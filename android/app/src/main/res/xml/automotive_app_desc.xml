@@ -1,0 +1,6 @@
+<automotive_app_desc>
+    <!-- Mantenha a tag vazia se não houver um media session que você queira declarar.
+         Geralmente, se você usa o audio_service, ele já cuida disso.
+         Você pode adicionar mais tags aqui se quiser uma experiência mais completa no Android Auto.
+    -->
+</automotive_app_desc>
