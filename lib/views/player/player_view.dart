@@ -15,6 +15,28 @@ class PlayerView extends StatelessWidget {
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
+  // Função auxiliar para determinar a cor do botão de repetição
+  Color _getRepeatButtonColor(RepeatMode mode) {
+    switch (mode) {
+      case RepeatMode.off:
+        return Colors.white70;
+      case RepeatMode.one:
+      case RepeatMode.all:
+        return AppColors.accentPurple;
+    }
+  }
+
+  // Função auxiliar para determinar o ícone do botão de repetição
+  IconData _getRepeatButtonIcon(RepeatMode mode) {
+    switch (mode) {
+      case RepeatMode.off:
+      case RepeatMode.all:
+        return Icons.repeat;
+      case RepeatMode.one:
+        return Icons.repeat_one;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -95,7 +117,7 @@ class PlayerView extends StatelessWidget {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    music.artist, // Tratamento para artista nulo
+                    music.artist,
                     style: const TextStyle(
                       fontSize: 16,
                       color: Colors.white70,
@@ -157,15 +179,25 @@ class PlayerView extends StatelessWidget {
 
                   const SizedBox(height: 30),
 
-                  // Controles do player
+                  // Controles do player com botões de shuffle e repeat
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      // Botão de Shuffle
+                      IconButton(
+                        icon: Icon(Icons.shuffle,
+                            size: 28,
+                            color: viewModel.isShuffled ? AppColors.accentPurple : Colors.white70),
+                        onPressed: viewModel.toggleShuffle,
+                      ),
+                      const SizedBox(width: 20),
+                      // Botão de Voltar
                       IconButton(
                         icon: const Icon(Icons.skip_previous, size: 40, color: Colors.white),
                         onPressed: viewModel.previousMusic,
                       ),
                       const SizedBox(width: 20),
+                      // Botão de Play/Pause
                       Container(
                         decoration: BoxDecoration(
                           color: AppColors.primaryPurple,
@@ -188,9 +220,20 @@ class PlayerView extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 20),
+                      // Botão de Avançar
                       IconButton(
                         icon: const Icon(Icons.skip_next, size: 40, color: Colors.white),
                         onPressed: viewModel.nextMusic,
+                      ),
+                      const SizedBox(width: 20),
+                      // Botão de Repetir
+                      IconButton(
+                        icon: Icon(
+                          _getRepeatButtonIcon(viewModel.repeatMode),
+                          size: 28,
+                          color: _getRepeatButtonColor(viewModel.repeatMode),
+                        ),
+                        onPressed: viewModel.toggleRepeatMode,
                       ),
                     ],
                   ),
