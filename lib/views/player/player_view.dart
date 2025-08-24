@@ -1,9 +1,11 @@
+// lib/views/player/player_view.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:on_audio_query/on_audio_query.dart';
+import 'package:just_audio/just_audio.dart' hide PlayerState;
 import '../../core/theme/app_colors.dart';
 import '../playlist/playlist_view_model.dart';
-// Removida a importação de 'package:just_audio/just_audio.dart';
+import '../../widgets/sleep_timer_button.dart'; // Importação do novo widget
 
 class PlayerView extends StatelessWidget {
   const PlayerView({super.key});
@@ -16,23 +18,23 @@ class PlayerView extends StatelessWidget {
   }
 
   // Função auxiliar para determinar a cor do botão de repetição
-  Color _getRepeatButtonColor(RepeatMode mode) {
+  Color _getRepeatButtonColor(LoopMode mode) {
     switch (mode) {
-      case RepeatMode.off:
+      case LoopMode.off:
         return Colors.white70;
-      case RepeatMode.one:
-      case RepeatMode.all:
+      case LoopMode.one:
+      case LoopMode.all:
         return AppColors.accentPurple;
     }
   }
 
   // Função auxiliar para determinar o ícone do botão de repetição
-  IconData _getRepeatButtonIcon(RepeatMode mode) {
+  IconData _getRepeatButtonIcon(LoopMode mode) {
     switch (mode) {
-      case RepeatMode.off:
-      case RepeatMode.all:
+      case LoopMode.off:
+      case LoopMode.all:
         return Icons.repeat;
-      case RepeatMode.one:
+      case LoopMode.one:
         return Icons.repeat_one;
     }
   }
@@ -40,12 +42,25 @@ class PlayerView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent, // Deixa a AppBar transparente
+        elevation: 0, // Remove a sombra
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: const [
+          SleepTimerButton(),
+        ],
+      ),
+      extendBodyBehindAppBar: true, // Permite que o corpo se estenda por trás da AppBar
       body: Consumer<PlaylistViewModel>(
         builder: (context, viewModel, child) {
           final music = viewModel.currentMusic;
           if (music == null) {
             return const Center(child: Text('Nenhuma música sendo tocada.'));
           }
+          final List<double> playbackSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
           return Container(
             decoration: const BoxDecoration(
@@ -60,17 +75,7 @@ class PlayerView extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Botão de voltar
-                  Align(
-                    alignment: Alignment.topLeft,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Imagem do álbum - Agora com tamanho uniforme
+                  // Removeremos o Align com o IconButton e usaremos a AppBar
                   SizedBox(
                     width: MediaQuery.of(context).size.width * 0.9,
                     height: MediaQuery.of(context).size.width * 0.9,
@@ -94,13 +99,9 @@ class PlayerView extends StatelessWidget {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 30),
-
-                  // Título e Artista
-                  // Título com rolagem horizontal para nomes longos
                   SizedBox(
-                    height: 30, // Altura para o texto
+                    height: 30,
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Text(
@@ -111,7 +112,7 @@ class PlayerView extends StatelessWidget {
                           color: Colors.white,
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.visible, // Permite que o texto saia da caixa
+                        overflow: TextOverflow.visible,
                       ),
                     ),
                   ),
@@ -127,14 +128,11 @@ class PlayerView extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 30),
-
-                  // Barra de progresso e tempos com Slider
                   StreamBuilder<Duration>(
                     stream: viewModel.positionStream,
                     builder: (context, snapshot) {
                       final position = snapshot.data ?? Duration.zero;
                       final totalDuration = Duration(milliseconds: music.duration ?? 0);
-                      
                       return Column(
                         children: [
                           SliderTheme(
@@ -148,12 +146,12 @@ class PlayerView extends StatelessWidget {
                               overlayColor: AppColors.accentPurple.withOpacity(0.2),
                             ),
                             child: Slider(
-                              value: position.inMilliseconds.toDouble(),
+                              value: totalDuration.inMilliseconds > 0
+                                  ? position.inMilliseconds.toDouble()
+                                  : 0.0,
                               min: 0.0,
                               max: totalDuration.inMilliseconds.toDouble(),
-                              onChanged: (double value) {
-                                // Pode ser usado para pré-visualização, se necessário
-                              },
+                              onChanged: (double value) {},
                               onChangeEnd: (double value) {
                                 viewModel.seek(Duration(milliseconds: value.toInt()));
                               },
@@ -176,28 +174,23 @@ class PlayerView extends StatelessWidget {
                       );
                     },
                   ),
-
                   const SizedBox(height: 30),
-
-                  // Controles do player com botões de shuffle e repeat
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Botão de Shuffle
                       IconButton(
                         icon: Icon(Icons.shuffle,
-                            size: 28,
-                            color: viewModel.isShuffled ? AppColors.accentPurple : Colors.white70),
+                          size: 28,
+                          color: viewModel.isShuffled ? AppColors.accentPurple : Colors.white70,
+                        ),
                         onPressed: viewModel.toggleShuffle,
                       ),
                       const SizedBox(width: 20),
-                      // Botão de Voltar
                       IconButton(
                         icon: const Icon(Icons.skip_previous, size: 40, color: Colors.white),
                         onPressed: viewModel.previousMusic,
                       ),
                       const SizedBox(width: 20),
-                      // Botão de Play/Pause
                       Container(
                         decoration: BoxDecoration(
                           color: AppColors.primaryPurple,
@@ -214,19 +207,17 @@ class PlayerView extends StatelessWidget {
                           icon: Icon(
                             viewModel.playerState == PlayerState.playing ? Icons.pause : Icons.play_arrow,
                             size: 40,
+                            color: Colors.white,
                           ),
-                          color: Colors.white,
                           onPressed: viewModel.playPause,
                         ),
                       ),
                       const SizedBox(width: 20),
-                      // Botão de Avançar
                       IconButton(
                         icon: const Icon(Icons.skip_next, size: 40, color: Colors.white),
                         onPressed: viewModel.nextMusic,
                       ),
                       const SizedBox(width: 20),
-                      // Botão de Repetir
                       IconButton(
                         icon: Icon(
                           _getRepeatButtonIcon(viewModel.repeatMode),
@@ -236,6 +227,28 @@ class PlayerView extends StatelessWidget {
                         onPressed: viewModel.toggleRepeatMode,
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 30),
+                  DropdownButton<double>(
+                    value: viewModel.currentSpeed,
+                    dropdownColor: AppColors.cardBackground,
+                    style: const TextStyle(color: Colors.white),
+                    icon: const Icon(Icons.speed, color: AppColors.accentPurple),
+                    underline: Container(
+                      height: 2,
+                      color: AppColors.accentPurple,
+                    ),
+                    onChanged: (double? newValue) {
+                      if (newValue != null) {
+                        viewModel.setPlaybackSpeed(newValue);
+                      }
+                    },
+                    items: playbackSpeeds.map<DropdownMenuItem<double>>((double value) {
+                      return DropdownMenuItem<double>(
+                        value: value,
+                        child: Text('${value}x', style: const TextStyle(color: Colors.white)),
+                      );
+                    }).toList(),
                   ),
                 ],
               ),

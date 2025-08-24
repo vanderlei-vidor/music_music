@@ -1,5 +1,7 @@
-import 'dart:io';
+// lib/views/playlist/playlist_view_model.dart
+import 'dart:io'; // Importação necessária para a verificação de plataforma
 import 'dart:typed_data';
+import 'dart:async'; // Importado para usar a classe Timer
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
@@ -9,7 +11,6 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../models/music_model.dart';
 
-enum RepeatMode { off, all, one }
 enum PlayerState { playing, paused, stopped }
 
 class PlaylistViewModel extends ChangeNotifier {
@@ -21,14 +22,20 @@ class PlaylistViewModel extends ChangeNotifier {
   Music? _currentMusic;
 
   bool _isShuffled = false;
-  RepeatMode _repeatMode = RepeatMode.off;
+  LoopMode _repeatMode = LoopMode.off;
+  double _currentSpeed = 1.0;
+
+  // Variáveis para o temporizador de desligamento
+  Timer? _sleepTimer;
+  Duration? _sleepDuration;
 
   // Getters
   PlayerState get playerState => _playerState;
   List<Music> get musics => _musics;
   Music? get currentMusic => _currentMusic;
   bool get isShuffled => _isShuffled;
-  RepeatMode get repeatMode => _repeatMode;
+  LoopMode get repeatMode => _repeatMode;
+  double get currentSpeed => _currentSpeed;
   Stream<Duration> get positionStream => _player.positionStream;
 
   Stream<PlayerState> get playerStateStream =>
@@ -45,12 +52,16 @@ class PlaylistViewModel extends ChangeNotifier {
   Stream<SequenceState?> get sequenceStateStream =>
       _player.sequenceStateStream;
 
+  // Getters para o temporizador de desligamento
+  Duration? get sleepDuration => _sleepDuration;
+  bool get hasSleepTimer => _sleepTimer != null && _sleepTimer!.isActive;
+
   PlaylistViewModel() {
     _initAudioSession();
     _listenToPlayerStateAndSequence();
   }
 
-  // 🔹 Helper para salvar artwork em arquivo temporário
+  // Helper para salvar artwork em arquivo temporário
   Future<String?> _saveArtworkToFile(Uint8List bytes, int songId) async {
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/artwork_$songId.jpg');
@@ -58,10 +69,9 @@ class PlaylistViewModel extends ChangeNotifier {
     return file.uri.toString();
   }
 
-  // 🔹 Carrega músicas com capas reais
+  // Carrega músicas com capas reais
   Future<void> loadMusics() async {
     final songs = await _audioQuery.querySongs();
-
     List<Music> loaded = [];
 
     for (var song in songs) {
@@ -77,7 +87,6 @@ class PlaylistViewModel extends ChangeNotifier {
         Music.fromSongModel(song, albumArtUri: artPath)
       );
     }
-
     setMusics(loaded);
   }
 
@@ -109,8 +118,8 @@ class PlaylistViewModel extends ChangeNotifier {
             artist: music.artist,
             artUri: music.albumId != null
                 ? Uri.parse("content://media/external/audio/albumart/${music.albumId}")
-                : Uri.parse("asset:///assets/images/notifica.png"), // fallback
-        )
+                : Uri.parse("asset:///assets/images/notifica.png"),
+          )
         );
       }).toList(),
     );
@@ -145,7 +154,7 @@ class PlaylistViewModel extends ChangeNotifier {
     });
   }
 
-  // Controles do player
+  // 🎵 Controles do player
   Future<void> play() async => await _player.play();
   Future<void> pause() async => await _player.pause();
 
@@ -180,21 +189,56 @@ class PlaylistViewModel extends ChangeNotifier {
   }
 
   void toggleRepeatMode() {
-    if (_repeatMode == RepeatMode.off) {
-      _repeatMode = RepeatMode.all;
+    if (_repeatMode == LoopMode.off) {
+      _repeatMode = LoopMode.all;
       _player.setLoopMode(LoopMode.all);
-    } else if (_repeatMode == RepeatMode.all) {
-      _repeatMode = RepeatMode.one;
+    } else if (_repeatMode == LoopMode.all) {
+      _repeatMode = LoopMode.one;
       _player.setLoopMode(LoopMode.one);
     } else {
-      _repeatMode = RepeatMode.off;
+      _repeatMode = LoopMode.off;
       _player.setLoopMode(LoopMode.off);
     }
     notifyListeners();
   }
+  
+  // Método para definir a velocidade de reprodução
+  Future<void> setPlaybackSpeed(double speed) async {
+    if (speed > 0.1 && speed <= 2.0) {
+      _currentSpeed = speed;
+      await _player.setSpeed(speed);
+      notifyListeners();
+    }
+  }
+
+  // 😴 Métodos para o temporizador de desligamento
+  void setSleepTimer(Duration duration) {
+    // Cancela o temporizador anterior, se houver
+    _sleepTimer?.cancel();
+
+    _sleepDuration = duration;
+    notifyListeners();
+
+    _sleepTimer = Timer(duration, () {
+      pause();
+      _sleepTimer = null;
+      _sleepDuration = null;
+      notifyListeners();
+    });
+  }
+
+  void cancelSleepTimer() {
+    if (_sleepTimer != null) {
+      _sleepTimer!.cancel();
+      _sleepTimer = null;
+      _sleepDuration = null;
+      notifyListeners();
+    }
+  }
 
   @override
   void dispose() {
+    _sleepTimer?.cancel();
     _player.dispose();
     super.dispose();
   }
