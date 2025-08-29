@@ -1,11 +1,13 @@
 // lib/views/player/player_view.dart
 import 'package:flutter/material.dart';
+import 'package:music_music/views/playlist/playlists_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:just_audio/just_audio.dart' hide PlayerState;
 import '../../core/theme/app_colors.dart';
 import '../playlist/playlist_view_model.dart';
-import '../../widgets/sleep_timer_button.dart'; // Importação do novo widget
+import '../../widgets/sleep_timer_button.dart';
+
 
 class PlayerView extends StatelessWidget {
   const PlayerView({super.key});
@@ -17,7 +19,6 @@ class PlayerView extends StatelessWidget {
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
-  // Função auxiliar para determinar a cor do botão de repetição
   Color _getRepeatButtonColor(LoopMode mode) {
     switch (mode) {
       case LoopMode.off:
@@ -28,7 +29,6 @@ class PlayerView extends StatelessWidget {
     }
   }
 
-  // Função auxiliar para determinar o ícone do botão de repetição
   IconData _getRepeatButtonIcon(LoopMode mode) {
     switch (mode) {
       case LoopMode.off:
@@ -38,13 +38,51 @@ class PlayerView extends StatelessWidget {
         return Icons.repeat_one;
     }
   }
+  
+  // Diálogo para criar a playlist
+  void _showCreatePlaylistDialog(BuildContext context, PlaylistViewModel viewModel) {
+    final TextEditingController controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBackground,
+        title: const Text('Criar Nova Playlist', style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Nome da Playlist',
+            labelStyle: TextStyle(color: Colors.white70),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: AppColors.accentPurple),
+            ),
+          ),
+          style: const TextStyle(color: Colors.white),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.white)),
+          ),
+          TextButton(
+            onPressed: () {
+              if (controller.text.isNotEmpty) {
+                viewModel.createPlaylist(controller.text);
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Criar', style: TextStyle(color: AppColors.accentPurple)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.transparent, // Deixa a AppBar transparente
-        elevation: 0, // Remove a sombra
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -53,7 +91,7 @@ class PlayerView extends StatelessWidget {
           SleepTimerButton(),
         ],
       ),
-      extendBodyBehindAppBar: true, // Permite que o corpo se estenda por trás da AppBar
+      extendBodyBehindAppBar: true,
       body: Consumer<PlaylistViewModel>(
         builder: (context, viewModel, child) {
           final music = viewModel.currentMusic;
@@ -75,7 +113,6 @@ class PlayerView extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Removeremos o Align com o IconButton e usaremos a AppBar
                   SizedBox(
                     width: MediaQuery.of(context).size.width * 0.9,
                     height: MediaQuery.of(context).size.width * 0.9,
@@ -229,6 +266,44 @@ class PlayerView extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 30),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Botão para ver playlists
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryPurple,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const PlaylistsScreen()),
+                          );
+                        },
+                        icon: const Icon(Icons.list, color: Colors.white),
+                        label: const Text('Ver Playlists', style: TextStyle(color: Colors.white)),
+                      ),
+                      const SizedBox(width: 20),
+                      // Botão para criar playlist
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryPurple,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        ),
+                        onPressed: () => _showCreatePlaylistDialog(context, viewModel),
+                        icon: const Icon(Icons.add, color: Colors.white),
+                        label: const Text('Criar Playlist', style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
                   DropdownButton<double>(
                     value: viewModel.currentSpeed,
                     dropdownColor: AppColors.cardBackground,

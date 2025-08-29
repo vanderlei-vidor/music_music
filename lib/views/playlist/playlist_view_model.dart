@@ -1,21 +1,26 @@
-// lib/views/playlist/playlist_view_model.dart
-import 'dart:io'; // Importação necessária para a verificação de plataforma
+import 'dart:io';
 import 'dart:typed_data';
-import 'dart:async'; // Importado para usar a classe Timer
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:just_audio_background/just_audio_background.dart';
+import 'package:music_music/data/database_helper.dart';
+import 'package:music_music/models/music_model.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:sqflite/sqflite.dart';
 
-import '../../models/music_model.dart';
+
+
 
 enum PlayerState { playing, paused, stopped }
 
 class PlaylistViewModel extends ChangeNotifier {
   final _player = AudioPlayer();
   final OnAudioQuery _audioQuery = OnAudioQuery();
+  // Corrigido: Agora cria uma nova instância da classe
+  final DatabaseHelper _dbHelper = DatabaseHelper();
 
   PlayerState _playerState = PlayerState.stopped;
   List<Music> _musics = [];
@@ -25,7 +30,6 @@ class PlaylistViewModel extends ChangeNotifier {
   LoopMode _repeatMode = LoopMode.off;
   double _currentSpeed = 1.0;
 
-  // Variáveis para o temporizador de desligamento
   Timer? _sleepTimer;
   Duration? _sleepDuration;
 
@@ -49,10 +53,8 @@ class PlaylistViewModel extends ChangeNotifier {
         }
       });
 
-  Stream<SequenceState?> get sequenceStateStream =>
-      _player.sequenceStateStream;
+  Stream<SequenceState?> get sequenceStateStream => _player.sequenceStateStream;
 
-  // Getters para o temporizador de desligamento
   Duration? get sleepDuration => _sleepDuration;
   bool get hasSleepTimer => _sleepTimer != null && _sleepTimer!.isActive;
 
@@ -61,33 +63,37 @@ class PlaylistViewModel extends ChangeNotifier {
     _listenToPlayerStateAndSequence();
   }
 
-  // Helper para salvar artwork em arquivo temporário
-  Future<String?> _saveArtworkToFile(Uint8List bytes, int songId) async {
-    final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/artwork_$songId.jpg');
-    await file.writeAsBytes(bytes, flush: true);
-    return file.uri.toString();
+  // 🎵 Métodos de playlist (ajustados)
+  Future<void> createPlaylist(String name) async {
+    await _dbHelper.createPlaylist(name);
+    notifyListeners();
   }
 
-  // Carrega músicas com capas reais
-  Future<void> loadMusics() async {
-    final songs = await _audioQuery.querySongs();
-    List<Music> loaded = [];
+  Future<void> addMusicToPlaylist(int playlistId, Music music) async {
+    await _dbHelper.addMusicToPlaylist(playlistId, music);
+    notifyListeners();
+  }
 
-    for (var song in songs) {
-      Uint8List? artwork =
-          await _audioQuery.queryArtwork(song.id, ArtworkType.AUDIO);
+  Future<List<Map<String, dynamic>>> getPlaylists() async {
+    return await _dbHelper.getPlaylists();
+  }
 
-      String? artPath;
-      if (artwork != null) {
-        artPath = await _saveArtworkToFile(artwork, song.id);
-      }
+  Future<List<Music>> getMusicsFromPlaylist(int playlistId) async {
+    return await _dbHelper.getMusicsFromPlaylist(playlistId);
+  }
 
-      loaded.add(
-        Music.fromSongModel(song, albumArtUri: artPath)
-      );
-    }
-    setMusics(loaded);
+  // NOVO MÉTODO: Remove uma música da playlist
+  Future<void> removeMusicFromPlaylist(int playlistId, int musicId) async {
+    await _dbHelper.removeMusicFromPlaylist(playlistId, musicId);
+    notifyListeners();
+  }
+
+  // 🎵 Métodos de player e áudio (originais)
+  // Carrega todas as músicas do banco de dados (ajustado para usar o DB)
+  Future<void> loadAllMusics() async {
+    _musics = await _dbHelper.getAllMusics();
+    _setAudioSource();
+    notifyListeners();
   }
 
   // Define músicas e cria playlist no player
@@ -119,7 +125,7 @@ class PlaylistViewModel extends ChangeNotifier {
             artUri: music.albumId != null
                 ? Uri.parse("content://media/external/audio/albumart/${music.albumId}")
                 : Uri.parse("asset:///assets/images/notifica.png"),
-          )
+          ),
         );
       }).toList(),
     );
@@ -201,8 +207,7 @@ class PlaylistViewModel extends ChangeNotifier {
     }
     notifyListeners();
   }
-  
-  // Método para definir a velocidade de reprodução
+
   Future<void> setPlaybackSpeed(double speed) async {
     if (speed > 0.1 && speed <= 2.0) {
       _currentSpeed = speed;
@@ -213,12 +218,9 @@ class PlaylistViewModel extends ChangeNotifier {
 
   // 😴 Métodos para o temporizador de desligamento
   void setSleepTimer(Duration duration) {
-    // Cancela o temporizador anterior, se houver
     _sleepTimer?.cancel();
-
     _sleepDuration = duration;
     notifyListeners();
-
     _sleepTimer = Timer(duration, () {
       pause();
       _sleepTimer = null;
