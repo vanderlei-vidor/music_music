@@ -142,11 +142,20 @@ class DatabaseHelper {
     );
   }
   Future<void> deletePlaylist(int playlistId) async {
-  final db = await database;
-  await db.delete(
-    'playlists',
-    where: 'id = ?',
-    whereArgs: [playlistId],
-  );
+    final db = await database;
+    await db.delete(
+      'playlists',
+      where: 'id = ?',
+      whereArgs: [playlistId],
+    );
+  }
+  // Adicione este método na classe DatabaseHelper
+  Future<int> getMusicCountForPlaylist(int playlistId) async {  
+    final db = await database;
+    final count = Sqflite.firstIntValue(await db.rawQuery(
+      'SELECT COUNT(*) FROM playlist_musics WHERE playlistId = ?',
+    [playlistId],
+    ));
+    return count ?? 0;
   }
 }

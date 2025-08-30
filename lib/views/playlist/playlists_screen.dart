@@ -1,14 +1,56 @@
+// lib/views/playlist/playlists_screen.dart
 import 'package:flutter/material.dart';
 import 'package:music_music/views/playlist/playlist_detail_screen.dart';
 import 'package:provider/provider.dart';
-import 'package:sqflite/sqflite.dart';
-
 import '../../core/theme/app_colors.dart';
 import '../playlist/playlist_view_model.dart';
 import '../../models/music_model.dart';
 
 class PlaylistsScreen extends StatelessWidget {
   const PlaylistsScreen({super.key});
+
+  Future<void> _showDeleteConfirmationDialog(
+    BuildContext context,
+    PlaylistViewModel viewModel,
+    int playlistId,
+    String playlistName,
+  ) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: AppColors.cardBackground,
+          title: const Text('Confirmar Exclusão', style: TextStyle(color: Colors.white)),
+          content: Text(
+            'Tem certeza que deseja apagar a playlist "$playlistName"?',
+            style: const TextStyle(color: Colors.white70),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Não', style: TextStyle(color: Colors.white)),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Sim', style: TextStyle(color: Colors.red)),
+              onPressed: () {
+                viewModel.deletePlaylist(playlistId);
+                Navigator.of(dialogContext).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Playlist "$playlistName" removida.'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +71,7 @@ class PlaylistsScreen extends StatelessWidget {
         child: Consumer<PlaylistViewModel>(
           builder: (context, viewModel, child) {
             return FutureBuilder<List<Map<String, dynamic>>>(
-              future: viewModel.getPlaylists(),
+              future: viewModel.getPlaylistsWithMusicCount(), // LINHA CORRIGIDA
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
@@ -42,6 +84,7 @@ class PlaylistsScreen extends StatelessWidget {
                   return Center(
                     child: Text(
                       'Erro ao carregar playlists: ${snapshot.error}',
+                      style: const TextStyle(color: Colors.white70),
                     ),
                   );
                 }
@@ -62,6 +105,7 @@ class PlaylistsScreen extends StatelessWidget {
                     final playlist = playlists[index];
                     final playlistId = playlist['id'] as int;
                     final playlistName = playlist['name'] as String;
+                    final musicCount = playlist['musicCount'] as int;
 
                     return Card(
                       color: AppColors.cardBackground,
@@ -81,30 +125,26 @@ class PlaylistsScreen extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        // 👉 ADICIONA ESTE TRECHO DE CÓDIGO
+                        subtitle: Text(
+                          '$musicCount ${musicCount == 1 ? 'música' : 'músicas'}',
+                          style: const TextStyle(color: Colors.white70),
+                        ),
                         trailing: IconButton(
                           icon: const Icon(
                             Icons.delete,
                             color: Colors.redAccent,
                           ),
                           onPressed: () {
-                            // Lógica para remover a playlist
                             _showDeleteConfirmationDialog(
                               context,
                               viewModel,
                               playlistId,
                               playlistName,
                             );
-                            viewModel.deletePlaylist(playlistId);
-                            // Opcional: mostrar um feedback para o usuário
-                            
                           },
                         ),
-                        // FIM DO TRECHO ADICIONADO
                         onTap: () async {
-                          final musics = await viewModel.getMusicsFromPlaylist(
-                            playlistId,
-                          );
+                          final musics = await viewModel.getMusicsFromPlaylist(playlistId);
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -127,48 +167,4 @@ class PlaylistsScreen extends StatelessWidget {
       ),
     );
   }
-}
-
-Future<void> _showDeleteConfirmationDialog(
-  BuildContext context,
-  PlaylistViewModel viewModel,
-  int playlistId,
-  String playlistName,
-) async {
-  return showDialog<void>(
-    context: context,
-    barrierDismissible:
-        false, // O usuário deve clicar em um dos botões para fechar
-    builder: (BuildContext dialogContext) {
-      return AlertDialog(
-        title: const Text('Confirmar Exclusão'),
-        content: Text(
-          'Tem certeza que deseja apagar a playlist "$playlistName"?',
-        ),
-        actions: <Widget>[
-          TextButton(
-            child: const Text('Não', style: TextStyle(color: Colors.white)),
-            onPressed: () {
-              Navigator.of(dialogContext).pop(); // Fecha o diálogo
-            },
-          ),
-          TextButton(
-            child: const Text('Sim', style: TextStyle(color: Colors.red)),
-            onPressed: () {
-              // Chama a função para apagar a playlist
-              viewModel.deletePlaylist(playlistId);
-              Navigator.of(dialogContext).pop(); // Fecha o diálogo
-              // Opcional: mostrar um feedback
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Playlist "$playlistName" removida.'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            },
-          ),
-        ],
-      );
-    },
-  );
 }

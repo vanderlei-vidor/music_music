@@ -6,8 +6,7 @@ import 'package:on_audio_query/on_audio_query.dart';
 import 'package:just_audio/just_audio.dart' hide PlayerState;
 import '../../core/theme/app_colors.dart';
 import '../playlist/playlist_view_model.dart';
-import '../../widgets/sleep_timer_button.dart';
-
+import '../../widgets/sleep_timer_button.dart'; // Mantive o import caso você queira reutilizar o widget em outro lugar.
 
 class PlayerView extends StatelessWidget {
   const PlayerView({super.key});
@@ -38,8 +37,7 @@ class PlayerView extends StatelessWidget {
         return Icons.repeat_one;
     }
   }
-  
-  // Diálogo para criar a playlist
+
   void _showCreatePlaylistDialog(BuildContext context, PlaylistViewModel viewModel) {
     final TextEditingController controller = TextEditingController();
     showDialog(
@@ -77,28 +75,151 @@ class PlayerView extends StatelessWidget {
     );
   }
 
+  // Novo método para exibir o diálogo do temporizador
+  void _showSleepTimerDialog(BuildContext context, PlaylistViewModel viewModel) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: AppColors.cardBackground,
+          title: const Text('Definir Temporizador', style: TextStyle(color: Colors.white)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('15 minutos', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  viewModel.setSleepTimer(const Duration(minutes: 15));
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: const Text('30 minutos', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  viewModel.setSleepTimer(const Duration(minutes: 30));
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: const Text('1 hora', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  viewModel.setSleepTimer(const Duration(hours: 1));
+                  Navigator.pop(context);
+                },
+              ),
+              if (viewModel.hasSleepTimer)
+                ListTile(
+                  title: const Text('Cancelar Temporizador', style: TextStyle(color: Colors.red)),
+                  onTap: () {
+                    viewModel.cancelSleepTimer();
+                    Navigator.pop(context);
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            onPressed: () {
+              Scaffold.of(context).openDrawer();
+            },
+          ),
         ),
-        actions: const [
-          SleepTimerButton(),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.playlist_play, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const PlaylistsScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.add, color: Colors.white),
+            onPressed: () {
+              _showCreatePlaylistDialog(context, Provider.of<PlaylistViewModel>(context, listen: false));
+            },
+          ),
         ],
       ),
       extendBodyBehindAppBar: true,
+      drawer: Consumer<PlaylistViewModel>(
+        builder: (context, viewModel, child) {
+          final List<double> playbackSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+          return Drawer(
+            backgroundColor: AppColors.cardBackground,
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                const DrawerHeader(
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryPurple,
+                  ),
+                  child: Text(
+                    'Configurações do Player',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                    ),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.timer, color: AppColors.accentPurple),
+                  title: const Text('Temporizador de Repouso', style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showSleepTimerDialog(context, viewModel);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.speed, color: AppColors.accentPurple),
+                  title: const Text('Velocidade de Reprodução', style: TextStyle(color: Colors.white)),
+                  trailing: DropdownButton<double>(
+                    value: viewModel.currentSpeed,
+                    dropdownColor: AppColors.cardBackground,
+                    style: const TextStyle(color: Colors.white),
+                    icon: const Icon(Icons.arrow_drop_down, color: AppColors.accentPurple),
+                    underline: Container(),
+                    onChanged: (double? newValue) {
+                      if (newValue != null) {
+                        viewModel.setPlaybackSpeed(newValue);
+                      }
+                    },
+                    items: playbackSpeeds.map<DropdownMenuItem<double>>((double value) {
+                      return DropdownMenuItem<double>(
+                        value: value,
+                        child: Text('${value}x', style: const TextStyle(color: Colors.white)),
+                      );
+                    }).toList(),
+                  ),
+                  onTap: () {
+                    // Sem ação, pois o DropdownButton já lida com a interação
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      ),
       body: Consumer<PlaylistViewModel>(
         builder: (context, viewModel, child) {
           final music = viewModel.currentMusic;
           if (music == null) {
-            return const Center(child: Text('Nenhuma música sendo tocada.'));
+            return const Center(
+                child: CircularProgressIndicator(color: AppColors.accentPurple));
           }
-          final List<double> playbackSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
           return Container(
             decoration: const BoxDecoration(
@@ -264,66 +385,6 @@ class PlayerView extends StatelessWidget {
                         onPressed: viewModel.toggleRepeatMode,
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 30),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Botão para ver playlists
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryPurple,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        ),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const PlaylistsScreen()),
-                          );
-                        },
-                        icon: const Icon(Icons.list, color: Colors.white),
-                        label: const Text('Ver Playlists', style: TextStyle(color: Colors.white)),
-                      ),
-                      const SizedBox(width: 20),
-                      // Botão para criar playlist
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryPurple,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        ),
-                        onPressed: () => _showCreatePlaylistDialog(context, viewModel),
-                        icon: const Icon(Icons.add, color: Colors.white),
-                        label: const Text('Criar Playlist', style: TextStyle(color: Colors.white)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  DropdownButton<double>(
-                    value: viewModel.currentSpeed,
-                    dropdownColor: AppColors.cardBackground,
-                    style: const TextStyle(color: Colors.white),
-                    icon: const Icon(Icons.speed, color: AppColors.accentPurple),
-                    underline: Container(
-                      height: 2,
-                      color: AppColors.accentPurple,
-                    ),
-                    onChanged: (double? newValue) {
-                      if (newValue != null) {
-                        viewModel.setPlaybackSpeed(newValue);
-                      }
-                    },
-                    items: playbackSpeeds.map<DropdownMenuItem<double>>((double value) {
-                      return DropdownMenuItem<double>(
-                        value: value,
-                        child: Text('${value}x', style: const TextStyle(color: Colors.white)),
-                      );
-                    }).toList(),
                   ),
                 ],
               ),

@@ -87,7 +87,7 @@ class PlaylistViewModel extends ChangeNotifier {
     await _dbHelper.removeMusicFromPlaylist(playlistId, musicId);
     notifyListeners();
   }
-  
+
   Future<void> deletePlaylist(int playlistId) async {
   await _dbHelper.deletePlaylist(playlistId);
   notifyListeners(); // Notifica a UI sobre a mudança
@@ -224,6 +224,23 @@ class PlaylistViewModel extends ChangeNotifier {
       await _player.setSpeed(speed);
       notifyListeners();
     }
+  }
+
+  Future<List<Map<String, dynamic>>> getPlaylistsWithMusicCount() async {
+    final playlists = await _dbHelper.getPlaylists();
+    final playlistsWithCount = <Map<String, dynamic>>[];
+
+  for (var playlist in playlists) {
+    final playlistId = playlist['id'] as int;
+    final musicCount = await _dbHelper.getMusicCountForPlaylist(playlistId);
+    playlistsWithCount.add({
+      'id': playlistId,
+      'name': playlist['name'],
+      'musicCount': musicCount,
+    });
+  }
+
+    return playlistsWithCount;
   }
 
   // 😴 Métodos para o temporizador de desligamento
