@@ -141,4 +141,12 @@ class DatabaseHelper {
       whereArgs: [playlistId, musicId],
     );
   }
+  Future<void> deletePlaylist(int playlistId) async {
+  final db = await database;
+  await db.delete(
+    'playlists',
+    where: 'id = ?',
+    whereArgs: [playlistId],
+  );
+  }
 }

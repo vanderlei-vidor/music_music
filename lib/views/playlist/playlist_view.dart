@@ -136,7 +136,7 @@ class PlaylistView extends StatelessWidget {
                             if (isPlaying) {
                               viewModel.playPause();
                             } else {
-                              viewModel.playMusic(index);
+                              viewModel.playMusic(musics, index);
                             }
                             Navigator.push(
                               context,

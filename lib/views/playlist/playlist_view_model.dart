@@ -87,6 +87,11 @@ class PlaylistViewModel extends ChangeNotifier {
     await _dbHelper.removeMusicFromPlaylist(playlistId, musicId);
     notifyListeners();
   }
+  
+  Future<void> deletePlaylist(int playlistId) async {
+  await _dbHelper.deletePlaylist(playlistId);
+  notifyListeners(); // Notifica a UI sobre a mudança
+  }
 
   // 🎵 Métodos de player e áudio (originais)
   // Carrega todas as músicas do banco de dados (ajustado para usar o DB)
@@ -97,9 +102,9 @@ class PlaylistViewModel extends ChangeNotifier {
   }
 
   // Define músicas e cria playlist no player
-  void setMusics(List<Music> musics) {
+  void setMusics(List<Music> musics,  {int startIndex = 0}) {
     _musics = musics;
-    _setAudioSource();
+    _setAudioSource(initialIndex: startIndex);
     notifyListeners();
   }
 
@@ -110,7 +115,7 @@ class PlaylistViewModel extends ChangeNotifier {
   }
 
   // Define playlist no player
-  Future<void> _setAudioSource() async {
+  Future<void> _setAudioSource({int initialIndex = 0}) async {
     if (_musics.isEmpty) return;
 
     final playlist = ConcatenatingAudioSource(
@@ -129,8 +134,12 @@ class PlaylistViewModel extends ChangeNotifier {
         );
       }).toList(),
     );
+    await _player.setAudioSource(
+    playlist,
+    initialIndex: initialIndex, // 👉 começa exatamente da música clicada
+  );
 
-    await _player.setAudioSource(playlist);
+    //await _player.setAudioSource(playlist);
     await _player.setShuffleModeEnabled(isShuffled);
   }
 
@@ -172,12 +181,13 @@ class PlaylistViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> playMusic(int index) async {
+  Future<void> playMusic(List<Music> musics, int index) async {
     if (index >= 0 && index < _musics.length) {
+      _musics = musics;
       _currentMusic = _musics[index];
       notifyListeners();
-      await _player.seek(Duration.zero, index: index);
-      play();
+      await _setAudioSource(initialIndex: index);
+      await play();
     }
   }
 
