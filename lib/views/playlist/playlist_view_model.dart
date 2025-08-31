@@ -243,6 +243,8 @@ class PlaylistViewModel extends ChangeNotifier {
     return playlistsWithCount;
   }
 
+  
+
   // 😴 Métodos para o temporizador de desligamento
   void setSleepTimer(Duration duration) {
     _sleepTimer?.cancel();

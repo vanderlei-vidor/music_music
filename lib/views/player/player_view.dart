@@ -336,6 +336,7 @@ class PlayerView extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      
                       IconButton(
                         icon: Icon(Icons.shuffle,
                           size: 28,

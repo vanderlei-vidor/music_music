@@ -33,12 +33,14 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   }
 
   Future<List<Music>> _loadMusics() {
-    return context.read<PlaylistViewModel>()
+    return context
+        .read<PlaylistViewModel>()
         .getMusicsFromPlaylist(widget.playlistId);
   }
 
   void _removeMusic(int musicId) {
-    context.read<PlaylistViewModel>()
+    context
+        .read<PlaylistViewModel>()
         .removeMusicFromPlaylist(widget.playlistId, musicId);
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -73,6 +75,25 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add, color: Colors.white),
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MusicSelectionScreen(
+                    playlistId: widget.playlistId,
+                    playlistName: widget.playlistName,
+                  ),
+                ),
+              );
+              setState(() {
+                _musicsFuture = _loadMusics();
+              });
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -90,8 +111,9 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
-                        child: CircularProgressIndicator(
-                            color: AppColors.accentPurple));
+                      child: CircularProgressIndicator(
+                          color: AppColors.accentPurple),
+                    );
                   }
                   if (snapshot.hasError) {
                     return Center(child: Text('Erro: ${snapshot.error}'));
@@ -112,7 +134,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                         itemCount: musics.length,
                         itemBuilder: (context, index) {
                           final music = musics[index];
-                          final isPlaying = viewModel.currentMusic?.id == music.id;
+                          final isPlaying =
+                              viewModel.currentMusic?.id == music.id;
 
                           return Card(
                             color: AppColors.cardBackground,
@@ -174,8 +197,9 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                        builder: (context) =>
-                                            const PlayerView()),
+                                      builder: (context) =>
+                                          const PlayerView(),
+                                    ),
                                   );
                                 } else {
                                   // Define a lista de reprodução atual e toca a música
@@ -194,24 +218,6 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           ),
           if (viewModel.currentMusic != null) const MiniPlayerView(),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => MusicSelectionScreen(
-                playlistId: widget.playlistId,
-                playlistName: widget.playlistName,
-              ),
-            ),
-          );
-          setState(() {
-            _musicsFuture = _loadMusics();
-          });
-        },
-        backgroundColor: AppColors.accentPurple,
-        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
