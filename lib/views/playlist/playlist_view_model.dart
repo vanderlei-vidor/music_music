@@ -5,14 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:just_audio_background/just_audio_background.dart';
+import 'package:just_waveform/just_waveform.dart';
 import 'package:music_music/data/database_helper.dart';
 import 'package:music_music/models/music_model.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
-
-
-
 
 enum PlayerState { playing, paused, stopped }
 
@@ -41,6 +39,9 @@ class PlaylistViewModel extends ChangeNotifier {
   LoopMode get repeatMode => _repeatMode;
   double get currentSpeed => _currentSpeed;
   Stream<Duration> get positionStream => _player.positionStream;
+
+  Waveform? _currentWaveform;
+  Waveform? get currentWaveform => _currentWaveform;
 
   Stream<PlayerState> get playerStateStream =>
       _player.playerStateStream.map((state) {
@@ -89,8 +90,8 @@ class PlaylistViewModel extends ChangeNotifier {
   }
 
   Future<void> deletePlaylist(int playlistId) async {
-  await _dbHelper.deletePlaylist(playlistId);
-  notifyListeners(); // Notifica a UI sobre a mudança
+    await _dbHelper.deletePlaylist(playlistId);
+    notifyListeners(); // Notifica a UI sobre a mudança
   }
 
   // 🎵 Métodos de player e áudio (originais)
@@ -102,7 +103,7 @@ class PlaylistViewModel extends ChangeNotifier {
   }
 
   // Define músicas e cria playlist no player
-  void setMusics(List<Music> musics,  {int startIndex = 0}) {
+  void setMusics(List<Music> musics, {int startIndex = 0}) {
     _musics = musics;
     _setAudioSource(initialIndex: startIndex);
     notifyListeners();
@@ -128,16 +129,18 @@ class PlaylistViewModel extends ChangeNotifier {
             title: music.title,
             artist: music.artist,
             artUri: music.albumId != null
-                ? Uri.parse("content://media/external/audio/albumart/${music.albumId}")
+                ? Uri.parse(
+                    "content://media/external/audio/albumart/${music.albumId}",
+                  )
                 : Uri.parse("asset:///assets/images/notifica.png"),
           ),
         );
       }).toList(),
     );
     await _player.setAudioSource(
-    playlist,
-    initialIndex: initialIndex, // 👉 começa exatamente da música clicada
-  );
+      playlist,
+      initialIndex: initialIndex, // 👉 começa exatamente da música clicada
+    );
 
     //await _player.setAudioSource(playlist);
     await _player.setShuffleModeEnabled(isShuffled);
@@ -161,13 +164,21 @@ class PlaylistViewModel extends ChangeNotifier {
         final index = sequenceState.currentIndex;
         if (index < _musics.length) {
           _currentMusic = _musics[index];
+          
         }
       } else {
         _currentMusic = null;
+        _currentWaveform = null;
       }
       notifyListeners();
     });
   }
+
+  
+
+
+
+
 
   // 🎵 Controles do player
   Future<void> play() async => await _player.play();
@@ -230,20 +241,18 @@ class PlaylistViewModel extends ChangeNotifier {
     final playlists = await _dbHelper.getPlaylists();
     final playlistsWithCount = <Map<String, dynamic>>[];
 
-  for (var playlist in playlists) {
-    final playlistId = playlist['id'] as int;
-    final musicCount = await _dbHelper.getMusicCountForPlaylist(playlistId);
-    playlistsWithCount.add({
-      'id': playlistId,
-      'name': playlist['name'],
-      'musicCount': musicCount,
-    });
-  }
+    for (var playlist in playlists) {
+      final playlistId = playlist['id'] as int;
+      final musicCount = await _dbHelper.getMusicCountForPlaylist(playlistId);
+      playlistsWithCount.add({
+        'id': playlistId,
+        'name': playlist['name'],
+        'musicCount': musicCount,
+      });
+    }
 
     return playlistsWithCount;
   }
-
-  
 
   // 😴 Métodos para o temporizador de desligamento
   void setSleepTimer(Duration duration) {

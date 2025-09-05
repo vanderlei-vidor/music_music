@@ -26,16 +26,50 @@ class PlaylistDetailScreen extends StatefulWidget {
 class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   late Future<List<Music>> _musicsFuture;
 
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false;
+  List<Music> _allMusics = [];
+  List<Music> _filteredMusics = [];
+
   @override
-  void initState() {
-    super.initState();
-    _musicsFuture = _loadMusics();
+void initState() {
+  super.initState();
+  _musicsFuture = _loadMusics().then((musics) {
+    setState(() {
+      _allMusics = musics;
+      _filteredMusics = musics; // A lista filtrada começa com todas as músicas
+    });
+    return musics;
+  });
+
+  _searchController.addListener(_filterMusics);
+  }
+
+@override
+void dispose() {
+  _searchController.dispose();
+  super.dispose();
   }
 
   Future<List<Music>> _loadMusics() {
     return context
         .read<PlaylistViewModel>()
         .getMusicsFromPlaylist(widget.playlistId);
+  }
+
+  // Método para filtrar a lista
+void _filterMusics() {
+  final query = _searchController.text.toLowerCase();
+  setState(() {
+    if (query.isEmpty) {
+      _filteredMusics = _allMusics;
+    } else {
+      _filteredMusics = _allMusics.where((music) {
+        return music.title.toLowerCase().contains(query) ||
+               (music.artist?.toLowerCase().contains(query) ?? false);
+      }).toList();
+    }
+  });
   }
 
   void _removeMusic(int musicId) {
@@ -68,85 +102,111 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.playlistName),
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add, color: Colors.white),
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => MusicSelectionScreen(
-                    playlistId: widget.playlistId,
-                    playlistName: widget.playlistName,
-                  ),
-                ),
-              );
-              setState(() {
-                _musicsFuture = _loadMusics();
-              });
-            },
-          ),
-        ],
+      title: _isSearching
+          ? TextField(
+              controller: _searchController,
+              autofocus: true,
+              decoration: const InputDecoration(
+                hintText: 'Buscar músicas...',
+                border: InputBorder.none,
+                hintStyle: TextStyle(color: Colors.white54),
+              ),
+              style: const TextStyle(color: Colors.white, fontSize: 18),
+            )
+          : Text(widget.playlistName),
+      backgroundColor: AppColors.background,
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+        onPressed: () => Navigator.pop(context),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppColors.background, Color(0xFF13101E)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+      actions: [
+        // Botão de busca
+        IconButton(
+          icon: Icon(_isSearching ? Icons.close : Icons.search, color: Colors.white),
+          onPressed: () {
+            setState(() {
+              _isSearching = !_isSearching;
+              if (!_isSearching) {
+                // Se a busca for fechada, restaura a lista original
+                _searchController.clear();
+                _filteredMusics = _allMusics;
+              }
+            });
+          },
+        ),
+        // Botão de adicionar
+        IconButton(
+          icon: const Icon(Icons.add, color: Colors.white),
+          onPressed: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => MusicSelectionScreen(
+                  playlistId: widget.playlistId,
+                  playlistName: widget.playlistName,
                 ),
               ),
-              child: FutureBuilder<List<Music>>(
-                future: _musicsFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                          color: AppColors.accentPurple),
-                    );
-                  }
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Erro: ${snapshot.error}'));
-                  }
-                  final musics = snapshot.data ?? [];
-                  if (musics.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        'Esta playlist não tem músicas.',
-                        style: TextStyle(color: Colors.white70),
-                      ),
-                    );
-                  }
-                  return Consumer<PlaylistViewModel>(
-                    builder: (context, viewModel, child) {
-                      return ListView.builder(
-                        padding: const EdgeInsets.all(16.0),
-                        itemCount: musics.length,
-                        itemBuilder: (context, index) {
-                          final music = musics[index];
-                          final isPlaying =
-                              viewModel.currentMusic?.id == music.id;
-
-                          return Card(
-                            color: AppColors.cardBackground,
-                            margin: const EdgeInsets.only(bottom: 12.0),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12.0),
-                              side: isPlaying
-                                  ? const BorderSide(
-                                      color: AppColors.accentPurple, width: 2)
-                                  : BorderSide.none,
-                            ),
+            );
+            // Recarrega a lista de músicas após adicionar
+            setState(() {
+              _musicsFuture = _loadMusics().then((musics) {
+                setState(() {
+                  _allMusics = musics;
+                  _filteredMusics = musics;
+                });
+                return musics;
+              });
+            });
+          },
+        ),
+      ],
+    ),
+    body: Column(
+      children: [
+        Expanded(
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.background, Color(0xFF13101E)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+            child: FutureBuilder<List<Music>>(
+              future: _musicsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: AppColors.accentPurple));
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Erro: ${snapshot.error}'));
+                }
+                final musicsToShow = _isSearching ? _filteredMusics : snapshot.data ?? [];
+                if (musicsToShow.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'Esta playlist não tem músicas.',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  );
+                }
+                return Consumer<PlaylistViewModel>(
+                  builder: (context, viewModel, child) {
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(16.0),
+                      itemCount: musicsToShow.length,
+                      itemBuilder: (context, index) {
+                        final music = musicsToShow[index];
+                        final isPlaying = viewModel.currentMusic?.id == music.id;
+                        
+                        return Card(
+                          color: AppColors.cardBackground,
+                          margin: const EdgeInsets.only(bottom: 12.0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                            side: isPlaying ? const BorderSide(color: AppColors.accentPurple, width: 2) : BorderSide.none,
+                          ),
                             child: ListTile(
                               leading: QueryArtworkWidget(
                                 id: music.albumId ?? 0,
@@ -202,8 +262,12 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                     ),
                                   );
                                 } else {
-                                  // Define a lista de reprodução atual e toca a música
-                                  viewModel.playMusic(musics, index);
+                                  final originalIndex = _allMusics.indexOf(music);
+                                  if (originalIndex != -1) {
+              // 3. Chame o playMusic com a lista ORIGINAL e o novo índice.
+                                  viewModel.playMusic(_allMusics, originalIndex);
+                                }
+                                  
                                 }
                               },
                             ),

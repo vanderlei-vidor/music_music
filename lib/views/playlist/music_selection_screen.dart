@@ -23,14 +23,26 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
   late final PlaylistViewModel _viewModel;
   bool _isLoading = true;
   List<Music> _allMusics = [];
+  List<Music> _filteredMusics = [];
   Set<int> _selectedMusicIds = {};
   Set<int> _existingMusicIds = {};
+
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false;
 
   @override
   void initState() {
     super.initState();
     _viewModel = Provider.of<PlaylistViewModel>(context, listen: false);
     _loadAllMusics();
+    _searchController.addListener(_filterMusics);
+  }
+
+   @override
+  void dispose() {
+    // Adicione o dispose para o controlador de texto 👇
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadAllMusics() async {
@@ -47,6 +59,7 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
 
       setState(() {
         _allMusics = allMusics;
+        _filteredMusics = allMusics;
         _isLoading = false;
       });
     } catch (e) {
@@ -70,27 +83,65 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
     Navigator.pop(context);
   }
 
+  void _filterMusics() {
+  final query = _searchController.text.toLowerCase();
+  setState(() {
+    if (query.isEmpty) {
+      _filteredMusics = _allMusics;
+    } else {
+      _filteredMusics = _allMusics.where((music) {
+        return music.title.toLowerCase().contains(query) ||
+               (music.artist?.toLowerCase().contains(query) ?? false);
+      }).toList();
+    }
+  });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Adicionar à ${widget.playlistName}'),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          TextButton(
-            onPressed: _selectedMusicIds.isNotEmpty ? _confirmSelection : null,
-            child: const Text('Confirmar', style: TextStyle(color: Colors.blue)),
+  title: _isSearching
+      ? TextField(
+          controller: _searchController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Buscar músicas...',
+            border: InputBorder.none,
+            hintStyle: TextStyle(color: Colors.white54),
           ),
-        ],
-      ),
+          style: const TextStyle(color: Colors.white, fontSize: 18),
+        )
+      : Text('Adicionar à ${widget.playlistName}'),
+  centerTitle: true,
+  backgroundColor: Colors.transparent,
+  elevation: 0,
+  actions: [
+    IconButton(
+      icon: Icon(_isSearching ? Icons.close : Icons.search),
+      onPressed: () {
+        setState(() {
+          _isSearching = !_isSearching;
+          if (!_isSearching) {
+            // Limpa a busca e restaura a lista
+            _searchController.clear();
+            _filteredMusics = _allMusics;
+          }
+        });
+      },
+    ),
+    TextButton(
+      onPressed: _selectedMusicIds.isNotEmpty ? _confirmSelection : null,
+      child: const Text('Confirmar', style: TextStyle(color: Colors.blue)),
+    ),
+  ],
+),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView.builder(
-              itemCount: _allMusics.length,
+              itemCount: _filteredMusics.length,
               itemBuilder: (context, index) {
-                final music = _allMusics[index];
+                final music = _filteredMusics[index];
                 // Verifica se a música já existe na playlist
                 final bool isExisting = _existingMusicIds.contains(music.id);
                 // Verifica se a música está selecionada para adicionar

@@ -70,4 +70,7 @@ class Music {
       isFavorite: map['isFavorite'] == 1,
     );
   }
+
+  // ignore: recursive_getters
+  String? get data => data;
 }

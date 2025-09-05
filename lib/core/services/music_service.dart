@@ -1,4 +1,6 @@
 // core/services/music_service.dart
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import '../../models/music_model.dart';
@@ -9,19 +11,22 @@ class MusicService {
 
   /// Pede permissão de acordo com a versão do Android
   Future<bool> requestPermission() async {
-    // Android 13+ usa permissões de mídia separadas
-    if (await Permission.audio.isGranted) return true;
+    if (Platform.isAndroid) {
+      // Android 13+ (API 33) usa permissões de mídia separadas
+      if (await Permission.audio.isGranted) return true;
 
-    var audioStatus = await Permission.audio.request();
-    if (audioStatus.isGranted) return true;
+      var audioStatus = await Permission.audio.request();
+      if (audioStatus.isGranted) return true;
 
-    // Android 12 ou menor ainda usa "storage"
-    if (await Permission.storage.isGranted) return true;
+      // Android 12 ou menor usa "storage"
+      if (await Permission.storage.isGranted) return true;
 
-    var storageStatus = await Permission.storage.request();
-    if (storageStatus.isGranted) return true;
+      var storageStatus = await Permission.storage.request();
+      return storageStatus.isGranted;
+    }
 
-    return false;
+    // iOS não precisa para OnAudioQuery
+    return true;
   }
 
   /// Carrega músicas do dispositivo

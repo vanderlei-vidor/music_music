@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:music_music/delegates/music_search_delegate.dart'; //assim está correto
 import 'package:provider/provider.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import '../../core/theme/app_colors.dart';
 import 'playlist_view_model.dart';
 import '../player/player_view.dart';
-import '../player/mini_player_view.dart'; // Importação do mini-player
+import '../player/mini_player_view.dart';
+ 
 
-class PlaylistView extends StatelessWidget {
+class PlaylistView extends StatefulWidget {
   const PlaylistView({super.key});
 
+  @override
+  State<PlaylistView> createState() => _PlaylistViewState();
+}
+
+class _PlaylistViewState extends State<PlaylistView> {
+  // A variável _audioQuery e _filteredMusics não são mais necessárias aqui,
+  // pois a lógica de dados está no PlaylistViewModel.
   String _formatDuration(int? duration) {
     if (duration == null) return "00:00";
     final minutes = (duration / 60000).truncate();
@@ -29,10 +38,18 @@ class PlaylistView extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          // Mantenha o IconButton de busca aqui. O Consumer no `body` já dá acesso ao viewModel.
           IconButton(
             icon: const Icon(Icons.search, color: Colors.white),
             onPressed: () {
-              // Ação do botão de busca
+              // Pegue o viewModel diretamente no contexto
+              final viewModel = Provider.of<PlaylistViewModel>(context, listen: false);
+              showSearch(
+                context: context,
+                // O `as List<SongModel>` é um "cast" seguro,
+                // já que você sabe que viewModel.musics é uma lista de SongModel.
+                delegate: MusicSearchDelegate(viewModel.musics),
+              );
             },
           ),
         ],
@@ -40,6 +57,12 @@ class PlaylistView extends StatelessWidget {
       body: Consumer<PlaylistViewModel>(
         builder: (context, viewModel, child) {
           final musics = viewModel.musics;
+          // Se a lista de músicas for nula ou vazia, mostre uma mensagem de carregamento ou erro.
+          if (musics == null || musics.isEmpty) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
           return Column(
             children: [
               Expanded(
@@ -48,7 +71,6 @@ class PlaylistView extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final music = musics[index];
                     final isPlaying = viewModel.currentMusic?.id == music.id;
-
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                       child: Container(
@@ -87,7 +109,7 @@ class PlaylistView extends StatelessWidget {
                             ),
                           ),
                           subtitle: Text(
-                            music.artist,
+                            music.artist ?? "Artista desconhecido",
                             style: const TextStyle(
                               color: Colors.white70,
                             ),
@@ -149,7 +171,6 @@ class PlaylistView extends StatelessWidget {
                   },
                 ),
               ),
-              // Adicionando o mini player na parte inferior
               if (viewModel.currentMusic != null)
                 const MiniPlayerView(),
             ],
