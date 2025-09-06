@@ -11,6 +11,7 @@ import 'package:music_music/models/music_model.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart' as p;
 
 enum PlayerState { playing, paused, stopped }
 
@@ -63,6 +64,8 @@ class PlaylistViewModel extends ChangeNotifier {
     _initAudioSession();
     _listenToPlayerStateAndSequence();
   }
+  
+ 
 
   // 🎵 Métodos de playlist (ajustados)
   Future<void> createPlaylist(String name) async {
@@ -163,7 +166,11 @@ class PlaylistViewModel extends ChangeNotifier {
       if (sequenceState != null && sequenceState.currentSource != null) {
         final index = sequenceState.currentIndex;
         if (index < _musics.length) {
-          _currentMusic = _musics[index];
+          final newMusic = _musics[index];
+          if (_currentMusic?.id != newMusic.id) {
+            _currentMusic = newMusic;
+            _generateWaveform(newMusic);
+          }
           
         }
       } else {
@@ -174,7 +181,56 @@ class PlaylistViewModel extends ChangeNotifier {
     });
   }
 
-  
+  StreamSubscription<WaveformProgress>? _waveformSub;
+
+  Future<void> _generateWaveform(Music music) async {
+  _currentWaveform = null;
+  notifyListeners();
+
+  try {
+    if (music.data == null) {
+      print("Music data path is null");
+      return;
+    }
+
+    final audioFile = File(music.data!);
+    if (!await audioFile.exists()) {
+      print("Arquivo de áudio não existe: ${music.data}");
+      return;
+    }
+
+    final waveFile = File(
+      p.join((await getTemporaryDirectory()).path, '${p.basename(music.data!)}.wave'),
+    );
+
+    // Cancela assinatura anterior
+    _waveformSub?.cancel();
+
+    final stream = JustWaveform.extract(
+      audioInFile: audioFile,
+      waveOutFile: waveFile,
+    );
+
+    _waveformSub = stream.listen(
+      (progress) {
+        if (progress.waveform != null) {
+          _currentWaveform = progress.waveform;
+          notifyListeners();
+        } else {
+          print("Progresso: ${(progress.progress * 100).toStringAsFixed(0)}%");
+        }
+      },
+      onError: (e) {
+        print("Erro ao gerar waveform: $e");
+        _currentWaveform = null;
+        notifyListeners();
+      },
+    );
+  } catch (e) {
+    print("Error generating waveform: $e");
+    _currentWaveform = null;
+  }
+  }
 
 
 
@@ -193,14 +249,24 @@ class PlaylistViewModel extends ChangeNotifier {
   }
 
   Future<void> playMusic(List<Music> musics, int index) async {
-    if (index >= 0 && index < _musics.length) {
-      _musics = musics;
-      _currentMusic = _musics[index];
-      notifyListeners();
-      await _setAudioSource(initialIndex: index);
-      await play();
-    }
+  if (index < 0 || index >= musics.length) return;
+
+  // Se a lista atual é diferente da nova, recria o AudioSource
+  if (_musics.isEmpty || _musics.length != musics.length) {
+    _musics = musics;
+    await _setAudioSource(initialIndex: index);
+    _currentMusic = _musics[index];
+    notifyListeners();
+    await play();
+    return;
   }
+
+  // Se a lista já é a mesma, apenas troca de índice
+  _currentMusic = musics[index];
+  notifyListeners();
+  await _player.seek(Duration.zero, index: index);
+  await play();
+}
 
   Future<void> nextMusic() async => await _player.seekToNext();
   Future<void> previousMusic() async => await _player.seekToPrevious();
@@ -278,6 +344,7 @@ class PlaylistViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+     _waveformSub?.cancel();
     _sleepTimer?.cancel();
     _player.dispose();
     super.dispose();

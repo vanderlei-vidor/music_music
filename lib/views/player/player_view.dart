@@ -301,26 +301,30 @@ class PlayerView extends StatelessWidget {
                         ? position.inMilliseconds / totalDuration.inMilliseconds
                         : 0.0;
                       return Column(
-                        children: [
-                          // Exibe a forma de onda se ela existir
-        if (currentWaveform != null)
+      children: [
+        if (currentWaveform != null && currentWaveform.data.isNotEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: SizedBox(
-              height: 150,
-              width: double.infinity,
-              child: CustomPaint(
-                painter: WaveformPainter(
-                  waveform: currentWaveform,
-                  progress: progress,
-                  playedColor: Colors.purple,
-                  unplayedColor: Colors.white24,
-                  strokeWidth: 1.5,
-                ),
-              ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SizedBox(
+                  height: 50,
+                  width: constraints.maxWidth, // Use a largura máxima disponível
+                  child: CustomPaint(
+                    painter: WaveformPainter(
+                      waveform: currentWaveform,
+                      progress: progress,
+                      playedColor: Colors.purple,
+                      unplayedColor: Colors.white24,
+                      strokeWidth: 1.5,
+                    ),
+                  ),
+                );
+              },
             ),
           ),
-          const SizedBox(height: 16),
+        
+          const SizedBox(height: 50),
           
                           SliderTheme(
                             data: SliderTheme.of(context).copyWith(

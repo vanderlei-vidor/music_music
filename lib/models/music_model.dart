@@ -9,6 +9,7 @@ class Music {
   final String title;
   final String artist;
   final String uri;
+  final String? data;
   final int? duration;
   final int? albumId;
   final String? album;
@@ -20,6 +21,7 @@ class Music {
     required this.title,
     required this.artist,
     required this.uri,
+    required this.data,
     this.duration,
     this.albumId,
     this.album,
@@ -33,6 +35,7 @@ class Music {
       title: song.title,
       artist: song.artist ?? 'Artista desconhecido',
       uri: song.uri!,
+      data: song.data,
       duration: song.duration,
       albumId: song.albumId,
       album: song.album,
@@ -48,6 +51,7 @@ class Music {
       'title': title,
       'artist': artist,
       'uri': uri,
+      'data': data,
       'duration': duration,
       'albumId': albumId,
       'album': album,
@@ -63,6 +67,7 @@ class Music {
       title: map['title'],
       artist: map['artist'],
       uri: map['uri'],
+      data: map['data'],
       duration: map['duration'],
       albumId: map['albumId'],
       album: map['album'],
@@ -71,6 +76,5 @@ class Music {
     );
   }
 
-  // ignore: recursive_getters
-  String? get data => data;
+  
 }

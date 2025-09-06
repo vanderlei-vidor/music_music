@@ -3,7 +3,7 @@ import 'package:just_waveform/just_waveform.dart';
 
 class WaveformPainter extends CustomPainter {
   final Waveform waveform;
-  final double progress; // De 0.0 a 1.0
+  final double progress; // 0.0 a 1.0
   final Color playedColor;
   final Color unplayedColor;
   final double strokeWidth;
@@ -31,24 +31,23 @@ class WaveformPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     final double widthPerSample = size.width / waveform.data.length;
-    final double maxSample = 127; // Valor máximo de um sample
-
-    final playedSamplesCount = (waveform.data.length * progress).toInt();
+    final int playedSamplesCount = (waveform.data.length * progress).toInt();
 
     for (int i = 0; i < waveform.data.length; i++) {
       final sample = waveform.data[i];
-      final x = i * widthPerSample;
-      final y = (size.height / 2) - (size.height / 2) * (sample / maxSample);
-      final height = (size.height) * (sample / maxSample);
 
-      // Define a cor com base no progresso da música
-      final paint = i < playedSamplesCount ? playedPaint : unplayedPaint;
       
+
+      final x = i * widthPerSample;
+      final normalizedY = (sample / 128.0) * (size.height / 2);
+
+      final paint = i < playedSamplesCount ? playedPaint : unplayedPaint;
+
       canvas.drawLine(
-        Offset(x, y),
-        Offset(x, y + height),
-        paint,
-      );
+    Offset(x, size.height / 2 - normalizedY),
+    Offset(x, size.height / 2 + normalizedY),
+    paint,
+    );
     }
   }
 

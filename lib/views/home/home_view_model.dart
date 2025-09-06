@@ -37,6 +37,7 @@ class HomeViewModel extends ChangeNotifier {
               title: song.title,
               artist: song.artist ?? "Desconhecido",
               uri: song.uri!,
+              data: song.data,
               albumId: song.albumId,
               duration: song.duration,
             ),
