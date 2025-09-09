@@ -1,13 +1,13 @@
 // lib/views/player/player_view.dart
 import 'package:flutter/material.dart';
 import 'package:music_music/views/playlist/playlists_screen.dart';
-import 'package:music_music/widgets/waveform_painter.dart';
+
 import 'package:provider/provider.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:just_audio/just_audio.dart' hide PlayerState;
 import '../../core/theme/app_colors.dart';
 import '../playlist/playlist_view_model.dart';
-import '../../widgets/sleep_timer_button.dart'; // Mantive o import caso você queira reutilizar o widget em outro lugar.
+import '../../widgets/sleep_timer_button.dart';
 
 class PlayerView extends StatelessWidget {
   const PlayerView({super.key});
@@ -76,7 +76,6 @@ class PlayerView extends StatelessWidget {
     );
   }
 
-  // Novo método para exibir o diálogo do temporizador
   void _showSleepTimerDialog(BuildContext context, PlaylistViewModel viewModel) {
     showDialog(
       context: context,
@@ -207,9 +206,7 @@ class PlayerView extends StatelessWidget {
                       );
                     }).toList(),
                   ),
-                  onTap: () {
-                    // Sem ação, pois o DropdownButton já lida com a interação
-                  },
+                  onTap: () {},
                 ),
               ],
             ),
@@ -219,7 +216,6 @@ class PlayerView extends StatelessWidget {
       body: Consumer<PlaylistViewModel>(
         builder: (context, viewModel, child) {
           final music = viewModel.currentMusic;
-          final currentWaveform = viewModel.currentWaveform;
           if (music == null) {
             return const Center(
                 child: CircularProgressIndicator(color: AppColors.accentPurple));
@@ -280,7 +276,7 @@ class PlayerView extends StatelessWidget {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    music.artist,
+                    music.artist ?? "Artista Desconhecido", // Corrigido para lidar com artista nulo
                     style: const TextStyle(
                       fontSize: 16,
                       color: Colors.white70,
@@ -290,42 +286,13 @@ class PlayerView extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 30),
-                  
                   StreamBuilder<Duration>(
                     stream: viewModel.positionStream,
                     builder: (context, snapshot) {
                       final position = snapshot.data ?? Duration.zero;
                       final totalDuration = Duration(milliseconds: music.duration ?? 0);
-                      // Calcula o progresso para a forma de onda
-                      final double progress = totalDuration.inMilliseconds > 0
-                        ? position.inMilliseconds / totalDuration.inMilliseconds
-                        : 0.0;
                       return Column(
-      children: [
-        if (currentWaveform != null && currentWaveform.data.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SizedBox(
-                  height: 50,
-                  width: constraints.maxWidth, // Use a largura máxima disponível
-                  child: CustomPaint(
-                    painter: WaveformPainter(
-                      waveform: currentWaveform,
-                      progress: progress,
-                      playedColor: Colors.purple,
-                      unplayedColor: Colors.white24,
-                      strokeWidth: 1.5,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        
-          const SizedBox(height: 50),
-          
+                        children: [
                           SliderTheme(
                             data: SliderTheme.of(context).copyWith(
                               trackHeight: 4.0,
@@ -342,7 +309,7 @@ class PlayerView extends StatelessWidget {
                                   : 0.0,
                               min: 0.0,
                               max: totalDuration.inMilliseconds.toDouble(),
-                              onChanged: (double value) {},
+                              onChanged: (double value) {}, // Não faz nada enquanto arrasta
                               onChangeEnd: (double value) {
                                 viewModel.seek(Duration(milliseconds: value.toInt()));
                               },
@@ -363,17 +330,12 @@ class PlayerView extends StatelessWidget {
                           ),
                         ],
                       );
-                      
                     },
                   ),
                   const SizedBox(height: 30),
-                  
-
-                  
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      
                       IconButton(
                         icon: Icon(Icons.shuffle,
                           size: 28,

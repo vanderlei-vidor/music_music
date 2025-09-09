@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:just_audio_background/just_audio_background.dart';
-import 'package:just_waveform/just_waveform.dart';
+
 import 'package:music_music/data/database_helper.dart';
 import 'package:music_music/models/music_model.dart';
 import 'package:on_audio_query/on_audio_query.dart';
@@ -41,8 +41,7 @@ class PlaylistViewModel extends ChangeNotifier {
   double get currentSpeed => _currentSpeed;
   Stream<Duration> get positionStream => _player.positionStream;
 
-  Waveform? _currentWaveform;
-  Waveform? get currentWaveform => _currentWaveform;
+  
 
   Stream<PlayerState> get playerStateStream =>
       _player.playerStateStream.map((state) {
@@ -169,69 +168,19 @@ class PlaylistViewModel extends ChangeNotifier {
           final newMusic = _musics[index];
           if (_currentMusic?.id != newMusic.id) {
             _currentMusic = newMusic;
-            _generateWaveform(newMusic);
+            
           }
           
         }
       } else {
         _currentMusic = null;
-        _currentWaveform = null;
+     
       }
       notifyListeners();
     });
   }
 
-  StreamSubscription<WaveformProgress>? _waveformSub;
-
-  Future<void> _generateWaveform(Music music) async {
-  _currentWaveform = null;
-  notifyListeners();
-
-  try {
-    if (music.data == null) {
-      print("Music data path is null");
-      return;
-    }
-
-    final audioFile = File(music.data!);
-    if (!await audioFile.exists()) {
-      print("Arquivo de áudio não existe: ${music.data}");
-      return;
-    }
-
-    final waveFile = File(
-      p.join((await getTemporaryDirectory()).path, '${p.basename(music.data!)}.wave'),
-    );
-
-    // Cancela assinatura anterior
-    _waveformSub?.cancel();
-
-    final stream = JustWaveform.extract(
-      audioInFile: audioFile,
-      waveOutFile: waveFile,
-    );
-
-    _waveformSub = stream.listen(
-      (progress) {
-        if (progress.waveform != null) {
-          _currentWaveform = progress.waveform;
-          notifyListeners();
-        } else {
-          print("Progresso: ${(progress.progress * 100).toStringAsFixed(0)}%");
-        }
-      },
-      onError: (e) {
-        print("Erro ao gerar waveform: $e");
-        _currentWaveform = null;
-        notifyListeners();
-      },
-    );
-  } catch (e) {
-    print("Error generating waveform: $e");
-    _currentWaveform = null;
-  }
-  }
-
+  
 
 
 
@@ -344,7 +293,7 @@ class PlaylistViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
-     _waveformSub?.cancel();
+     
     _sleepTimer?.cancel();
     _player.dispose();
     super.dispose();
