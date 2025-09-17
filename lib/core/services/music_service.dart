@@ -60,8 +60,7 @@ class MusicService {
       try {
         final Directory? musicDir = await _getMusicDirectory();
         if (musicDir != null && await musicDir.exists()) {
-          final List<FileSystemEntity> files = musicDir.listSync(recursive: true);
-          for (final FileSystemEntity file in files) {
+          await for (final FileSystemEntity file in musicDir.list(recursive: true)) {
             if (file is File && file.path.toLowerCase().endsWith('.mp3')) {
               try {
                 final tagProcessor = TagProcessor();
