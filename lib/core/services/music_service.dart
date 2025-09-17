@@ -1,21 +1,24 @@
 // core/services/music_service.dart
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import '../../models/music_model.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p; // Importe para juntar caminhos
+import 'package:path/path.dart' as p;
+import 'package:dart_tags/dart_tags.dart'; // ✅ Importe dart_tags
+import '../../data/database_helper.dart'; // ✅ Importe o DatabaseHelper
 
 class MusicService {
   final OnAudioQuery _audioQuery = OnAudioQuery();
+  final DatabaseHelper _dbHelper = DatabaseHelper(); // ✅ Instância do DB Helper
 
-  /// Pede permissão de acordo com a versão do Android.
   Future<bool> requestPermission() async {
+    // ... seu código de permissão (sem alterações)
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       return true;
     }
-    // ... restante do seu código para Android/iOS
     if (Platform.isAndroid) {
       if (await Permission.audio.isGranted) return true;
       var audioStatus = await Permission.audio.request();
@@ -23,10 +26,9 @@ class MusicService {
       var storageStatus = await Permission.storage.request();
       return storageStatus.isGranted;
     }
-    return true; // iOS
+    return true;
   }
 
-  /// Carrega músicas do dispositivo.
   Future<List<Music>> getSongs() async {
     final hasPermission = await requestPermission();
     if (!hasPermission) {
@@ -34,8 +36,10 @@ class MusicService {
       return [];
     }
 
+    List<Music> allMusics = [];
+
     if (Platform.isAndroid || Platform.isIOS) {
-      // ... sua lógica para mobile (sem alterações)
+      // ✅ Lógica para mobile (Android/iOS)
       try {
         final songs = await _audioQuery.querySongs(
           sortType: null,
@@ -43,47 +47,69 @@ class MusicService {
           uriType: UriType.EXTERNAL,
           ignoreCase: true,
         );
-        return songs.map((song) => Music.fromSongModel(song)).toList();
+        for (final song in songs) {
+          final music = Music.fromSongModel(song);
+          allMusics.add(music);
+          await _dbHelper.insertMusic(music); // ✅ Salva no banco de dados
+        }
       } catch (e) {
         debugPrint('Erro ao carregar músicas no mobile: $e');
-        return [];
       }
     } else {
-      // ✅ Lógica para desktop
+      // ✅ Lógica para desktop (corrigida)
       try {
         final Directory? musicDir = await _getMusicDirectory();
-        if (musicDir == null || !await musicDir.exists()) {
-          debugPrint('Diretório de músicas não encontrado.');
-          return [];
-        }
+        if (musicDir != null && await musicDir.exists()) {
+          final List<FileSystemEntity> files = musicDir.listSync(recursive: true);
+          for (final FileSystemEntity file in files) {
+            if (file is File && file.path.toLowerCase().endsWith('.mp3')) {
+              try {
+                final tagProcessor = TagProcessor();
+                final tags = await tagProcessor.getTagsFromByteArray(file.readAsBytes());
 
-        final List<FileSystemEntity> files = musicDir.listSync(recursive: true);
-        final List<Music> desktopSongs = [];
-        for (final FileSystemEntity file in files) {
-          if (file is File && file.path.endsWith('.mp3')) {
-            debugPrint('Música encontrada: ${file.path}');
-            desktopSongs.add(Music(
-              id: file.hashCode,
-              title: p.basenameWithoutExtension(file.path),
-              artist: 'Unknown',
-              uri: file.path,
-              data: file.path,
-              duration: 0,
-              albumId: 0,
-              album: 'Unknown',
-              albumArtUri: '',
-            ));
+                String title = p.basenameWithoutExtension(file.path);
+                String artist = 'Unknown';
+                
+                final tag = tags.firstWhere(
+                  (t) => t.tags.isNotEmpty,
+                  orElse: () => Tag(),
+                );
+                
+                if (tag.tags.isNotEmpty) {
+                  title = tag.tags['title'] ?? title;
+                  artist = tag.tags['artist'] ?? artist;
+                }
+
+                final music = Music(
+                  id: file.path.hashCode,
+                  title: title,
+                  artist: artist,
+                  uri: file.path,
+                  data: file.path,
+                  duration: 0,
+                  albumId: 0,
+                  album: '',
+                  albumArtUri: '',
+                );
+                
+                allMusics.add(music);
+                await _dbHelper.insertMusic(music); 
+              } catch (e) {
+                // ✅ ADICIONADO: Bloco try-catch para ignorar arquivos corrompidos
+                debugPrint('Erro ao processar arquivo de música, ignorando: ${file.path}');
+                debugPrint('Detalhes do erro: $e');
+              }
+            }
           }
         }
-        return desktopSongs;
       } catch (e) {
         debugPrint('Erro ao carregar músicas no desktop: $e');
-        return [];
       }
     }
+    
+    return allMusics;
   }
 
-  /// ✅ Função corrigida para encontrar o diretório de Músicas.
   Future<Directory?> _getMusicDirectory() async {
     if (Platform.isWindows) {
       final userProfile = Platform.environment['USERPROFILE'];
@@ -96,7 +122,6 @@ class MusicService {
         return Directory(p.join(home, 'Music'));
       }
     }
-    // Retorna nulo se o diretório não for encontrado
     return null;
   }
 }

@@ -280,52 +280,62 @@ class PlayerView extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 30),
-                  StreamBuilder<Duration>(
-                    stream: viewModel.positionStream,
-                    builder: (context, snapshot) {
-                      final position = snapshot.data ?? Duration.zero;
-                      final totalDuration = Duration(milliseconds: music.duration ?? 0);
-                      return Column(
-                        children: [
-                          SliderTheme(
-                            data: SliderTheme.of(context).copyWith(
-                              trackHeight: 4.0,
-                              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8.0),
-                              overlayShape: const RoundSliderOverlayShape(overlayRadius: 16.0),
-                              activeTrackColor: AppColors.accentPurple,
-                              inactiveTrackColor: Colors.white.withOpacity(0.3),
-                              thumbColor: AppColors.accentPurple,
-                              overlayColor: AppColors.accentPurple.withOpacity(0.2),
-                            ),
-                            child: Slider(
-                              value: totalDuration.inMilliseconds > 0
-                                  ? position.inMilliseconds.toDouble()
-                                  : 0.0,
-                              min: 0.0,
-                              max: totalDuration.inMilliseconds.toDouble(),
-                              onChanged: (double value) {}, // Não faz nada enquanto arrasta
-                              onChangeEnd: (double value) {
-                                viewModel.seek(Duration(milliseconds: value.toInt()));
-                              },
-                            ),
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                _formatDuration(position),
-                                style: const TextStyle(color: Colors.white70),
+                  // ✅ CÓDIGO CORRIGIDO AQUI ✅
+                StreamBuilder<Duration?>(
+                  stream: viewModel.player.durationStream,
+                  builder: (context, durationSnapshot) {
+                    final totalDuration = durationSnapshot.data ?? Duration.zero;
+
+                    return StreamBuilder<Duration>(
+                      stream: viewModel.positionStream,
+                      builder: (context, positionSnapshot) {
+                        final position = positionSnapshot.data ?? Duration.zero;
+
+                        return Column(
+                          children: [
+                            SliderTheme(
+                              data: SliderTheme.of(context).copyWith(
+                                trackHeight: 4.0,
+                                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8.0),
+                                overlayShape: const RoundSliderOverlayShape(overlayRadius: 16.0),
+                                activeTrackColor: AppColors.accentPurple,
+                                inactiveTrackColor: Colors.white.withOpacity(0.3),
+                                thumbColor: AppColors.accentPurple,
+                                overlayColor: AppColors.accentPurple.withOpacity(0.2),
                               ),
-                              Text(
-                                _formatDuration(totalDuration),
-                                style: const TextStyle(color: Colors.white70),
+                              child: Slider(
+                                // ✅ A duração total é usada aqui
+                                value: totalDuration.inMilliseconds > 0
+                                    ? position.inMilliseconds.toDouble()
+                                    : 0.0,
+                                min: 0.0,
+                                max: totalDuration.inMilliseconds.toDouble(),
+                                onChanged: (double value) {},
+                                onChangeEnd: (double value) {
+                                  viewModel.seek(Duration(milliseconds: value.toInt()));
+                                },
                               ),
-                            ],
-                          ),
-                        ],
-                      );
-                    },
-                  ),
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  _formatDuration(position),
+                                  style: const TextStyle(color: Colors.white70),
+                                ),
+                                Text(
+                                  // ✅ A duração total é usada aqui
+                                  _formatDuration(totalDuration),
+                                  style: const TextStyle(color: Colors.white70),
+                                ),
+                              ],
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ),
                   const SizedBox(height: 30),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,

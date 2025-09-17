@@ -40,7 +40,7 @@ class PlaylistViewModel extends ChangeNotifier {
   LoopMode get repeatMode => _repeatMode;
   double get currentSpeed => _currentSpeed;
   Stream<Duration> get positionStream => _player.positionStream;
-
+  AudioPlayer get player => _player;
   
 
   Stream<PlayerState> get playerStateStream =>
@@ -118,34 +118,39 @@ class PlaylistViewModel extends ChangeNotifier {
   }
 
   // Define playlist no player
-  Future<void> _setAudioSource({int initialIndex = 0}) async {
-    if (_musics.isEmpty) return;
+  // Define playlist no player
+Future<void> _setAudioSource({int initialIndex = 0}) async {
+  if (_musics.isEmpty) return;
 
-    final playlist = ConcatenatingAudioSource(
+  final playlist = ConcatenatingAudioSource(
     children: _musics.map((music) {
-      // ⚠️ CÓDIGO MODIFICADO AQUI ⚠️
-      Uri uri;
-      // Use 'file://' para desktops e caminhos de arquivo absolutos.
-      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-        uri = Uri.file(music.data!); 
-      } else {
-        // Mantenha o comportamento original para mobile.
+      Uri? uri;
+      // ✅ Usar Uri.file() para desktop e Android para garantir o caminho correto
+      if (music.data != null) {
+        uri = Uri.file(music.data!);
+      } else if (music.uri != null) {
+        // Fallback para URIs do OnAudioQuery em mobile se necessário
         uri = Uri.parse(music.uri!);
+      } else {
+        // Se ambos forem nulos, retorne uma fonte de áudio vazia para evitar erros
+        return null;
       }
-
-      // A lógica para a capa do álbum é o ponto mais crítico aqui
-      // No mobile, você tem um albumId, no desktop, você precisa do arquivo de imagem
-      // Aqui, vamos usar um placeholder. Para uma solução completa, você
-      // precisaria de uma biblioteca para extrair a capa do arquivo .mp3 (como o flutter_media_metadata)
+      
+      // ✅ A lógica para a capa do álbum
       Uri? albumArtUri;
       if (Platform.isAndroid || Platform.isIOS) {
+        // Lógica original do mobile
         albumArtUri = music.albumId != null
             ? Uri.parse("content://media/external/audio/albumart/${music.albumId}")
             : Uri.parse("asset:///assets/images/notifica.png");
       } else {
-        // Lógica para desktop - você precisaria encontrar a capa do álbum.
-        // Por enquanto, usaremos um placeholder.
+        // Lógica para desktop (placeholder)
         albumArtUri = Uri.parse("asset:///assets/images/notifica.png");
+      }
+
+      // Adicionar uma verificação de segurança antes de retornar
+      if (uri == null) {
+        return null;
       }
 
       return AudioSource.uri(
@@ -158,16 +163,15 @@ class PlaylistViewModel extends ChangeNotifier {
           artUri: albumArtUri,
         ),
       );
-    }).toList(),
+    }).whereType<AudioSource>().toList(), // Filtrar elementos nulos
   );
-    await _player.setAudioSource(
-      playlist,
-      initialIndex: initialIndex, // 👉 começa exatamente da música clicada
-    );
 
-    //await _player.setAudioSource(playlist);
-    await _player.setShuffleModeEnabled(isShuffled);
-  }
+  await _player.setAudioSource(
+    playlist,
+    initialIndex: initialIndex,
+  );
+  await _player.setShuffleModeEnabled(isShuffled);
+}
 
   // Listener de estados
   void _listenToPlayerStateAndSequence() {

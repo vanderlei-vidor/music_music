@@ -75,35 +75,25 @@ class DatabaseHelper {
     ''');
   }
 
-  // Método para obter todas as músicas do dispositivo
+  // ✅ CORRIGIDO: Este método agora só lê do banco de dados.
+  // A lógica de popular o banco foi movida para o MusicService.
   Future<List<Music>> getAllMusics() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('musics');
 
-    // Se a tabela estiver vazia, popular com músicas do dispositivo
-    if (maps.isEmpty) {
-      final OnAudioQuery audioQuery = OnAudioQuery();
-      final List<SongModel> songs = await audioQuery.querySongs(
-        sortType: null,
-        orderType: OrderType.ASC_OR_SMALLER,
-        uriType: UriType.EXTERNAL,
-      );
-
-      await db.transaction((txn) async {
-        final batch = txn.batch();
-        for (var song in songs) {
-          final music = Music.fromSongModel(song);
-          batch.insert('musics', music.toMap(), conflictAlgorithm: ConflictAlgorithm.ignore);
-        }
-        await batch.commit(noResult: true);
-      });
-
-      return songs.map((song) => Music.fromSongModel(song)).toList();
-    }
-    
     return List.generate(maps.length, (i) {
       return Music.fromMap(maps[i]);
     });
+  }
+
+  // ✅ NOVO: Método para inserir uma música no banco de dados
+  Future<void> insertMusic(Music music) async {
+    final db = await database;
+    await db.insert(
+      'musics',
+      music.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace, // Substitui se o ID já existir
+    );
   }
 
   // Método para criar uma nova playlist
