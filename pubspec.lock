@@ -57,6 +57,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.2"
+  build_cli_annotations:
+    dependency: transitive
+    description:
+      name: build_cli_annotations
+      sha256: e563c2e01de8974566a1998410d3f6f03521788160a02503b0b1f1a46c7b3d95
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.1"
   characters:
     dependency: transitive
     description:
@@ -81,14 +89,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.19.1"
-  convert:
-    dependency: transitive
-    description:
-      name: convert
-      sha256: b30acd5944035672bc15c6b7a8b47d773e41e2f17de064350988c5d02adb1c68
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.1.2"
   cross_file:
     dependency: transitive
     description:
@@ -113,14 +113,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.8"
-  dart_tags:
-    dependency: "direct main"
-    description:
-      name: dart_tags
-      sha256: "2dbe297845ff979581b404bf6fac9278466cecac20b8e5ae3c3d30a46f418632"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.4.1"
   dbus:
     dependency: transitive
     description:
@@ -198,6 +190,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.30"
+  flutter_rust_bridge:
+    dependency: transitive
+    description:
+      name: flutter_rust_bridge
+      sha256: "37ef40bc6f863652e865f0b2563ea07f0d3c58d8efad803cc01933a4b2ee067e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.11.1"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -344,6 +344,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.16.0"
+  metadata_god:
+    dependency: "direct main"
+    description:
+      name: metadata_god
+      sha256: "2b19b7e88cf5ab7016fe8d1f868bb35a193aaef06fd96cfc7de4ec3eacc16eb0"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.0"
   nested:
     dependency: transitive
     description:
@@ -709,14 +717,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
-  utf_convert:
-    dependency: transitive
-    description:
-      name: utf_convert
-      sha256: c9f84e1165735eb13f643cbaace89a34e72db5f9f224f0ffa8931b6f58aa56fe
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.10.0+1"
   uuid:
     dependency: transitive
     description:

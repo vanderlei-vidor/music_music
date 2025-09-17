@@ -47,7 +47,7 @@ dependencies:
   path_provider: ^2.1.5
   file_picker: ^10.3.2
   window_manager: ^0.5.1
-  dart_tags: ^0.4.1
+  metadata_god: ^1.1.0
   
 
   

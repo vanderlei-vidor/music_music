@@ -2,12 +2,13 @@
 
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:metadata_god/metadata_god.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import '../../models/music_model.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:dart_tags/dart_tags.dart'; // ✅ Importe dart_tags
+
 import '../../data/database_helper.dart'; // ✅ Importe o DatabaseHelper
 
 class MusicService {
@@ -58,56 +59,42 @@ class MusicService {
     } else {
       // ✅ Lógica para desktop (corrigida)
       try {
-        final Directory? musicDir = await _getMusicDirectory();
-        if (musicDir != null && await musicDir.exists()) {
-          await for (final FileSystemEntity file in musicDir.list(recursive: true)) {
-            if (file is File && file.path.toLowerCase().endsWith('.mp3')) {
-              try {
-                final tagProcessor = TagProcessor();
-                final tags = await tagProcessor.getTagsFromByteArray(file.readAsBytes());
+ final Directory? musicDir = await _getMusicDirectory();
+ if (musicDir != null && await musicDir.exists()) {
+ final files = musicDir.listSync(recursive: true, followLinks: false)
+ .where((item) => item.path.toLowerCase().endsWith('.mp3') || item.path.toLowerCase().endsWith('.m4a'));
+ 
+ for (final FileSystemEntity file in files) {
+ if (file is File) {
+ try {
+ final metadata = await MetadataGod.readMetadata(file.path);
 
-                String title = p.basenameWithoutExtension(file.path);
-                String artist = 'Unknown';
-                
-                final tag = tags.firstWhere(
-                  (t) => t.tags.isNotEmpty,
-                  orElse: () => Tag(),
-                );
-                
-                if (tag.tags.isNotEmpty) {
-                  title = tag.tags['title'] ?? title;
-                  artist = tag.tags['artist'] ?? artist;
-                }
-
-                final music = Music(
-                  id: file.path.hashCode,
-                  title: title,
-                  artist: artist,
-                  uri: file.path,
-                  data: file.path,
-                  duration: 0,
-                  albumId: 0,
-                  album: '',
-                  albumArtUri: '',
-                );
-                
-                allMusics.add(music);
-                await _dbHelper.insertMusic(music); 
-              } catch (e) {
-                // ✅ ADICIONADO: Bloco try-catch para ignorar arquivos corrompidos
-                debugPrint('Erro ao processar arquivo de música, ignorando: ${file.path}');
-                debugPrint('Detalhes do erro: $e');
-              }
-            }
-          }
-        }
-      } catch (e) {
-        debugPrint('Erro ao carregar músicas no desktop: $e');
-      }
-    }
-    
-    return allMusics;
-  }
+final music = Music(
+ id: file.path.hashCode,
+ title: metadata.title ?? p.basenameWithoutExtension(file.path),
+ artist: metadata.artist ?? 'Unknown',
+ uri: file.path,
+ data: file.path,
+ duration: metadata.durationMs,
+ albumId: null, // metadata_god não tem essa propriedade
+ album: metadata.album ?? 'Unknown',
+albumArtUri: '',
+ );
+ allMusics.add(music);
+ await _dbHelper.insertMusic(music);
+ } catch (e) {
+ debugPrint('Erro ao processar arquivo de música, ignorando: ${file.path}');
+ debugPrint('Detalhes do erro: $e');
+ }
+ }
+ }
+ }
+ } catch (e) {
+ debugPrint('Erro ao carregar músicas no desktop: $e');
+ }
+ }
+ return allMusics;
+}
 
   Future<Directory?> _getMusicDirectory() async {
     if (Platform.isWindows) {

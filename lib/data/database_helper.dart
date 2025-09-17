@@ -95,6 +95,16 @@ class DatabaseHelper {
       conflictAlgorithm: ConflictAlgorithm.replace, // Substitui se o ID já existir
     );
   }
+  Future<bool> musicExists(int id) async {
+  final db = await database;
+  final result = await db.query(
+    'musics',
+    where: 'id = ?',
+    whereArgs: [id],
+    limit: 1,
+  );
+  return result.isNotEmpty;
+}
 
   // Método para criar uma nova playlist
   Future<void> createPlaylist(String playlistName) async {
