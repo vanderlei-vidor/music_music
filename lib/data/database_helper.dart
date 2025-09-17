@@ -3,9 +3,11 @@ import 'package:on_audio_query/on_audio_query.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../../models/music_model.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class DatabaseHelper {
   static Database? _database;
+  
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -14,16 +16,23 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDB() async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'music_music.db');
-
-    return await openDatabase(
-      path,
-      version: 2,
-      onCreate: _onCreate,
-      onUpgrade: _onUpgrade,
-    );
+  // Use sqflite_common_ffi para desktop
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
   }
+  
+  // O restante do seu código pode permanecer o mesmo, pois o 'getDatabasesPath()' e o 'join()' já são compatíveis.
+  final dbPath = await getDatabasesPath();
+  final path = join(dbPath, 'music_music.db');
+  
+  return await openDatabase(
+    path,
+    version: 2,
+    onCreate: _onCreate,
+    onUpgrade: _onUpgrade,
+  );
+}
 
 // Added onUpgrade to migrate the database
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {

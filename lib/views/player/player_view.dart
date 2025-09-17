@@ -1,4 +1,6 @@
 // lib/views/player/player_view.dart
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:music_music/views/playlist/playlists_screen.dart';
 
@@ -220,6 +222,9 @@ class PlayerView extends StatelessWidget {
             return const Center(
                 child: CircularProgressIndicator(color: AppColors.accentPurple));
           }
+          final double imageSize = MediaQuery.of(context).size.width * 0.9 > 400 
+           ? 400 
+           : MediaQuery.of(context).size.width * 0.9;
 
           return Container(
             decoration: const BoxDecoration(
@@ -231,32 +236,21 @@ class PlayerView extends StatelessWidget {
             ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: ListView(
                 children: [
                   SizedBox(
-                    width: MediaQuery.of(context).size.width * 0.9,
-                    height: MediaQuery.of(context).size.width * 0.9,
-                    child: QueryArtworkWidget(
-                      id: music.albumId ?? 0,
-                      type: ArtworkType.ALBUM,
-                      artworkBorder: BorderRadius.circular(20),
-                      nullArtworkWidget: Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.cardBackground,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(Icons.music_note, size: 100, color: AppColors.lightPurple),
-                      ),
-                    ),
-                  ),
+                    width: imageSize,
+                   height: imageSize,
+                    // ✅ Lógica de verificação de plataforma
+ child: Platform.isWindows || Platform.isLinux || Platform.isMacOS
+ ? _buildDefaultArtwork() // Widget para Desktop
+ : QueryArtworkWidget( // Widget para Mobile
+ id: music.albumId ?? 0,
+ type: ArtworkType.ALBUM,
+ artworkBorder: BorderRadius.circular(20),
+ nullArtworkWidget: _buildDefaultArtwork(),
+ ),
+),
                   const SizedBox(height: 30),
                   SizedBox(
                     height: 30,
@@ -394,4 +388,23 @@ class PlayerView extends StatelessWidget {
       ),
     );
   }
+
+
+// ✅ Novo widget para mostrar a arte do álbum padrão para desktop
+ Widget _buildDefaultArtwork() {
+ return Container(
+decoration: BoxDecoration(
+ color: AppColors.cardBackground,
+ borderRadius: BorderRadius.circular(20),
+ boxShadow: [
+ BoxShadow(
+ color: Colors.black.withOpacity(0.3),
+ blurRadius: 20,
+ offset: const Offset(0, 10),
+ ),
+ ],
+ ),
+ child: const Icon(Icons.music_note, size: 100, color: AppColors.lightPurple),
+ );
+ }
 }

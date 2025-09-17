@@ -14,7 +14,7 @@ class Music {
   final int? albumId;
   final String? album;
   final String? albumArtUri;
-  bool isFavorite;
+  
 
   Music({
     required this.id,
@@ -26,7 +26,7 @@ class Music {
     this.albumId,
     this.album,
     this.albumArtUri,
-    this.isFavorite = false,
+    
   });
 
   factory Music.fromSongModel(SongModel song) {
@@ -56,7 +56,7 @@ class Music {
       'albumId': albumId,
       'album': album,
       'albumArtUri': albumArtUri,
-      'isFavorite': isFavorite ? 1 : 0, // Converta o bool para int
+      
     };
   }
 
@@ -72,7 +72,7 @@ class Music {
       albumId: map['albumId'],
       album: map['album'],
       albumArtUri: map['albumArtUri'],
-      isFavorite: map['isFavorite'] == 1,
+     
     );
   }
 

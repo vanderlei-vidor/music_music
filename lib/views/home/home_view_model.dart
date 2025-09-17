@@ -1,17 +1,20 @@
 // lib/views/home/home_view_model.dart
 import 'package:flutter/material.dart';
-import 'package:on_audio_query/on_audio_query.dart';
 import '../../models/music_model.dart';
+import '../../core/services/music_service.dart'; // ✅ Importe seu MusicService
 
 class HomeViewModel extends ChangeNotifier {
-  // Adicione a propriedade para a instância de OnAudioQuery
-  final OnAudioQuery _audioQuery;
-
-  // Crie um construtor que aceita OnAudioQuery como parâmetro
-  HomeViewModel(this._audioQuery);
+  // ✅ Remova a dependência de OnAudioQuery no construtor.
+  // ✅ Instancie o MusicService diretamente.
+  final MusicService _musicService = MusicService();
 
   final List<Music> _musics = [];
   bool _isLoading = true;
+
+  // Construtor sem argumentos.
+  HomeViewModel() {
+    loadMusics(); // ✅ Inicie o carregamento de músicas automaticamente.
+  }
 
   List<Music> get musics => _musics;
   bool get isLoading => _isLoading;
@@ -21,29 +24,13 @@ class HomeViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final List<SongModel> songs = await _audioQuery.querySongs(
-        orderType: OrderType.ASC_OR_SMALLER,
-        uriType: UriType.EXTERNAL,
-        sortType: null,
-        ignoreCase: true,
-      );
+      // ✅ Agora, ele usa o MusicService para buscar as músicas.
+      // A lógica de plataforma está toda dentro do MusicService.
+      final List<Music> songs = await _musicService.getSongs();
 
       _musics.clear();
-      for (var song in songs) {
-        if (song.isMusic!) {
-          _musics.add(
-            Music(
-              id: song.id,
-              title: song.title,
-              artist: song.artist ?? "Desconhecido",
-              uri: song.uri!,
-              data: song.data,
-              albumId: song.albumId,
-              duration: song.duration,
-            ),
-          );
-        }
-      }
+      _musics.addAll(songs);
+      
     } catch (e) {
       debugPrint("Erro ao carregar músicas: $e");
     } finally {
@@ -52,7 +39,7 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
-  // Método para buscar músicas por título
+  // Método para buscar músicas por título (sem alterações necessárias).
   List<Music> searchMusics(String query) {
     if (query.isEmpty) {
       return _musics;

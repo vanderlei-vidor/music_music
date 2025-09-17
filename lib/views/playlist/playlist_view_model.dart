@@ -122,23 +122,44 @@ class PlaylistViewModel extends ChangeNotifier {
     if (_musics.isEmpty) return;
 
     final playlist = ConcatenatingAudioSource(
-      children: _musics.map((music) {
-        return AudioSource.uri(
-          Uri.parse(music.uri),
-          tag: MediaItem(
-            id: music.id.toString(),
-            album: music.album ?? 'Álbum desconhecido',
-            title: music.title,
-            artist: music.artist,
-            artUri: music.albumId != null
-                ? Uri.parse(
-                    "content://media/external/audio/albumart/${music.albumId}",
-                  )
-                : Uri.parse("asset:///assets/images/notifica.png"),
-          ),
-        );
-      }).toList(),
-    );
+    children: _musics.map((music) {
+      // ⚠️ CÓDIGO MODIFICADO AQUI ⚠️
+      Uri uri;
+      // Use 'file://' para desktops e caminhos de arquivo absolutos.
+      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+        uri = Uri.file(music.data!); 
+      } else {
+        // Mantenha o comportamento original para mobile.
+        uri = Uri.parse(music.uri!);
+      }
+
+      // A lógica para a capa do álbum é o ponto mais crítico aqui
+      // No mobile, você tem um albumId, no desktop, você precisa do arquivo de imagem
+      // Aqui, vamos usar um placeholder. Para uma solução completa, você
+      // precisaria de uma biblioteca para extrair a capa do arquivo .mp3 (como o flutter_media_metadata)
+      Uri? albumArtUri;
+      if (Platform.isAndroid || Platform.isIOS) {
+        albumArtUri = music.albumId != null
+            ? Uri.parse("content://media/external/audio/albumart/${music.albumId}")
+            : Uri.parse("asset:///assets/images/notifica.png");
+      } else {
+        // Lógica para desktop - você precisaria encontrar a capa do álbum.
+        // Por enquanto, usaremos um placeholder.
+        albumArtUri = Uri.parse("asset:///assets/images/notifica.png");
+      }
+
+      return AudioSource.uri(
+        uri,
+        tag: MediaItem(
+          id: music.id.toString(),
+          album: music.album ?? 'Álbum desconhecido',
+          title: music.title,
+          artist: music.artist,
+          artUri: albumArtUri,
+        ),
+      );
+    }).toList(),
+  );
     await _player.setAudioSource(
       playlist,
       initialIndex: initialIndex, // 👉 começa exatamente da música clicada
