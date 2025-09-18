@@ -1,6 +1,7 @@
 // main.dart
 import 'dart:io'; // Import for platform check
 import 'package:flutter/material.dart';
+import 'package:metadata_god/metadata_god.dart';
 import 'package:provider/provider.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:just_audio_background/just_audio_background.dart';
@@ -16,7 +17,7 @@ import 'views/home/home_view_model.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  MetadataGod.initialize();
   // Set up the window for desktop platforms
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     sqfliteFfiInit();
