@@ -294,6 +294,14 @@ Future<void> _setAudioSource({int initialIndex = 0}) async {
     return playlistsWithCount;
   }
 
+  Future<void> setVolume(double volume) async {
+  // O volume deve estar entre 0.0 e 1.0 para ser válido
+  if (volume >= 0.0 && volume <= 1.0) {
+    await _player.setVolume(volume);
+    notifyListeners();
+    }
+  }
+
   // 😴 Métodos para o temporizador de desligamento
   void setSleepTimer(Duration duration) {
     _sleepTimer?.cancel();

@@ -1,18 +1,54 @@
 // lib/views/player/player_view.dart
+
 import 'dart:io';
+import 'dart:async'; // 👈 Importante: Adicione esta linha para usar o Timer
 
 import 'package:flutter/material.dart';
 import 'package:music_music/views/playlist/playlists_screen.dart';
-
 import 'package:provider/provider.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:just_audio/just_audio.dart' hide PlayerState;
 import '../../core/theme/app_colors.dart';
 import '../playlist/playlist_view_model.dart';
-import '../../widgets/sleep_timer_button.dart';
+import '../../widgets/sleep_timer_button.dart'; // Mantido para referência, mas não usado aqui
 
-class PlayerView extends StatelessWidget {
+class PlayerView extends StatefulWidget {
   const PlayerView({super.key});
+
+  @override
+  State<PlayerView> createState() => _PlayerViewState();
+}
+
+class _PlayerViewState extends State<PlayerView> {
+  // ✅ Estado e temporizador para o slider de volume
+  bool _showVolumeSlider = false;
+  Timer? _volumeSliderTimer;
+
+  // ✅ Método para mostrar e esconder o slider
+  void _toggleVolumeSlider(bool show) {
+    setState(() {
+      _showVolumeSlider = show;
+    });
+
+    _volumeSliderTimer?.cancel();
+
+    if (show) {
+      _volumeSliderTimer = Timer(const Duration(seconds: 3), () {
+        if (mounted) { // Garante que o widget ainda está na árvore
+          setState(() {
+            _showVolumeSlider = false;
+          });
+        }
+      });
+    }
+  }
+
+  // ✅ Lembre de cancelar o timer quando o widget for descartado
+  @override
+  void dispose() {
+    _volumeSliderTimer?.cancel();
+    super.dispose();
+  }
 
   String _formatDuration(Duration? duration) {
     if (duration == null) return "00:00";
@@ -124,9 +160,49 @@ class PlayerView extends StatelessWidget {
     );
   }
 
+  // ✅ Método para mostrar o diálogo de velocidade de reprodução
+  void _showPlaybackSpeedDialog(BuildContext context, PlaylistViewModel viewModel) {
+    final List<double> playbackSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: AppColors.cardBackground,
+          title: const Text('Velocidade de Reprodução', style: TextStyle(color: Colors.white)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: playbackSpeeds.map((speed) {
+              return RadioListTile<double>(
+                title: Text('${speed}x', style: const TextStyle(color: Colors.white)),
+                value: speed,
+                groupValue: viewModel.currentSpeed,
+                activeColor: AppColors.accentPurple,
+                onChanged: (double? newValue) {
+                  if (newValue != null) {
+                    viewModel.setPlaybackSpeed(newValue);
+                    Navigator.pop(context);
+                  }
+                },
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<PlaylistViewModel>();
+    final music = viewModel.currentMusic;
+
+    if (music == null) {
+      return const Center(child: CircularProgressIndicator(color: AppColors.accentPurple));
+    }
+
+    final double imageSize = MediaQuery.of(context).size.width * 0.9 > 400
+        ? 400
+        : MediaQuery.of(context).size.width * 0.9;
 
     return Scaffold(
       appBar: AppBar(
@@ -190,43 +266,36 @@ class PlayerView extends StatelessWidget {
                 ListTile(
                   leading: const Icon(Icons.speed, color: AppColors.accentPurple),
                   title: const Text('Velocidade de Reprodução', style: TextStyle(color: Colors.white)),
-                  trailing: DropdownButton<double>(
-                    value: viewModel.currentSpeed,
-                    dropdownColor: AppColors.cardBackground,
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showPlaybackSpeedDialog(context, viewModel);
+                  },
+                  trailing: Text(
+                    '${viewModel.currentSpeed}x',
                     style: const TextStyle(color: Colors.white),
-                    icon: const Icon(Icons.arrow_drop_down, color: AppColors.accentPurple),
-                    underline: Container(),
-                    onChanged: (double? newValue) {
-                      if (newValue != null) {
-                        viewModel.setPlaybackSpeed(newValue);
-                      }
-                    },
-                    items: playbackSpeeds.map<DropdownMenuItem<double>>((double value) {
-                      return DropdownMenuItem<double>(
-                        value: value,
-                        child: Text('${value}x', style: const TextStyle(color: Colors.white)),
-                      );
-                    }).toList(),
                   ),
-                  onTap: () {},
+                ),
+                // ✅ Novo item de menu para o volume
+                ListTile(
+                  leading: const Icon(Icons.volume_up, color: AppColors.accentPurple),
+                  title: const Text('Volume', style: TextStyle(color: Colors.white)),
+                  trailing: Text(
+                    (viewModel.player.volume * 100).toInt().toString(), // Exibe o volume em porcentagem
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _toggleVolumeSlider(true);
+                  },
                 ),
               ],
             ),
           );
         },
       ),
-      body: Consumer<PlaylistViewModel>(
-        builder: (context, viewModel, child) {
-          final music = viewModel.currentMusic;
-          if (music == null) {
-            return const Center(
-                child: CircularProgressIndicator(color: AppColors.accentPurple));
-          }
-          final double imageSize = MediaQuery.of(context).size.width * 0.9 > 400 
-           ? 400 
-           : MediaQuery.of(context).size.width * 0.9;
-
-          return Container(
+      body: Stack(
+        children: [
+          Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [AppColors.background, Color(0xFF13101E)],
@@ -240,17 +309,16 @@ class PlayerView extends StatelessWidget {
                 children: [
                   SizedBox(
                     width: imageSize,
-                   height: imageSize,
-                    // ✅ Lógica de verificação de plataforma
- child: Platform.isWindows || Platform.isLinux || Platform.isMacOS
- ? _buildDefaultArtwork() // Widget para Desktop
- : QueryArtworkWidget( // Widget para Mobile
- id: music.albumId ?? 0,
- type: ArtworkType.ALBUM,
- artworkBorder: BorderRadius.circular(20),
- nullArtworkWidget: _buildDefaultArtwork(),
- ),
-),
+                    height: imageSize,
+                    child: Platform.isWindows || Platform.isLinux || Platform.isMacOS
+                        ? _buildDefaultArtwork()
+                        : QueryArtworkWidget(
+                            id: music.albumId ?? 0,
+                            type: ArtworkType.ALBUM,
+                            artworkBorder: BorderRadius.circular(20),
+                            nullArtworkWidget: _buildDefaultArtwork(),
+                          ),
+                  ),
                   const SizedBox(height: 30),
                   SizedBox(
                     height: 30,
@@ -270,7 +338,7 @@ class PlayerView extends StatelessWidget {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    music.artist ?? "Artista Desconhecido", // Corrigido para lidar com artista nulo
+                    music.artist ?? "Artista Desconhecido",
                     style: const TextStyle(
                       fontSize: 16,
                       color: Colors.white70,
@@ -280,62 +348,59 @@ class PlayerView extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 30),
-                  // ✅ CÓDIGO CORRIGIDO AQUI ✅
-                StreamBuilder<Duration?>(
-                  stream: viewModel.player.durationStream,
-                  builder: (context, durationSnapshot) {
-                    final totalDuration = durationSnapshot.data ?? Duration.zero;
+                  StreamBuilder<Duration?>(
+                    stream: viewModel.player.durationStream,
+                    builder: (context, durationSnapshot) {
+                      final totalDuration = durationSnapshot.data ?? Duration.zero;
 
-                    return StreamBuilder<Duration>(
-                      stream: viewModel.positionStream,
-                      builder: (context, positionSnapshot) {
-                        final position = positionSnapshot.data ?? Duration.zero;
+                      return StreamBuilder<Duration>(
+                        stream: viewModel.positionStream,
+                        builder: (context, positionSnapshot) {
+                          final position = positionSnapshot.data ?? Duration.zero;
 
-                        return Column(
-                          children: [
-                            SliderTheme(
-                              data: SliderTheme.of(context).copyWith(
-                                trackHeight: 4.0,
-                                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8.0),
-                                overlayShape: const RoundSliderOverlayShape(overlayRadius: 16.0),
-                                activeTrackColor: AppColors.accentPurple,
-                                inactiveTrackColor: Colors.white.withOpacity(0.3),
-                                thumbColor: AppColors.accentPurple,
-                                overlayColor: AppColors.accentPurple.withOpacity(0.2),
-                              ),
-                              child: Slider(
-                                // ✅ A duração total é usada aqui
-                                value: totalDuration.inMilliseconds > 0
-                                    ? position.inMilliseconds.toDouble()
-                                    : 0.0,
-                                min: 0.0,
-                                max: totalDuration.inMilliseconds.toDouble(),
-                                onChanged: (double value) {},
-                                onChangeEnd: (double value) {
-                                  viewModel.seek(Duration(milliseconds: value.toInt()));
-                                },
-                              ),
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  _formatDuration(position),
-                                  style: const TextStyle(color: Colors.white70),
+                          return Column(
+                            children: [
+                              SliderTheme(
+                                data: SliderTheme.of(context).copyWith(
+                                  trackHeight: 4.0,
+                                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8.0),
+                                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 16.0),
+                                  activeTrackColor: AppColors.accentPurple,
+                                  inactiveTrackColor: Colors.white.withOpacity(0.3),
+                                  thumbColor: AppColors.accentPurple,
+                                  overlayColor: AppColors.accentPurple.withOpacity(0.2),
                                 ),
-                                Text(
-                                  // ✅ A duração total é usada aqui
-                                  _formatDuration(totalDuration),
-                                  style: const TextStyle(color: Colors.white70),
+                                child: Slider(
+                                  value: totalDuration.inMilliseconds > 0
+                                      ? position.inMilliseconds.toDouble()
+                                      : 0.0,
+                                  min: 0.0,
+                                  max: totalDuration.inMilliseconds.toDouble(),
+                                  onChanged: (double value) {},
+                                  onChangeEnd: (double value) {
+                                    viewModel.seek(Duration(milliseconds: value.toInt()));
+                                  },
                                 ),
-                              ],
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                  },
-                ),
+                              ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    _formatDuration(position),
+                                    style: const TextStyle(color: Colors.white70),
+                                  ),
+                                  Text(
+                                    _formatDuration(totalDuration),
+                                    style: const TextStyle(color: Colors.white70),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                  ),
                   const SizedBox(height: 30),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -393,28 +458,95 @@ class PlayerView extends StatelessWidget {
                 ],
               ),
             ),
-          );
-        },
+          ),
+          // ✅ O Slider de volume flutuante
+          Positioned(
+            bottom: 120, // Ajuste a posição conforme sua UI
+            left: 20,
+            right: 20,
+            child: AnimatedOpacity(
+              opacity: _showVolumeSlider ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 300),
+              child: _buildVolumeSlider(viewModel),
+            ),
+          ),
+        ],
       ),
     );
   }
 
+  // ✅ Novo widget que constrói o slider de volume
+  Widget _buildVolumeSlider(PlaylistViewModel viewModel) {
+  return StreamBuilder<double>(
+    stream: viewModel.player.volumeStream,
+    builder: (context, snapshot) {
+      final currentVolume = snapshot.data ?? viewModel.player.volume;
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // ✅ O Ícone agora é um IconButton
+            IconButton(
+              icon: Icon(
+                currentVolume == 0 ? Icons.volume_off : Icons.volume_up,
+                color: Colors.white,
+              ),
+              onPressed: () {
+                if (currentVolume > 0) {
+                  viewModel.setVolume(0.0); // Muta o volume
+                } else {
+                  // Aqui, você pode restaurar para um volume padrão, por exemplo, 0.5
+                  viewModel.setVolume(0.5); // Desmuta para um valor padrão
+                }
+                _toggleVolumeSlider(true); // Garante que o slider não desapareça
+              },
+            ),
+            Expanded(
+              child: Slider(
+                min: 0.0,
+                max: 1.0,
+                value: currentVolume,
+                activeColor: AppColors.accentPurple,
+                inactiveColor: Colors.white.withOpacity(0.3),
+                onChanged: (newVolume) {
+                  viewModel.setVolume(newVolume);
+                  _toggleVolumeSlider(true); // Reinicia o temporizador a cada ajuste
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+  }
 
-// ✅ Novo widget para mostrar a arte do álbum padrão para desktop
- Widget _buildDefaultArtwork() {
- return Container(
-decoration: BoxDecoration(
- color: AppColors.cardBackground,
- borderRadius: BorderRadius.circular(20),
- boxShadow: [
- BoxShadow(
- color: Colors.black.withOpacity(0.3),
- blurRadius: 20,
- offset: const Offset(0, 10),
- ),
- ],
- ),
- child: const Icon(Icons.music_note, size: 100, color: AppColors.lightPurple),
- );
- }
+
+  Widget _buildDefaultArtwork() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: const Icon(Icons.music_note, size: 100, color: AppColors.lightPurple),
+    );
+  }
 }
