@@ -48,12 +48,22 @@ dependencies:
   file_picker: ^10.3.2
   window_manager: ^0.5.1
   metadata_god: ^1.1.0
+  flutter_launcher_icons: ^0.14.4
+
+
   
 
   
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/logo-lauch.png"
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -71,6 +81,8 @@ flutter:
 
   assets:
     - assets/images/notifica.png
+    - assets/images/background.png
+    
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
     

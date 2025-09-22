@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:async'; // 👈 Importante: Adicione esta linha para usar o Timer
 
 import 'package:flutter/material.dart';
+import 'package:music_music/core/theme/theme_manager.dart';
 import 'package:music_music/views/playlist/playlists_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:on_audio_query/on_audio_query.dart';
@@ -238,6 +239,7 @@ class _PlayerViewState extends State<PlayerView> {
       drawer: Consumer<PlaylistViewModel>(
         builder: (context, viewModel, child) {
           final List<double> playbackSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+          final themeManager = Provider.of<ThemeManager>(context);
           return Drawer(
             backgroundColor: AppColors.cardBackground,
             child: ListView(
@@ -253,8 +255,23 @@ class _PlayerViewState extends State<PlayerView> {
                       color: Colors.white,
                       fontSize: 24,
                     ),
+
                   ),
                 ),
+                ListTile(
+                leading: Icon(
+                  themeManager.themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
+                  color: AppColors.accentPurple,
+                ),
+                title: Text(
+                  themeManager.themeMode == ThemeMode.dark ? 'Modo Claro' : 'Modo Escuro',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  themeManager.toggleTheme();
+                  Navigator.of(context).pop();
+                },
+              ),
                 ListTile(
                   leading: const Icon(Icons.timer, color: AppColors.accentPurple),
                   title: const Text('Temporizador de Repouso', style: TextStyle(color: Colors.white)),

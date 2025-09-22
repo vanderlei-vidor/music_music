@@ -173,6 +173,8 @@ Future<void> _setAudioSource({int initialIndex = 0}) async {
   await _player.setShuffleModeEnabled(isShuffled);
 }
 
+  
+
   // Listener de estados
   void _listenToPlayerStateAndSequence() {
     _player.playerStateStream.listen((state) {
