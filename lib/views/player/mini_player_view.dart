@@ -2,7 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:on_audio_query/on_audio_query.dart';
-import '../../core/theme/app_colors.dart';
+// Remova esta linha, pois não vamos usar AppColors diretamente:
+// import '../../core/theme/app_colors.dart'; 
 import '../playlist/playlist_view_model.dart';
 import 'player_view.dart';
 
@@ -11,17 +12,18 @@ class MiniPlayerView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // 👈 Pega o tema atual
+
     return Consumer<PlaylistViewModel>(
       builder: (context, viewModel, child) {
         if (viewModel.currentMusic == null) {
-          return const SizedBox.shrink(); // Não exibe nada se não houver música tocando
+          return const SizedBox.shrink();
         }
-        
+
         final currentMusic = viewModel.currentMusic!;
 
         return GestureDetector(
           onTap: () {
-            // Navega para a tela do player de tela cheia
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const PlayerView()),
@@ -31,11 +33,11 @@ class MiniPlayerView extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.cardBackground,
+              color: theme.cardColor, // ✅ Usa a cor do card do tema atual
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
+                  color: theme.shadowColor.withOpacity(0.3), // ✅ Sombra adaptável
                   blurRadius: 10,
                   offset: const Offset(0, -5),
                 ),
@@ -43,7 +45,7 @@ class MiniPlayerView extends StatelessWidget {
             ),
             child: Row(
               children: [
-                // Arte do álbum da música
+                // Arte do álbum
                 QueryArtworkWidget(
                   id: currentMusic.albumId ?? 0,
                   type: ArtworkType.ALBUM,
@@ -52,14 +54,17 @@ class MiniPlayerView extends StatelessWidget {
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
-                      color: AppColors.primaryPurple,
+                      color: theme.colorScheme.primary, // ✅ Cor primária do tema
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.music_note, color: Colors.white),
+                    child: Icon(
+                      Icons.music_note,
+                      color: theme.colorScheme.onPrimary, // ✅ Cor sobre fundo primário
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Título e artista da música
+                // Título e artista
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,16 +72,16 @@ class MiniPlayerView extends StatelessWidget {
                     children: [
                       Text(
                         currentMusic.title,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurface, // ✅ Texto legível
                           fontWeight: FontWeight.bold,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
-                        currentMusic.artist,
-                        style: const TextStyle(
-                          color: Colors.white70,
+                        currentMusic.artist ?? "Artista desconhecido",
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurface.withOpacity(0.7), // ✅ Secundário
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -84,13 +89,13 @@ class MiniPlayerView extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Controles de reprodução (play/pause)
+                // Botão de play/pause
                 IconButton(
                   icon: Icon(
                     viewModel.playerState == PlayerState.playing
                         ? Icons.pause_circle_filled
                         : Icons.play_circle_filled,
-                    color: AppColors.accentPurple,
+                    color: theme.colorScheme.primary, // ✅ Usa a cor primária (roxa)
                     size: 40,
                   ),
                   onPressed: viewModel.playPause,

@@ -3,6 +3,8 @@ import 'package:music_music/models/music_model.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import '../../core/theme/app_colors.dart';
 
+
+
 class MusicSearchDelegate extends SearchDelegate<String> {
   final List<Music> allMusics;
 
@@ -10,23 +12,26 @@ class MusicSearchDelegate extends SearchDelegate<String> {
 
   @override
   ThemeData appBarTheme(BuildContext context) {
-    return Theme.of(context).copyWith(
-      appBarTheme: const AppBarTheme(
-        color: AppColors.background,
-        elevation: 0,
-        iconTheme: IconThemeData(color: Colors.white),
+  final theme = Theme.of(context);
+  return theme.copyWith(
+    appBarTheme: AppBarTheme(
+      backgroundColor: theme.scaffoldBackgroundColor, // ✅ Usa a cor do tema atual
+      elevation: 0,
+      iconTheme: IconThemeData(color: theme.colorScheme.onBackground),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      hintStyle: TextStyle(color: theme.hintColor),
+      labelStyle: TextStyle(color: theme.colorScheme.onSurface),
+      border: InputBorder.none,
+    ),
+    scaffoldBackgroundColor: theme.scaffoldBackgroundColor,
+    textTheme: theme.textTheme.copyWith(
+      titleLarge: theme.textTheme.titleLarge?.copyWith(
+        color: theme.colorScheme.onSurface,
       ),
-      inputDecorationTheme: const InputDecorationTheme(
-        hintStyle: TextStyle(color: Colors.white70),
-        labelStyle: TextStyle(color: Colors.white),
-        border: InputBorder.none,
-      ),
-      scaffoldBackgroundColor: AppColors.background,
-      textTheme: const TextTheme(
-        titleLarge: TextStyle(color: Colors.white),
-      ),
-    );
-  }
+    ),
+  );
+}
 
   @override
   List<Widget> buildActions(BuildContext context) {
@@ -80,45 +85,47 @@ class MusicSearchDelegate extends SearchDelegate<String> {
       );
     }
     return ListView.builder(
-      itemCount: musics.length,
-      itemBuilder: (context, index) {
-        final music = musics[index];
-        return ListTile(
-          leading: QueryArtworkWidget(
-            id: music.albumId ?? 0,
-            type: ArtworkType.ALBUM,
-            artworkBorder: BorderRadius.circular(10),
-            nullArtworkWidget: Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: AppColors.primaryPurple,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.music_note, color: Colors.white),
-            ),
+  itemCount: musics.length,
+  itemBuilder: (context, index) {
+    final music = musics[index];
+    final theme = Theme.of(context); // 👈 Pega o tema atual
+
+    return ListTile(
+      leading: QueryArtworkWidget(
+        id: music.albumId ?? 0,
+        type: ArtworkType.ALBUM,
+        artworkBorder: BorderRadius.circular(10),
+        nullArtworkWidget: Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary, // ✅ Usa a cor primária do tema atual
+            borderRadius: BorderRadius.circular(10),
           ),
-          title: Text(
-            music.title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
+          child: Icon(
+            Icons.music_note,
+            color: theme.colorScheme.onPrimary, // ✅ Cor do ícone sobre fundo primário
           ),
-          subtitle: Text(
-            music.artist ?? "Artista desconhecido",
-            style: const TextStyle(
-              color: Colors.white70,
-            ),
-          ),
-          onTap: () {
-            // Ação ao tocar na música para reproduzi-la
-            // Você pode querer chamar um método do ViewModel aqui para iniciar a reprodução.
-            // Por exemplo: Provider.of<PlaylistViewModel>(context, listen: false).playMusic(musics, index);
-            close(context, ''); // Fecha a tela de busca
-          },
-        );
+        ),
+      ),
+      title: Text(
+        music.title,
+        style: TextStyle(
+          color: theme.colorScheme.onSurface, // ✅ Cor do texto principal
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      subtitle: Text(
+        music.artist ?? "Artista desconhecido",
+        style: TextStyle(
+          color: theme.colorScheme.onSurface.withOpacity(0.7), // ✅ Cor secundária suave
+        ),
+      ),
+      onTap: () {
+        close(context, '');
       },
     );
+  },
+);
   }
 }

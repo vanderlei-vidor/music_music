@@ -1,8 +1,10 @@
-// views/home/home_view.dart
+// lib/views/home/home_view.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'home_view_model.dart';
 import '../playlist/playlist_view.dart';
+import '../playlist/playlists_screen.dart'; // 👈 IMPORTANTE!
 import '../../widgets/custom_button.dart';
 import '../playlist/playlist_view_model.dart';
 
@@ -17,7 +19,6 @@ class _HomeViewState extends State<HomeView> {
   @override
   void initState() {
     super.initState();
-    // Carrega as músicas assim que a tela é iniciada
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final viewModel = Provider.of<HomeViewModel>(context, listen: false);
       viewModel.loadMusics();
@@ -26,46 +27,46 @@ class _HomeViewState extends State<HomeView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       body: Center(
         child: Consumer<HomeViewModel>(
           builder: (context, viewModel, child) {
-            // Se as músicas estiverem carregando, mostra o indicador de progresso
             if (viewModel.isLoading) {
               return Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
+                children: [
                   CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7B66FF)),
+                    valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   Text(
                     'Carregando suas músicas...',
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.white70,
+                      color: theme.colorScheme.onSurface.withOpacity(0.7),
                     ),
                   ),
                 ],
               );
             }
 
-            // Se as músicas já foram carregadas, exibe o botão
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
+                Icon(
                   Icons.library_music,
                   size: 80,
-                  color: Color(0xFF7B66FF),
+                  color: theme.colorScheme.primary,
                 ),
                 const SizedBox(height: 30),
-                const Text(
+                Text(
                   'Bem-vindo!',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -74,24 +75,32 @@ class _HomeViewState extends State<HomeView> {
                       ? 'Nenhuma música encontrada.'
                       : 'Músicas encontradas: ${viewModel.musics.length}',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
-                    color: Colors.white70,
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
                   ),
                 ),
                 const SizedBox(height: 40),
+                // Botão 1: Ver todas as músicas
                 CustomButton(
                   text: 'Ver Minhas Músicas',
                   onPressed: () {
-                    // Acessa o ViewModel da Playlist para passar a lista de músicas
                     final playlistViewModel = Provider.of<PlaylistViewModel>(context, listen: false);
                     playlistViewModel.setMusics(viewModel.musics);
-
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => const PlaylistView(),
-                      ),
+                      MaterialPageRoute(builder: (context) => const PlaylistView()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                // Botão 2: Ir direto para playlists
+                CustomButton(
+                  text: 'Minhas Playlists',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const PlaylistsScreen()),
                     );
                   },
                 ),

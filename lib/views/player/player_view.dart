@@ -1,17 +1,23 @@
 // lib/views/player/player_view.dart
 
 import 'dart:io';
-import 'dart:async'; // 👈 Importante: Adicione esta linha para usar o Timer
+import 'dart:async';
+import 'dart:math';
 
+import 'package:audio_visualizer/audio_visualizer.dart';
+import 'package:audio_visualizer/utils.dart';
+import 'package:audio_visualizer/visualizers/audio_spectrum.dart';
+import 'package:audio_visualizer/visualizers/bar_visualizer.dart';
+import 'package:audio_visualizer/visualizers/rainbow_visualizer.dart';
 import 'package:flutter/material.dart';
 import 'package:music_music/core/theme/theme_manager.dart';
 import 'package:music_music/views/playlist/playlists_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:just_audio/just_audio.dart' hide PlayerState;
-import '../../core/theme/app_colors.dart';
 import '../playlist/playlist_view_model.dart';
-import '../../widgets/sleep_timer_button.dart'; // Mantido para referência, mas não usado aqui
+import '../../widgets/sleep_timer_button.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class PlayerView extends StatefulWidget {
   const PlayerView({super.key});
@@ -20,12 +26,39 @@ class PlayerView extends StatefulWidget {
   State<PlayerView> createState() => _PlayerViewState();
 }
 
-class _PlayerViewState extends State<PlayerView> {
-  // ✅ Estado e temporizador para o slider de volume
+class _PlayerViewState extends State<PlayerView> with TickerProviderStateMixin {
   bool _showVolumeSlider = false;
   Timer? _volumeSliderTimer;
 
-  // ✅ Método para mostrar e esconder o slider
+  ScrollController? _titleScrollController;
+  AnimationController? _scrollAnimationController;
+  Animation<double>? _scrollAnimation;
+  
+
+  @override
+  void initState() {
+    super.initState();
+
+   
+    _titleScrollController = ScrollController();
+    _scrollAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 8),
+    );
+
+    // 👇 Remova a inicialização da animação aqui (vai ser feita no LayoutBuilder)
+  }
+
+  
+
+  @override
+  void dispose() {
+    _titleScrollController?.dispose();
+    _scrollAnimationController?.dispose();
+    _volumeSliderTimer?.cancel();
+    super.dispose();
+  }
+
   void _toggleVolumeSlider(bool show) {
     setState(() {
       _showVolumeSlider = show;
@@ -35,20 +68,13 @@ class _PlayerViewState extends State<PlayerView> {
 
     if (show) {
       _volumeSliderTimer = Timer(const Duration(seconds: 3), () {
-        if (mounted) { // Garante que o widget ainda está na árvore
+        if (mounted) {
           setState(() {
             _showVolumeSlider = false;
           });
         }
       });
     }
-  }
-
-  // ✅ Lembre de cancelar o timer quando o widget for descartado
-  @override
-  void dispose() {
-    _volumeSliderTimer?.cancel();
-    super.dispose();
   }
 
   String _formatDuration(Duration? duration) {
@@ -58,13 +84,15 @@ class _PlayerViewState extends State<PlayerView> {
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
-  Color _getRepeatButtonColor(LoopMode mode) {
+  // ✅ Atualizado: usa o tema
+  Color _getRepeatButtonColor(BuildContext context, LoopMode mode) {
+    final theme = Theme.of(context);
     switch (mode) {
       case LoopMode.off:
-        return Colors.white70;
+        return theme.colorScheme.onSurface.withOpacity(0.7);
       case LoopMode.one:
       case LoopMode.all:
-        return AppColors.accentPurple;
+        return theme.colorScheme.primary;
     }
   }
 
@@ -78,28 +106,40 @@ class _PlayerViewState extends State<PlayerView> {
     }
   }
 
-  void _showCreatePlaylistDialog(BuildContext context, PlaylistViewModel viewModel) {
+  void _showCreatePlaylistDialog(
+    BuildContext context,
+    PlaylistViewModel viewModel,
+  ) {
+    final theme = Theme.of(context);
     final TextEditingController controller = TextEditingController();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.cardBackground,
-        title: const Text('Criar Nova Playlist', style: TextStyle(color: Colors.white)),
+        backgroundColor: theme.cardColor,
+        title: Text(
+          'Criar Nova Playlist',
+          style: TextStyle(color: theme.colorScheme.onSurface),
+        ),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Nome da Playlist',
-            labelStyle: TextStyle(color: Colors.white70),
+            labelStyle: TextStyle(
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
+            ),
             enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: AppColors.accentPurple),
+              borderSide: BorderSide(color: theme.colorScheme.primary),
             ),
           ),
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: theme.colorScheme.onSurface),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.white)),
+            child: Text(
+              'Cancelar',
+              style: TextStyle(color: theme.colorScheme.onSurface),
+            ),
           ),
           TextButton(
             onPressed: () {
@@ -108,39 +148,58 @@ class _PlayerViewState extends State<PlayerView> {
                 Navigator.pop(context);
               }
             },
-            child: const Text('Criar', style: TextStyle(color: AppColors.accentPurple)),
+            child: Text(
+              'Criar',
+              style: TextStyle(color: theme.colorScheme.primary),
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _showSleepTimerDialog(BuildContext context, PlaylistViewModel viewModel) {
+  void _showSleepTimerDialog(
+    BuildContext context,
+    PlaylistViewModel viewModel,
+  ) {
+    final theme = Theme.of(context);
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: AppColors.cardBackground,
-          title: const Text('Definir Temporizador', style: TextStyle(color: Colors.white)),
+          backgroundColor: theme.cardColor,
+          title: Text(
+            'Definir Temporizador',
+            style: TextStyle(color: theme.colorScheme.onSurface),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                title: const Text('15 minutos', style: TextStyle(color: Colors.white)),
+                title: Text(
+                  '15 minutos',
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                ),
                 onTap: () {
                   viewModel.setSleepTimer(const Duration(minutes: 15));
                   Navigator.pop(context);
                 },
               ),
               ListTile(
-                title: const Text('30 minutos', style: TextStyle(color: Colors.white)),
+                title: Text(
+                  '30 minutos',
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                ),
                 onTap: () {
                   viewModel.setSleepTimer(const Duration(minutes: 30));
                   Navigator.pop(context);
                 },
               ),
               ListTile(
-                title: const Text('1 hora', style: TextStyle(color: Colors.white)),
+                title: Text(
+                  '1 hora',
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                ),
                 onTap: () {
                   viewModel.setSleepTimer(const Duration(hours: 1));
                   Navigator.pop(context);
@@ -148,7 +207,10 @@ class _PlayerViewState extends State<PlayerView> {
               ),
               if (viewModel.hasSleepTimer)
                 ListTile(
-                  title: const Text('Cancelar Temporizador', style: TextStyle(color: Colors.red)),
+                  title: Text(
+                    'Cancelar Temporizador',
+                    style: TextStyle(color: Colors.red),
+                  ),
                   onTap: () {
                     viewModel.cancelSleepTimer();
                     Navigator.pop(context);
@@ -161,23 +223,32 @@ class _PlayerViewState extends State<PlayerView> {
     );
   }
 
-  // ✅ Método para mostrar o diálogo de velocidade de reprodução
-  void _showPlaybackSpeedDialog(BuildContext context, PlaylistViewModel viewModel) {
+  void _showPlaybackSpeedDialog(
+    BuildContext context,
+    PlaylistViewModel viewModel,
+  ) {
+    final theme = Theme.of(context);
     final List<double> playbackSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppColors.cardBackground,
-          title: const Text('Velocidade de Reprodução', style: TextStyle(color: Colors.white)),
+          backgroundColor: theme.cardColor,
+          title: Text(
+            'Velocidade de Reprodução',
+            style: TextStyle(color: theme.colorScheme.onSurface),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: playbackSpeeds.map((speed) {
               return RadioListTile<double>(
-                title: Text('${speed}x', style: const TextStyle(color: Colors.white)),
+                title: Text(
+                  '${speed}x',
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                ),
                 value: speed,
                 groupValue: viewModel.currentSpeed,
-                activeColor: AppColors.accentPurple,
+                activeColor: theme.colorScheme.primary,
                 onChanged: (double? newValue) {
                   if (newValue != null) {
                     viewModel.setPlaybackSpeed(newValue);
@@ -194,11 +265,14 @@ class _PlayerViewState extends State<PlayerView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final viewModel = context.watch<PlaylistViewModel>();
     final music = viewModel.currentMusic;
 
     if (music == null) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.accentPurple));
+      return Center(
+        child: CircularProgressIndicator(color: theme.colorScheme.primary),
+      );
     }
 
     final double imageSize = MediaQuery.of(context).size.width * 0.9 > 400
@@ -211,7 +285,8 @@ class _PlayerViewState extends State<PlayerView> {
         elevation: 0,
         leading: Builder(
           builder: (context) => IconButton(
-            icon: const Icon(Icons.menu, color: Colors.white),
+            icon: Icon(Icons.menu, color: theme.colorScheme.onSurface),
+            tooltip: 'Menu',
             onPressed: () {
               Scaffold.of(context).openDrawer();
             },
@@ -219,18 +294,25 @@ class _PlayerViewState extends State<PlayerView> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.playlist_play, color: Colors.white),
+            icon: Icon(Icons.playlist_play, color: theme.colorScheme.onSurface),
+            tooltip: 'Ver todas playlists',
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const PlaylistsScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const PlaylistsScreen(),
+                ),
               );
             },
           ),
           IconButton(
-            icon: const Icon(Icons.add, color: Colors.white),
+            icon: Icon(Icons.add, color: theme.colorScheme.onSurface),
+            tooltip: 'Criar nova playlist',
             onPressed: () {
-              _showCreatePlaylistDialog(context, Provider.of<PlaylistViewModel>(context, listen: false));
+              _showCreatePlaylistDialog(
+                context,
+                Provider.of<PlaylistViewModel>(context, listen: false),
+              );
             },
           ),
         ],
@@ -238,67 +320,79 @@ class _PlayerViewState extends State<PlayerView> {
       extendBodyBehindAppBar: true,
       drawer: Consumer<PlaylistViewModel>(
         builder: (context, viewModel, child) {
-          final List<double> playbackSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+          final theme = Theme.of(context);
           final themeManager = Provider.of<ThemeManager>(context);
           return Drawer(
-            backgroundColor: AppColors.cardBackground,
+            backgroundColor: theme.cardColor,
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
-                const DrawerHeader(
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryPurple,
-                  ),
+                DrawerHeader(
+                  decoration: BoxDecoration(color: theme.colorScheme.primary),
                   child: Text(
                     'Configurações do Player',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: theme.colorScheme.onPrimary,
                       fontSize: 24,
                     ),
-
                   ),
                 ),
                 ListTile(
-                leading: Icon(
-                  themeManager.themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
-                  color: AppColors.accentPurple,
+                  leading: Icon(
+                    themeManager.themeMode == ThemeMode.dark
+                        ? Icons.light_mode
+                        : Icons.dark_mode,
+                    color: theme.colorScheme.primary,
+                  ),
+                  title: Text(
+                    themeManager.themeMode == ThemeMode.dark
+                        ? 'Modo Escuro'
+                        : 'Modo Claro',
+                    style: TextStyle(color: theme.colorScheme.onSurface),
+                  ),
+                  onTap: () {
+                    themeManager.toggleTheme();
+                    Navigator.of(context).pop();
+                  },
                 ),
-                title: Text(
-                  themeManager.themeMode == ThemeMode.dark ? 'Modo Claro' : 'Modo Escuro',
-                  style: const TextStyle(color: Colors.white),
-                ),
-                onTap: () {
-                  themeManager.toggleTheme();
-                  Navigator.of(context).pop();
-                },
-              ),
                 ListTile(
-                  leading: const Icon(Icons.timer, color: AppColors.accentPurple),
-                  title: const Text('Temporizador de Repouso', style: TextStyle(color: Colors.white)),
+                  leading: Icon(Icons.timer, color: theme.colorScheme.primary),
+                  title: Text(
+                    'Temporizador de Repouso',
+                    style: TextStyle(color: theme.colorScheme.onSurface),
+                  ),
                   onTap: () {
                     Navigator.of(context).pop();
                     _showSleepTimerDialog(context, viewModel);
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.speed, color: AppColors.accentPurple),
-                  title: const Text('Velocidade de Reprodução', style: TextStyle(color: Colors.white)),
+                  leading: Icon(Icons.speed, color: theme.colorScheme.primary),
+                  title: Text(
+                    'Velocidade de Reprodução',
+                    style: TextStyle(color: theme.colorScheme.onSurface),
+                  ),
                   onTap: () {
                     Navigator.of(context).pop();
                     _showPlaybackSpeedDialog(context, viewModel);
                   },
                   trailing: Text(
                     '${viewModel.currentSpeed}x',
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: theme.colorScheme.onSurface),
                   ),
                 ),
-                // ✅ Novo item de menu para o volume
                 ListTile(
-                  leading: const Icon(Icons.volume_up, color: AppColors.accentPurple),
-                  title: const Text('Volume', style: TextStyle(color: Colors.white)),
+                  leading: Icon(
+                    Icons.volume_up,
+                    color: theme.colorScheme.primary,
+                  ),
+                  title: Text(
+                    'Volume',
+                    style: TextStyle(color: theme.colorScheme.onSurface),
+                  ),
                   trailing: Text(
-                    (viewModel.player.volume * 100).toInt().toString(), // Exibe o volume em porcentagem
-                    style: const TextStyle(color: Colors.white),
+                    (viewModel.player.volume * 100).toInt().toString(),
+                    style: TextStyle(color: theme.colorScheme.onSurface),
                   ),
                   onTap: () {
                     Navigator.of(context).pop();
@@ -313,9 +407,15 @@ class _PlayerViewState extends State<PlayerView> {
       body: Stack(
         children: [
           Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.background, Color(0xFF13101E)],
+                colors: [
+                  theme.scaffoldBackgroundColor,
+                  // Para manter o efeito escuro no fundo, usamos uma cor mais escura baseada no tema
+                  theme.brightness == Brightness.dark
+                      ? const Color(0xFF13101E)
+                      : theme.scaffoldBackgroundColor.withOpacity(0.9),
+                ],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -327,65 +427,163 @@ class _PlayerViewState extends State<PlayerView> {
                   SizedBox(
                     width: imageSize,
                     height: imageSize,
-                    child: Platform.isWindows || Platform.isLinux || Platform.isMacOS
-                        ? _buildDefaultArtwork()
+                    child:
+                        Platform.isWindows ||
+                            Platform.isLinux ||
+                            Platform.isMacOS
+                        ? _buildDefaultArtwork(context)
                         : QueryArtworkWidget(
                             id: music.albumId ?? 0,
                             type: ArtworkType.ALBUM,
                             artworkBorder: BorderRadius.circular(20),
-                            nullArtworkWidget: _buildDefaultArtwork(),
+                            nullArtworkWidget: _buildDefaultArtwork(context),
                           ),
                   ),
                   const SizedBox(height: 30),
                   SizedBox(
                     height: 30,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Text(
-                        music.title,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.visible,
-                      ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final containerWidth = constraints.maxWidth;
+
+                        // Mede a largura do texto
+                        final textPainter = TextPainter(
+                          text: TextSpan(
+                            text: music.title,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
+                          maxLines: 1,
+                          textDirection: TextDirection.ltr,
+                        )..layout();
+
+                        final textWidth = textPainter.size.width;
+                        const double extraMargin = 40.0;
+                        // Cancela animação anterior
+                        _scrollAnimation?.removeListener(() {});
+                        _scrollAnimationController?.stop();
+
+                        // Velocidade constante
+                        const double pixelsPerSecond = 30.0;
+                        // Distância total a percorrer: da direita (fora da tela) até sair pela esquerda
+                        final totalDistance =
+                            containerWidth + textWidth + extraMargin;
+                        final durationMs =
+                            (totalDistance / pixelsPerSecond * 1000)
+                                .toInt()
+                                .clamp(4000, 25000);
+
+                        _scrollAnimationController?.duration = Duration(
+                          milliseconds: durationMs,
+                        );
+
+                        // Animação: começa em containerWidth (texto à direita), termina em -textWidth (texto à esquerda)
+                        _scrollAnimation =
+                            Tween<double>(
+                                begin: containerWidth,
+                                end: -textWidth - extraMargin,
+                              ).animate(
+                                CurvedAnimation(
+                                  parent: _scrollAnimationController!,
+                                  curve: Curves.linear,
+                                ),
+                              )
+                              ..addListener(() {
+                                // Já está seguro
+                              })
+                              ..addStatusListener((status) {
+                                if (status == AnimationStatus.completed &&
+                                    mounted) {
+                                  // Reinicia com um pequeno delay para "respirar"
+                                  Future.delayed(
+                                    const Duration(milliseconds: 500),
+                                    () {
+                                      if (mounted &&
+                                          _scrollAnimationController != null) {
+                                        _scrollAnimationController!.reset();
+                                        _scrollAnimationController!.forward();
+                                      }
+                                    },
+                                  );
+                                }
+                              });
+
+                        _scrollAnimationController!.forward();
+
+                        return AnimatedBuilder(
+                          animation: _scrollAnimation!,
+                          builder: (context, child) {
+                            return OverflowBox(
+                              minWidth: containerWidth,
+                              maxWidth: containerWidth,
+                              child: Transform.translate(
+                                offset: Offset(_scrollAnimation!.value, 0),
+                                child: Text(
+                                  music.title,
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                  maxLines: 1,
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
                     ),
                   ),
+
                   const SizedBox(height: 5),
-                  Text(
-                    music.artist ?? "Artista Desconhecido",
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.white70,
+                  Center(
+                    child: Text(
+                      music.artist ?? "Artista Desconhecido",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 30),
+                  // Equalizador simulado (sempre visível, sem permissão)
+                  
+
                   StreamBuilder<Duration?>(
                     stream: viewModel.player.durationStream,
                     builder: (context, durationSnapshot) {
-                      final totalDuration = durationSnapshot.data ?? Duration.zero;
-
+                      final totalDuration =
+                          durationSnapshot.data ?? Duration.zero;
                       return StreamBuilder<Duration>(
                         stream: viewModel.positionStream,
                         builder: (context, positionSnapshot) {
-                          final position = positionSnapshot.data ?? Duration.zero;
-
+                          final position =
+                              positionSnapshot.data ?? Duration.zero;
                           return Column(
                             children: [
                               SliderTheme(
                                 data: SliderTheme.of(context).copyWith(
                                   trackHeight: 4.0,
-                                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8.0),
-                                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 16.0),
-                                  activeTrackColor: AppColors.accentPurple,
-                                  inactiveTrackColor: Colors.white.withOpacity(0.3),
-                                  thumbColor: AppColors.accentPurple,
-                                  overlayColor: AppColors.accentPurple.withOpacity(0.2),
+                                  thumbShape: const RoundSliderThumbShape(
+                                    enabledThumbRadius: 8.0,
+                                  ),
+                                  overlayShape: const RoundSliderOverlayShape(
+                                    overlayRadius: 16.0,
+                                  ),
+                                  activeTrackColor: theme.colorScheme.primary,
+                                  inactiveTrackColor: theme
+                                      .colorScheme
+                                      .onSurface
+                                      .withOpacity(0.3),
+                                  thumbColor: theme.colorScheme.primary,
+                                  overlayColor: theme.colorScheme.primary
+                                      .withOpacity(0.2),
                                 ),
                                 child: Slider(
                                   value: totalDuration.inMilliseconds > 0
@@ -395,20 +593,29 @@ class _PlayerViewState extends State<PlayerView> {
                                   max: totalDuration.inMilliseconds.toDouble(),
                                   onChanged: (double value) {},
                                   onChangeEnd: (double value) {
-                                    viewModel.seek(Duration(milliseconds: value.toInt()));
+                                    viewModel.seek(
+                                      Duration(milliseconds: value.toInt()),
+                                    );
                                   },
                                 ),
                               ),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     _formatDuration(position),
-                                    style: const TextStyle(color: Colors.white70),
+                                    style: TextStyle(
+                                      color: theme.colorScheme.onSurface
+                                          .withOpacity(0.7),
+                                    ),
                                   ),
                                   Text(
                                     _formatDuration(totalDuration),
-                                    style: const TextStyle(color: Colors.white70),
+                                    style: TextStyle(
+                                      color: theme.colorScheme.onSurface
+                                          .withOpacity(0.7),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -423,25 +630,32 @@ class _PlayerViewState extends State<PlayerView> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       IconButton(
-                        icon: Icon(Icons.shuffle,
+                        icon: Icon(
+                          Icons.shuffle,
                           size: 28,
-                          color: viewModel.isShuffled ? AppColors.accentPurple : Colors.white70,
+                          color: viewModel.isShuffled
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurface.withOpacity(0.7),
                         ),
                         onPressed: viewModel.toggleShuffle,
                       ),
                       const SizedBox(width: 20),
                       IconButton(
-                        icon: const Icon(Icons.skip_previous, size: 40, color: Colors.white),
+                        icon: Icon(
+                          Icons.skip_previous,
+                          size: 40,
+                          color: theme.colorScheme.onSurface,
+                        ),
                         onPressed: viewModel.previousMusic,
                       ),
                       const SizedBox(width: 20),
                       Container(
                         decoration: BoxDecoration(
-                          color: AppColors.primaryPurple,
+                          color: theme.colorScheme.primary,
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.primaryPurple.withOpacity(0.5),
+                              color: theme.colorScheme.primary.withOpacity(0.5),
                               blurRadius: 15,
                               offset: const Offset(0, 5),
                             ),
@@ -449,16 +663,22 @@ class _PlayerViewState extends State<PlayerView> {
                         ),
                         child: IconButton(
                           icon: Icon(
-                            viewModel.playerState == PlayerState.playing ? Icons.pause : Icons.play_arrow,
+                            viewModel.playerState == PlayerState.playing
+                                ? Icons.pause
+                                : Icons.play_arrow,
                             size: 40,
-                            color: Colors.white,
+                            color: theme.colorScheme.onPrimary,
                           ),
                           onPressed: viewModel.playPause,
                         ),
                       ),
                       const SizedBox(width: 20),
                       IconButton(
-                        icon: const Icon(Icons.skip_next, size: 40, color: Colors.white),
+                        icon: Icon(
+                          Icons.skip_next,
+                          size: 40,
+                          color: theme.colorScheme.onSurface,
+                        ),
                         onPressed: viewModel.nextMusic,
                       ),
                       const SizedBox(width: 20),
@@ -466,7 +686,10 @@ class _PlayerViewState extends State<PlayerView> {
                         icon: Icon(
                           _getRepeatButtonIcon(viewModel.repeatMode),
                           size: 28,
-                          color: _getRepeatButtonColor(viewModel.repeatMode),
+                          color: _getRepeatButtonColor(
+                            context,
+                            viewModel.repeatMode,
+                          ),
                         ),
                         onPressed: viewModel.toggleRepeatMode,
                       ),
@@ -476,15 +699,14 @@ class _PlayerViewState extends State<PlayerView> {
               ),
             ),
           ),
-          // ✅ O Slider de volume flutuante
           Positioned(
-            bottom: 120, // Ajuste a posição conforme sua UI
+            bottom: 90,
             left: 20,
             right: 20,
             child: AnimatedOpacity(
               opacity: _showVolumeSlider ? 1.0 : 0.0,
               duration: const Duration(milliseconds: 300),
-              child: _buildVolumeSlider(viewModel),
+              child: _buildVolumeSlider(context, viewModel),
             ),
           ),
         ],
@@ -492,78 +714,81 @@ class _PlayerViewState extends State<PlayerView> {
     );
   }
 
-  // ✅ Novo widget que constrói o slider de volume
-  Widget _buildVolumeSlider(PlaylistViewModel viewModel) {
-  return StreamBuilder<double>(
-    stream: viewModel.player.volumeStream,
-    builder: (context, snapshot) {
-      final currentVolume = snapshot.data ?? viewModel.player.volume;
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: AppColors.cardBackground.withOpacity(0.9),
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // ✅ O Ícone agora é um IconButton
-            IconButton(
-              icon: Icon(
-                currentVolume == 0 ? Icons.volume_off : Icons.volume_up,
-                color: Colors.white,
+  Widget _buildVolumeSlider(BuildContext context, PlaylistViewModel viewModel) {
+    final theme = Theme.of(context);
+    return StreamBuilder<double>(
+      stream: viewModel.player.volumeStream,
+      builder: (context, snapshot) {
+        final currentVolume = snapshot.data ?? viewModel.player.volume;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: theme.cardColor.withOpacity(0.9),
+            borderRadius: BorderRadius.circular(15),
+            boxShadow: [
+              BoxShadow(
+                color: theme.shadowColor.withOpacity(0.3),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
               ),
-              onPressed: () {
-                if (currentVolume > 0) {
-                  viewModel.setVolume(0.0); // Muta o volume
-                } else {
-                  // Aqui, você pode restaurar para um volume padrão, por exemplo, 0.5
-                  viewModel.setVolume(0.5); // Desmuta para um valor padrão
-                }
-                _toggleVolumeSlider(true); // Garante que o slider não desapareça
-              },
-            ),
-            Expanded(
-              child: Slider(
-                min: 0.0,
-                max: 1.0,
-                value: currentVolume,
-                activeColor: AppColors.accentPurple,
-                inactiveColor: Colors.white.withOpacity(0.3),
-                onChanged: (newVolume) {
-                  viewModel.setVolume(newVolume);
-                  _toggleVolumeSlider(true); // Reinicia o temporizador a cada ajuste
+            ],
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                icon: Icon(
+                  currentVolume == 0 ? Icons.volume_off : Icons.volume_up,
+                  color: theme.colorScheme.onSurface,
+                ),
+                onPressed: () {
+                  if (currentVolume > 0) {
+                    viewModel.setVolume(0.0);
+                  } else {
+                    viewModel.setVolume(0.5);
+                  }
+                  _toggleVolumeSlider(true);
                 },
               ),
-            ),
-          ],
-        ),
-      );
-    },
-  );
+              Expanded(
+                child: Slider(
+                  min: 0.0,
+                  max: 1.0,
+                  value: currentVolume,
+                  activeColor: theme.colorScheme.primary,
+                  inactiveColor: theme.colorScheme.onSurface.withOpacity(0.3),
+                  onChanged: (newVolume) {
+                    viewModel.setVolume(newVolume);
+                    _toggleVolumeSlider(true);
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
-
-  Widget _buildDefaultArtwork() {
+  Widget _buildDefaultArtwork(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: theme.shadowColor.withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: const Icon(Icons.music_note, size: 100, color: AppColors.lightPurple),
+      child: Icon(
+        Icons.music_note,
+        size: 100,
+        color: theme.colorScheme.primary,
+      ),
     );
   }
 }
+

@@ -1,12 +1,15 @@
+// lib/views/playlist/playlist_view.dart
+
 import 'package:flutter/material.dart';
-import 'package:music_music/delegates/music_search_delegate.dart'; //assim está correto
+import 'package:music_music/delegates/music_search_delegate.dart';
 import 'package:provider/provider.dart';
 import 'package:on_audio_query/on_audio_query.dart';
-import '../../core/theme/app_colors.dart';
+// Remova esta linha:
+// import '../../core/theme/app_colors.dart';
 import 'playlist_view_model.dart';
 import '../player/player_view.dart';
 import '../player/mini_player_view.dart';
- 
+import 'package:just_audio/just_audio.dart' hide PlayerState; // 👈 necessário para PlayerState
 
 class PlaylistView extends StatefulWidget {
   const PlaylistView({super.key});
@@ -16,8 +19,6 @@ class PlaylistView extends StatefulWidget {
 }
 
 class _PlaylistViewState extends State<PlaylistView> {
-  // A variável _audioQuery e _filteredMusics não são mais necessárias aqui,
-  // pois a lógica de dados está no PlaylistViewModel.
   String _formatDuration(int? duration) {
     if (duration == null) return "00:00";
     final minutes = (duration / 60000).truncate();
@@ -25,44 +26,91 @@ class _PlaylistViewState extends State<PlaylistView> {
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
+  void _showCreatePlaylistDialog(BuildContext context, PlaylistViewModel viewModel) {
+  final theme = Theme.of(context);
+  final TextEditingController controller = TextEditingController();
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: theme.cardColor,
+      title: Text('Criar Nova Playlist', style: TextStyle(color: theme.colorScheme.onSurface)),
+      content: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: 'Nome da Playlist',
+          labelStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+          enabledBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: theme.colorScheme.primary),
+          ),
+        ),
+        style: TextStyle(color: theme.colorScheme.onSurface),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Cancelar', style: TextStyle(color: theme.colorScheme.onSurface)),
+        ),
+        TextButton(
+          onPressed: () {
+            if (controller.text.isNotEmpty) {
+              viewModel.createPlaylist(controller.text);
+              Navigator.pop(context);
+            }
+          },
+          child: Text('Criar', style: TextStyle(color: theme.colorScheme.primary)),
+        ),
+      ],
+    ),
+  );
+}
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Minha Playlist', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          'Minha Playlist',
+          style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+        ),
         centerTitle: true,
-        backgroundColor: AppColors.background,
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          icon: Icon(Icons.arrow_back_ios, color: theme.colorScheme.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          // Mantenha o IconButton de busca aqui. O Consumer no `body` já dá acesso ao viewModel.
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () {
-              // Pegue o viewModel diretamente no contexto
-              final viewModel = Provider.of<PlaylistViewModel>(context, listen: false);
-              showSearch(
-                context: context,
-                // O `as List<SongModel>` é um "cast" seguro,
-                // já que você sabe que viewModel.musics é uma lista de SongModel.
-                delegate: MusicSearchDelegate(viewModel.musics),
-              );
-            },
-          ),
-        ],
+    // ✅ Botão de CRIAR NOVA PLAYLIST
+    IconButton(
+      icon: Icon(Icons.add, color: theme.colorScheme.onSurface),
+      tooltip: 'Criar nova playlist',
+      onPressed: () {
+        _showCreatePlaylistDialog(context, Provider.of<PlaylistViewModel>(context, listen: false));
+        
+      },
+    ),
+    // ✅ Botão de busca
+    IconButton(
+      icon: Icon(Icons.search, color: theme.colorScheme.onSurface),
+      onPressed: () {
+        final viewModel = Provider.of<PlaylistViewModel>(context, listen: false);
+        showSearch(
+          context: context,
+          delegate: MusicSearchDelegate(viewModel.musics),
+        );
+      },
+    ),
+  ],
       ),
       body: Consumer<PlaylistViewModel>(
         builder: (context, viewModel, child) {
           final musics = viewModel.musics;
-          // Se a lista de músicas for nula ou vazia, mostre uma mensagem de carregamento ou erro.
           if (musics == null || musics.isEmpty) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return Center(child: CircularProgressIndicator(color: theme.colorScheme.primary));
           }
+
           return Column(
             children: [
               Expanded(
@@ -71,16 +119,20 @@ class _PlaylistViewState extends State<PlaylistView> {
                   itemBuilder: (context, index) {
                     final music = musics[index];
                     final isPlaying = viewModel.currentMusic?.id == music.id;
+                    final theme = Theme.of(context); // 👈 tema dentro do builder
+
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: AppColors.cardBackground,
+                          color: theme.cardColor,
                           borderRadius: BorderRadius.circular(15),
-                          border: isPlaying ? Border.all(color: AppColors.accentPurple, width: 2) : null,
+                          border: isPlaying
+                              ? Border.all(color: theme.colorScheme.primary, width: 2)
+                              : null,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
+                              color: theme.shadowColor.withOpacity(0.2),
                               blurRadius: 10,
                               offset: const Offset(0, 5),
                             ),
@@ -95,23 +147,26 @@ class _PlaylistViewState extends State<PlaylistView> {
                               width: 50,
                               height: 50,
                               decoration: BoxDecoration(
-                                color: AppColors.primaryPurple,
+                                color: theme.colorScheme.primary,
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: const Icon(Icons.music_note, color: Colors.white),
+                              child: Icon(
+                                Icons.music_note,
+                                color: theme.colorScheme.onPrimary,
+                              ),
                             ),
                           ),
                           title: Text(
                             music.title,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurface,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           subtitle: Text(
                             music.artist ?? "Artista desconhecido",
-                            style: const TextStyle(
-                              color: Colors.white70,
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurface.withOpacity(0.7),
                             ),
                           ),
                           trailing: isPlaying
@@ -123,6 +178,7 @@ class _PlaylistViewState extends State<PlaylistView> {
                                     final progress = totalDuration.inMilliseconds > 0
                                         ? position.inMilliseconds / totalDuration.inMilliseconds
                                         : 0.0;
+
                                     return Stack(
                                       alignment: Alignment.center,
                                       children: [
@@ -132,8 +188,8 @@ class _PlaylistViewState extends State<PlaylistView> {
                                           child: CircularProgressIndicator(
                                             value: progress,
                                             strokeWidth: 2.5,
-                                            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accentPurple),
-                                            backgroundColor: Colors.white.withOpacity(0.1),
+                                            valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
+                                            backgroundColor: theme.colorScheme.onSurface.withOpacity(0.1),
                                           ),
                                         ),
                                         IconButton(
@@ -141,7 +197,7 @@ class _PlaylistViewState extends State<PlaylistView> {
                                             viewModel.playerState == PlayerState.playing
                                                 ? Icons.pause_circle_filled
                                                 : Icons.play_circle_filled,
-                                            color: AppColors.accentPurple,
+                                            color: theme.colorScheme.primary,
                                             size: 40,
                                           ),
                                           onPressed: viewModel.playPause,
@@ -152,7 +208,9 @@ class _PlaylistViewState extends State<PlaylistView> {
                                 )
                               : Text(
                                   _formatDuration(music.duration),
-                                  style: const TextStyle(color: Colors.white70),
+                                  style: TextStyle(
+                                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                  ),
                                 ),
                           onTap: () {
                             if (isPlaying) {
@@ -171,8 +229,7 @@ class _PlaylistViewState extends State<PlaylistView> {
                   },
                 ),
               ),
-              if (viewModel.currentMusic != null)
-                const MiniPlayerView(),
+              if (viewModel.currentMusic != null) const MiniPlayerView(),
             ],
           );
         },

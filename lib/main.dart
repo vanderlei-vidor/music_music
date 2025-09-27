@@ -9,7 +9,6 @@ import 'package:window_manager/window_manager.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite/sqflite.dart';
 
-import 'core/theme/app_colors.dart';
 import 'core/theme/theme_manager.dart'; // 👈 Importe o novo ThemeManager
 import 'views/splash/splash_view.dart';
 import 'views/playlist/playlist_view_model.dart';
@@ -59,38 +58,9 @@ class MusicApp extends StatelessWidget {
           return MaterialApp(
             title: 'Music Music',
             debugShowCheckedModeBanner: false,
-            // 💡 Define o tema baseado no ThemeManager
-            themeMode: themeManager.themeMode, 
-            // 💡 Tema Claro
-            theme: ThemeData.light(useMaterial3: true).copyWith(
-              // Exemplo: Cores personalizadas para o tema claro
-              scaffoldBackgroundColor: const Color(0xFFF0F0F0),
-              colorScheme: const ColorScheme.light(
-                primary: Color(0xFF5D3FD3), // Cor primária
-                secondary: Color(0xFF7B66FF), // Cor de destaque
-                background: Color(0xFFF0F0F0),
-              ),
-              appBarTheme: const AppBarTheme(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.black,
-              ),
-              // Adicione mais customizações de light theme aqui...
-            ),
-            // 💡 Tema Escuro
-            darkTheme: ThemeData.dark(useMaterial3: true).copyWith(
-              // Exemplo: Cores personalizadas para o tema escuro
-              scaffoldBackgroundColor: AppColors.background,
-              colorScheme: const ColorScheme.dark(
-                primary: AppColors.primaryPurple,
-                secondary: AppColors.accentPurple,
-                background: AppColors.background,
-              ),
-              appBarTheme: const AppBarTheme(
-                backgroundColor: AppColors.background,
-                foregroundColor: Colors.white,
-              ),
-              // Adicione mais customizações de dark theme aqui...
-            ),
+            themeMode: themeManager.themeMode,
+            theme: ThemeManager.lightTheme,
+            darkTheme: ThemeManager.darkTheme,
             home: const SplashView(),
           );
         },
