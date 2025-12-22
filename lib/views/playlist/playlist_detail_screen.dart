@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:provider/provider.dart';
-// Remova esta linha:
+import '../../widgets/music_list_item.dart';
 // import '../../core/theme/app_colors.dart';
 import '../../models/music_model.dart';
 import '../player/mini_player_view.dart';
@@ -214,86 +214,47 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                   return Consumer<PlaylistViewModel>(
                     builder: (context, viewModel, child) {
                       return ListView.builder(
-                        padding: const EdgeInsets.all(16.0),
                         itemCount: musicsToShow.length,
                         itemBuilder: (context, index) {
                           final music = musicsToShow[index];
                           final isPlaying = viewModel.currentMusic?.id == music.id;
 
-                          return Card(
-                            color: theme.cardColor,
-                            margin: const EdgeInsets.only(bottom: 12.0),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12.0),
-                              side: isPlaying
-                                  ? BorderSide(color: theme.colorScheme.primary, width: 2)
-                                  : BorderSide.none,
-                            ),
-                            child: ListTile(
-                              leading: QueryArtworkWidget(
-                                id: music.albumId ?? 0,
-                                type: ArtworkType.ALBUM,
-                                artworkBorder: BorderRadius.circular(10),
-                                nullArtworkWidget: Container(
-                                  width: 50,
-                                  height: 50,
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.primary,
-                                    borderRadius: BorderRadius.circular(10),
+                          return MusicListItem(
+                            music: music,
+                            isPlaying: isPlaying,
+                            onTap: () {
+                              if (isPlaying) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const PlayerView(),
                                   ),
-                                  child: Icon(
-                                    Icons.music_note,
-                                    color: theme.colorScheme.onPrimary,
-                                  ),
-                                ),
-                              ),
-                              title: Text(
-                                music.title,
-                                style: TextStyle(
-                                  color: theme.colorScheme.onSurface,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              subtitle: Text(
-                                music.artist ?? "Artista desconhecido",
-                                style: TextStyle(
-                                  color: theme.colorScheme.onSurface.withOpacity(0.7),
-                                ),
-                              ),
-                              trailing: isPlaying
-                                  ? IconButton(
-                                      icon: Icon(
-                                        viewModel.playerState == PlayerState.playing
-                                            ? Icons.pause_circle_filled
-                                            : Icons.play_circle_filled,
-                                        color: theme.colorScheme.primary,
-                                        size: 40,
-                                      ),
-                                      onPressed: viewModel.playPause,
-                                    )
-                                  : IconButton(
-                                      icon: const Icon(Icons.delete_forever),
-                                      color: Colors.redAccent, // Pode manter vermelho aqui (universal)
-                                      onPressed: () {
-                                        _removeMusic(music.id);
-                                      },
-                                    ),
-                              onTap: () {
-                                if (isPlaying) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const PlayerView(),
-                                    ),
-                                  );
-                                } else {
-                                  final originalIndex = _allMusics.indexOf(music);
-                                  if (originalIndex != -1) {
-                                    viewModel.playMusic(_allMusics, originalIndex);
-                                  }
+                                );
+                              } else {
+                                final originalIndex = _allMusics.indexOf(music);
+                                if (originalIndex != -1) {
+                                  viewModel.playMusic(_allMusics, originalIndex);
                                 }
-                              },
-                            ),
+                              }
+                            },
+                            trailing: isPlaying
+                                ? IconButton(
+                                    icon: Icon(
+                                      viewModel.playerState == PlayerState.playing
+                                          ? Icons.pause_circle_filled
+                                          : Icons.play_circle_filled,
+                                      color: theme.colorScheme.primary,
+                                      size: 40,
+                                    ),
+                                    onPressed: viewModel.playPause,
+                                  )
+                                : IconButton(
+                                    icon: const Icon(Icons.delete_forever),
+                                    color: Colors.redAccent,
+                                    onPressed: () {
+                                      _removeMusic(music.id);
+                                    },
+                                  ),
                           );
                         },
                       );
