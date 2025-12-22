@@ -4,50 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:music_music/delegates/music_search_delegate.dart';
 import 'package:music_music/views/playlist/playlist_detail_screen.dart';
 import 'package:provider/provider.dart';
-// Remova esta linha:
+import '../../widgets/dialogs.dart';
 // import '../../core/theme/app_colors.dart';
 import '../playlist/playlist_view_model.dart';
 
 class PlaylistsScreen extends StatelessWidget {
   const PlaylistsScreen({super.key});
-
-  void _showCreatePlaylistDialog(BuildContext context, PlaylistViewModel viewModel) {
-  final theme = Theme.of(context);
-  final TextEditingController controller = TextEditingController();
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: theme.cardColor,
-      title: Text('Criar Nova Playlist', style: TextStyle(color: theme.colorScheme.onSurface)),
-      content: TextField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: 'Nome da Playlist',
-          labelStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
-          enabledBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: theme.colorScheme.primary),
-          ),
-        ),
-        style: TextStyle(color: theme.colorScheme.onSurface),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text('Cancelar', style: TextStyle(color: theme.colorScheme.onSurface)),
-        ),
-        TextButton(
-          onPressed: () {
-            if (controller.text.isNotEmpty) {
-              viewModel.createPlaylist(controller.text);
-              Navigator.pop(context);
-            }
-          },
-          child: Text('Criar', style: TextStyle(color: theme.colorScheme.primary)),
-        ),
-      ],
-    ),
-  );
-}
 
   Future<void> _showDeleteConfirmationDialog(
     BuildContext context,
@@ -113,7 +75,7 @@ class PlaylistsScreen extends StatelessWidget {
       icon: Icon(Icons.add, color: theme.colorScheme.onSurface),
       tooltip: 'Criar nova playlist',
       onPressed: () {
-        _showCreatePlaylistDialog(context, Provider.of<PlaylistViewModel>(context, listen: false));
+        showCreatePlaylistDialog(context, Provider.of<PlaylistViewModel>(context, listen: false));
         
       },
     ),
