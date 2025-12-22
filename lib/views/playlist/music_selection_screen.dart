@@ -38,23 +38,18 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
     _searchController.addListener(_filterMusics);
   }
 
-   @override
+  @override
   void dispose() {
-    // Adicione o dispose para o controlador de texto 👇
     _searchController.dispose();
     super.dispose();
   }
 
   Future<void> _loadAllMusics() async {
     try {
-      // Pega todas as músicas do dispositivo
       final allMusics = await DatabaseHelper().getAllMusics();
-      // Pega as músicas que já estão na playlist atual
       final existingMusics = await _viewModel.getMusicsFromPlaylist(widget.playlistId);
 
-      // Mapeia as músicas existentes para um conjunto de IDs para busca rápida
       _existingMusicIds = existingMusics.map((m) => m.id).toSet();
-      // Inicializa o conjunto de músicas selecionadas com as músicas existentes
       _selectedMusicIds = Set<int>.from(_existingMusicIds);
 
       setState(() {
@@ -70,95 +65,114 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
     }
   }
 
-  // Lógica do botão de confirmação
   void _confirmSelection() {
-    // Itera sobre todas as músicas do dispositivo
     for (final music in _allMusics) {
-      // Se a música foi selecionada e ainda não está na playlist
       if (_selectedMusicIds.contains(music.id) && !_existingMusicIds.contains(music.id)) {
         _viewModel.addMusicToPlaylist(widget.playlistId, music);
       }
     }
-    // Retorna para a tela anterior
     Navigator.pop(context);
   }
 
   void _filterMusics() {
-  final query = _searchController.text.toLowerCase();
-  setState(() {
-    if (query.isEmpty) {
-      _filteredMusics = _allMusics;
-    } else {
-      _filteredMusics = _allMusics.where((music) {
-        return music.title.toLowerCase().contains(query) ||
-               (music.artist?.toLowerCase().contains(query) ?? false);
-      }).toList();
-    }
-  });
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      if (query.isEmpty) {
+        _filteredMusics = _allMusics;
+      } else {
+        _filteredMusics = _allMusics.where((music) {
+          return music.title.toLowerCase().contains(query) ||
+                 (music.artist?.toLowerCase().contains(query) ?? false);
+        }).toList();
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // 👈 Pega o tema atual
+
     return Scaffold(
       appBar: AppBar(
-  title: _isSearching
-      ? TextField(
-          controller: _searchController,
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'Buscar músicas...',
-            border: InputBorder.none,
-            hintStyle: TextStyle(color: Colors.white54),
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Buscar músicas...',
+                  border: InputBorder.none,
+                  hintStyle: TextStyle(color: theme.hintColor), // ✅ Cor do tema
+                ),
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface, // ✅ Cor do tema
+                  fontSize: 18,
+                ),
+              )
+            : Text('Adicionar à ${widget.playlistName}'),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: Icon(
+              _isSearching ? Icons.close : Icons.search,
+              color: theme.colorScheme.onSurface, // ✅ Cor do tema
+            ),
+            onPressed: () {
+              setState(() {
+                _isSearching = !_isSearching;
+                if (!_isSearching) {
+                  _searchController.clear();
+                  _filteredMusics = _allMusics;
+                }
+              });
+            },
           ),
-          style: const TextStyle(color: Colors.white, fontSize: 18),
-        )
-      : Text('Adicionar à ${widget.playlistName}'),
-  centerTitle: true,
-  backgroundColor: Colors.transparent,
-  elevation: 0,
-  actions: [
-    IconButton(
-      icon: Icon(_isSearching ? Icons.close : Icons.search),
-      onPressed: () {
-        setState(() {
-          _isSearching = !_isSearching;
-          if (!_isSearching) {
-            // Limpa a busca e restaura a lista
-            _searchController.clear();
-            _filteredMusics = _allMusics;
-          }
-        });
-      },
-    ),
-    TextButton(
-      onPressed: _selectedMusicIds.isNotEmpty ? _confirmSelection : null,
-      child: const Text('Confirmar', style: TextStyle(color: Colors.blue)),
-    ),
-  ],
-),
+          TextButton(
+            onPressed: _selectedMusicIds.isNotEmpty ? _confirmSelection : null,
+            child: Text(
+              'Confirmar',
+              style: TextStyle(color: theme.colorScheme.primary), // ✅ Cor primária do tema
+            ),
+          ),
+        ],
+      ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: theme.colorScheme.primary))
           : ListView.builder(
               itemCount: _filteredMusics.length,
               itemBuilder: (context, index) {
                 final music = _filteredMusics[index];
-                // Verifica se a música já existe na playlist
                 final bool isExisting = _existingMusicIds.contains(music.id);
-                // Verifica se a música está selecionada para adicionar
                 final bool isSelected = _selectedMusicIds.contains(music.id);
 
+                // Cores baseadas no tema
+                final titleColor = isExisting 
+                    ? theme.colorScheme.onSurface.withOpacity(0.5) // Cinza no modo claro/escuro
+                    : theme.colorScheme.onSurface;
+                final subtitleColor = isExisting
+                    ? theme.colorScheme.onSurface.withOpacity(0.4)
+                    : theme.colorScheme.onSurface.withOpacity(0.7);
+
                 return ListTile(
-                  leading: const Icon(Icons.music_note),
-                  title: Text(music.title,
-                      style: TextStyle(
-                          color: isExisting ? Colors.grey : Colors.black)),
-                  subtitle: Text(music.artist ?? 'Artista Desconhecido',
-                      style: TextStyle(
-                          color: isExisting ? Colors.grey : Colors.black54)),
+                  leading: Icon(
+                    Icons.music_note,
+                    color: theme.colorScheme.onSurface.withOpacity(0.7), // ✅ Ícone adaptável
+                  ),
+                  title: Text(
+                    music.title,
+                    style: TextStyle(color: titleColor),
+                  ),
+                  subtitle: Text(
+                    music.artist ?? 'Artista Desconhecido',
+                    style: TextStyle(color: subtitleColor),
+                  ),
                   trailing: Checkbox(
                     value: isSelected,
+                    activeColor: theme.colorScheme.primary, // ✅ Cor do checkbox
+                    checkColor: theme.colorScheme.onPrimary, // ✅ Cor do ✅
                     onChanged: isExisting
-                        ? null // Desabilita o checkbox se a música já existe
+                        ? null
                         : (bool? value) {
                             setState(() {
                               if (value == true) {

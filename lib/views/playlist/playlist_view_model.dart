@@ -304,7 +304,7 @@ Future<void> _setAudioSource({int initialIndex = 0}) async {
     }
   }
 
-  // 😴 Métodos para o temporizador de desligamento
+  //  Métodos para o temporizador de desligamento
   void setSleepTimer(Duration duration) {
     _sleepTimer?.cancel();
     _sleepDuration = duration;
