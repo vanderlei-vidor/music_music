@@ -1,8 +1,10 @@
+// lib/views/playlist/music_selection_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/database_helper.dart';
-import '../../models/music_model.dart';
+import '../../models/music_entity.dart';
 import 'playlist_view_model.dart';
 
 class MusicSelectionScreen extends StatefulWidget {
@@ -10,10 +12,10 @@ class MusicSelectionScreen extends StatefulWidget {
   final String playlistName;
 
   const MusicSelectionScreen({
-    Key? key,
+    super.key,
     required this.playlistId,
     required this.playlistName,
-  }) : super(key: key);
+  });
 
   @override
   State<MusicSelectionScreen> createState() => _MusicSelectionScreenState();
@@ -21,11 +23,13 @@ class MusicSelectionScreen extends StatefulWidget {
 
 class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
   late final PlaylistViewModel _viewModel;
+
   bool _isLoading = true;
-  List<Music> _allMusics = [];
-  List<Music> _filteredMusics = [];
-  Set<int> _selectedMusicIds = {};
-  Set<int> _existingMusicIds = {};
+  List<MusicEntity> _allMusics = [];
+  List<MusicEntity> _filteredMusics = [];
+
+  final Set<int> _selectedMusicIds = <int>{};
+  final Set<int> _existingMusicIds = <int>{};
 
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
@@ -33,7 +37,7 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
   @override
   void initState() {
     super.initState();
-    _viewModel = Provider.of<PlaylistViewModel>(context, listen: false);
+    _viewModel = context.read<PlaylistViewModel>();
     _loadAllMusics();
     _searchController.addListener(_filterMusics);
   }
@@ -46,11 +50,20 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
 
   Future<void> _loadAllMusics() async {
     try {
-      final allMusics = await DatabaseHelper().getAllMusics();
-      final existingMusics = await _viewModel.getMusicsFromPlaylist(widget.playlistId);
+      final db = DatabaseHelper.instance;
 
-      _existingMusicIds = existingMusics.map((m) => m.id).toSet();
-      _selectedMusicIds = Set<int>.from(_existingMusicIds);
+      final allMusics = await db.getAllMusicsV2();
+      final playlistMusics = await _viewModel.getMusicsFromPlaylistV2(
+        widget.playlistId,
+      );
+
+      _existingMusicIds
+        ..clear()
+        ..addAll(playlistMusics.where((m) => m.id != null).map((m) => m.id!));
+
+      _selectedMusicIds
+        ..clear()
+        ..addAll(_existingMusicIds);
 
       setState(() {
         _allMusics = allMusics;
@@ -58,17 +71,15 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Erro ao carregar músicas: $e');
-      setState(() {
-        _isLoading = false;
-      });
+      debugPrint('Erro ao carregar músicas: $e');
+      setState(() => _isLoading = false);
     }
   }
 
-  void _confirmSelection() {
-    for (final music in _allMusics) {
-      if (_selectedMusicIds.contains(music.id) && !_existingMusicIds.contains(music.id)) {
-        _viewModel.addMusicToPlaylist(widget.playlistId, music);
+  void _confirmSelection() async {
+    for (final musicId in _selectedMusicIds) {
+      if (!_existingMusicIds.contains(musicId)) {
+        await _viewModel.addMusicToPlaylistV2(widget.playlistId, musicId);
       }
     }
     Navigator.pop(context);
@@ -82,7 +93,7 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
       } else {
         _filteredMusics = _allMusics.where((music) {
           return music.title.toLowerCase().contains(query) ||
-                 (music.artist?.toLowerCase().contains(query) ?? false);
+              music.artist.toLowerCase().contains(query);
         }).toList();
       }
     });
@@ -90,7 +101,7 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context); // 👈 Pega o tema atual
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -101,23 +112,12 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
                 decoration: InputDecoration(
                   hintText: 'Buscar músicas...',
                   border: InputBorder.none,
-                  hintStyle: TextStyle(color: theme.hintColor), // ✅ Cor do tema
-                ),
-                style: TextStyle(
-                  color: theme.colorScheme.onSurface, // ✅ Cor do tema
-                  fontSize: 18,
                 ),
               )
             : Text('Adicionar à ${widget.playlistName}'),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(
-              _isSearching ? Icons.close : Icons.search,
-              color: theme.colorScheme.onSurface, // ✅ Cor do tema
-            ),
+            icon: Icon(_isSearching ? Icons.close : Icons.search),
             onPressed: () {
               setState(() {
                 _isSearching = !_isSearching;
@@ -132,53 +132,44 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
             onPressed: _selectedMusicIds.isNotEmpty ? _confirmSelection : null,
             child: Text(
               'Confirmar',
-              style: TextStyle(color: theme.colorScheme.primary), // ✅ Cor primária do tema
+              style: TextStyle(color: theme.colorScheme.primary),
             ),
           ),
         ],
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: theme.colorScheme.primary))
+          ? Center(
+              child: CircularProgressIndicator(
+                color: theme.colorScheme.primary,
+              ),
+            )
           : ListView.builder(
               itemCount: _filteredMusics.length,
               itemBuilder: (context, index) {
                 final music = _filteredMusics[index];
-                final bool isExisting = _existingMusicIds.contains(music.id);
-                final bool isSelected = _selectedMusicIds.contains(music.id);
+                final musicId = music.id;
 
-                // Cores baseadas no tema
-                final titleColor = isExisting 
-                    ? theme.colorScheme.onSurface.withOpacity(0.5) // Cinza no modo claro/escuro
-                    : theme.colorScheme.onSurface;
-                final subtitleColor = isExisting
-                    ? theme.colorScheme.onSurface.withOpacity(0.4)
-                    : theme.colorScheme.onSurface.withOpacity(0.7);
+                if (musicId == null) {
+                  return const SizedBox.shrink();
+                }
+
+                final isExisting = _existingMusicIds.contains(musicId);
+                final isSelected = _selectedMusicIds.contains(musicId);
 
                 return ListTile(
-                  leading: Icon(
-                    Icons.music_note,
-                    color: theme.colorScheme.onSurface.withOpacity(0.7), // ✅ Ícone adaptável
-                  ),
-                  title: Text(
-                    music.title,
-                    style: TextStyle(color: titleColor),
-                  ),
-                  subtitle: Text(
-                    music.artist ?? 'Artista Desconhecido',
-                    style: TextStyle(color: subtitleColor),
-                  ),
+                  leading: const Icon(Icons.music_note),
+                  title: Text(music.title),
+                  subtitle: Text(music.artist),
                   trailing: Checkbox(
                     value: isSelected,
-                    activeColor: theme.colorScheme.primary, // ✅ Cor do checkbox
-                    checkColor: theme.colorScheme.onPrimary, // ✅ Cor do ✅
                     onChanged: isExisting
                         ? null
-                        : (bool? value) {
+                        : (value) {
                             setState(() {
                               if (value == true) {
-                                _selectedMusicIds.add(music.id);
+                                _selectedMusicIds.add(musicId);
                               } else {
-                                _selectedMusicIds.remove(music.id);
+                                _selectedMusicIds.remove(musicId);
                               }
                             });
                           },

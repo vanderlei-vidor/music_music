@@ -1,0 +1,51 @@
+import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
+
+class RepeatButton extends StatelessWidget {
+  final LoopMode mode;
+  final VoidCallback onTap;
+
+  const RepeatButton({
+    super.key,
+    required this.mode,
+    required this.onTap,
+  });
+
+  IconData get _icon {
+    switch (mode) {
+      case LoopMode.one:
+        return Icons.repeat_one;
+      case LoopMode.all:
+        return Icons.repeat;
+      default:
+        return Icons.repeat;
+    }
+  }
+
+  Color _color(BuildContext context) {
+    final theme = Theme.of(context);
+
+    if (mode == LoopMode.off) {
+      return theme.colorScheme.onSurface.withOpacity(0.4);
+    }
+
+    return theme.colorScheme.primary;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedScale(
+        scale: mode == LoopMode.off ? 1.0 : 1.15,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutBack,
+        child: Icon(
+          _icon,
+          size: 30,
+          color: _color(context),
+        ),
+      ),
+    );
+  }
+}

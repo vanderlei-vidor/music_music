@@ -1,6 +1,7 @@
 // views/splash/splash_view.dart
 import 'package:flutter/material.dart';
-import '../home/home_view.dart';
+import 'package:music_music/views/home/home_screen.dart';
+
 import '../../core/theme/app_colors.dart';
 
 class SplashView extends StatefulWidget {
@@ -22,7 +23,7 @@ class _SplashViewState extends State<SplashView> {
     if (mounted) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomeView()),
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
     }
   }

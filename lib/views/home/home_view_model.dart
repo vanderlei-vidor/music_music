@@ -1,53 +1,261 @@
-// lib/views/home/home_view_model.dart
 import 'package:flutter/material.dart';
-import '../../models/music_model.dart';
-import '../../core/services/music_service.dart'; // ✅ Importe seu MusicService
+import 'package:music_music/models/search_result.dart';
+import '../../models/music_entity.dart';
+import '../../data/database_helper.dart';
+import '../../core/music/music_scanner_factory.dart'
+    if (dart.library.html) '../../core/music/music_scanner_factory_web.dart';
+import 'package:music_music/core/music/music_scanner.dart';
+import 'package:flutter/foundation.dart';
+import 'package:sqflite/sqflite.dart';
+import 'dart:async';
 
 class HomeViewModel extends ChangeNotifier {
-  // ✅ Remova a dependência de OnAudioQuery no construtor.
-  // ✅ Instancie o MusicService diretamente.
-  final MusicService _musicService = MusicService();
+  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
 
-  final List<Music> _musics = [];
+  final List<MusicEntity> _musics = [];
+
   bool _isLoading = true;
+  bool _isScanning = false;
+  bool _permissionDenied = false;
+  bool _didAutoScan = false;
 
-  // Construtor sem argumentos.
+  bool _showScanSuccess = false;
+  bool _showMiniPlayerGlow = false;
+
+  List<MusicEntity> get musics => _musics;
+  bool get isLoading => _isLoading;
+  bool get isScanning => _isScanning;
+  bool get permissionDenied => _permissionDenied;
+  bool get showScanSuccess => _showScanSuccess;
+  bool get showMiniPlayerGlow => _showMiniPlayerGlow;
+  Timer? _searchDebounce;
+  String _currentQuery = '';
+  String get currentQuery => _currentQuery;
+
+  final List<MusicEntity> _visibleMusics = [];
+
+  List<MusicEntity> get visibleMusics => _visibleMusics;
+
+  final List<SearchResult> _searchResults = [];
+  List<SearchResult> get searchResults => _searchResults;
+
   HomeViewModel() {
-    loadMusics(); // ✅ Inicie o carregamento de músicas automaticamente.
+    if (kIsWeb) {
+      loadMusics();
+    } else {
+      autoScan();
+    }
   }
 
-  List<Music> get musics => _musics;
-  bool get isLoading => _isLoading;
+  Future<void> autoScan() async {
+    if (kIsWeb || _isScanning || _didAutoScan) return;
+
+    _isScanning = true;
+    _permissionDenied = false;
+    notifyListeners();
+
+    try {
+      final scanner = getMusicScanner();
+      final rawList = await scanner.scan();
+
+      if (rawList.isEmpty) {
+        _permissionDenied = true;
+        return;
+      }
+
+      _didAutoScan = true;
+
+      final processed = await compute(processScanIsolate, rawList);
+
+      final db = await _dbHelper.database;
+      final batch = db.batch();
+
+      for (final music in processed) {
+        batch.insert(
+          'musics_v2',
+          music.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+      }
+
+      await batch.commit(noResult: true);
+
+      await loadMusics();
+
+      _showScanSuccess = true;
+      triggerMiniPlayerGlow();
+    } finally {
+      _isScanning = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> manualRescan() async {
+    if (_isScanning) return;
+
+    _isScanning = true;
+    notifyListeners();
+
+    try {
+      final scanner = getMusicScanner();
+      final rawList = await scanner.scan();
+
+      final processed = await compute(processScanIsolate, rawList);
+
+      final db = await _dbHelper.database;
+      final batch = db.batch();
+
+      for (final music in processed) {
+        batch.insert(
+          'musics_v2',
+          music.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+      }
+
+      await batch.commit(noResult: true);
+
+      await loadMusics();
+
+      _showScanSuccess = true;
+      triggerMiniPlayerGlow();
+    } finally {
+      _isScanning = false;
+      notifyListeners();
+    }
+  }
 
   Future<void> loadMusics() async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      // ✅ Agora, ele usa o MusicService para buscar as músicas.
-      // A lógica de plataforma está toda dentro do MusicService.
-      final List<Music> songs = await _musicService.getSongs();
+      final result = await _dbHelper.getAllMusicsV2();
 
-      _musics.clear();
-      _musics.addAll(songs);
-      
+      _musics
+        ..clear()
+        ..addAll(result);
+
+      // 🔥 ISSO É O QUE FALTAVA
+      _visibleMusics
+        ..clear()
+        ..addAll(_musics);
     } catch (e) {
-      debugPrint("Erro ao carregar músicas: $e");
+      debugPrint('Erro ao carregar músicas: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // Método para buscar músicas por título (sem alterações necessárias).
-  List<Music> searchMusics(String query) {
-    if (query.isEmpty) {
-      return _musics;
-    }
-    return _musics
-        .where((music) =>
-            music.title.toLowerCase().contains(query.toLowerCase()) ||
-            music.artist.toLowerCase().contains(query.toLowerCase()))
-        .toList();
+  void consumeScanSuccess() {
+    _showScanSuccess = false;
   }
+
+  void triggerMiniPlayerGlow() {
+    _showMiniPlayerGlow = true;
+    notifyListeners();
+
+    Future.delayed(const Duration(seconds: 4), () {
+      _showMiniPlayerGlow = false;
+      notifyListeners();
+    });
+  }
+
+  Future<void> insertWebMusic(MusicEntity music) async {
+    await _dbHelper.insertMusicV2(music);
+    await loadMusics();
+  }
+
+  void searchMusics(String query) {
+  _currentQuery = query;
+  _searchDebounce?.cancel();
+
+  _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+    _searchResults.clear();
+
+    if (query.isEmpty) {
+      notifyListeners();
+      return;
+    }
+
+    final q = query.toLowerCase();
+
+    /// 🎵 MÚSICAS (com ranking)
+    final matches = _musics.where((m) {
+      return m.title.toLowerCase().contains(q) ||
+          m.artist.toLowerCase().contains(q) ||
+          (m.album ?? '').toLowerCase().contains(q);
+    }).toList();
+
+    matches.sort(
+      (a, b) => _calculateSearchScore(b, q) - _calculateSearchScore(a, q),
+    );
+
+    for (final m in matches) {
+      _searchResults.add(
+        SearchResult(
+          type: SearchType.music,
+          title: m.title,
+          music: m,
+        ),
+      );
+    }
+
+    /// 👤 ARTISTAS
+    final artists = _musics
+        .map((m) => m.artist)
+        .toSet()
+        .where((a) => a.toLowerCase().contains(q));
+
+    for (final a in artists) {
+      _searchResults.add(
+        SearchResult(type: SearchType.artist, title: a),
+      );
+    }
+
+    /// 💿 ÁLBUNS
+    final albums = _musics
+        .map((m) => m.album ?? '')
+        .toSet()
+        .where((a) => a.isNotEmpty && a.toLowerCase().contains(q));
+
+    for (final a in albums) {
+      _searchResults.add(
+        SearchResult(type: SearchType.album, title: a),
+      );
+    }
+
+    notifyListeners();
+  });
+}
+
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
+}
+
+List<MusicEntity> processScanIsolate(List<MusicEntity> musics) {
+  return musics.where((m) => m.audioUrl.isNotEmpty).toList();
+}
+
+int _calculateSearchScore(MusicEntity m, String q) {
+  int score = 0;
+
+  final title = m.title.toLowerCase();
+  final artist = m.artist.toLowerCase();
+  final album = (m.album ?? '').toLowerCase();
+
+  if (title.startsWith(q)) score += 100;
+  if (artist.startsWith(q)) score += 80;
+  if (album.startsWith(q)) score += 60;
+
+  if (title.contains(q)) score += 50;
+  if (artist.contains(q)) score += 30;
+  if (album.contains(q)) score += 20;
+
+  return score;
 }

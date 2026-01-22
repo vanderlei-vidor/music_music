@@ -1,5 +1,3 @@
-import 'dart:io';
-import 'dart:typed_data';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
@@ -7,23 +5,34 @@ import 'package:audio_session/audio_session.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 
 import 'package:music_music/data/database_helper.dart';
-import 'package:music_music/models/music_model.dart';
-import 'package:on_audio_query/on_audio_query.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart' as p;
+import '../../models/music_entity.dart';
 
-enum PlayerState { playing, paused, stopped }
+enum FavoriteOrder { recent, az }
 
 class PlaylistViewModel extends ChangeNotifier {
-  final _player = AudioPlayer();
-  final OnAudioQuery _audioQuery = OnAudioQuery();
-  // Corrigido: Agora cria uma nova instância da classe
-  final DatabaseHelper _dbHelper = DatabaseHelper();
+  // 🎧 PLAYER
+  final AudioPlayer _player = AudioPlayer();
 
-  PlayerState _playerState = PlayerState.stopped;
-  List<Music> _musics = [];
-  Music? _currentMusic;
+  // 🗄️ DATABASE
+  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+
+  // ❤️ FAVORITOS
+  FavoriteOrder _favoriteOrder = FavoriteOrder.recent;
+  FavoriteOrder get favoriteOrder => _favoriteOrder;
+
+  List<MusicEntity> _favoriteMusics = [];
+  List<MusicEntity> get favoriteMusics => _favoriteMusics;
+
+  // 🕒 RECENTES
+  List<MusicEntity> _recentMusics = [];
+  List<MusicEntity> get recentMusics => _recentMusics;
+  // contador
+  List<MusicEntity> _mostPlayed = [];
+  List<MusicEntity> get mostPlayed => _mostPlayed;
+
+  // 🎵 STATE
+  List<MusicEntity> _musics = [];
+  MusicEntity? _currentMusic;
 
   bool _isShuffled = false;
   LoopMode _repeatMode = LoopMode.off;
@@ -32,189 +41,194 @@ class PlaylistViewModel extends ChangeNotifier {
   Timer? _sleepTimer;
   Duration? _sleepDuration;
 
-  // Getters
-  PlayerState get playerState => _playerState;
-  List<Music> get musics => _musics;
-  Music? get currentMusic => _currentMusic;
+  // =====================
+  // GETTERS
+  // =====================
+  AudioPlayer get player => _player;
+  List<MusicEntity> get musics => _musics;
+  MusicEntity? get currentMusic => _currentMusic;
   bool get isShuffled => _isShuffled;
   LoopMode get repeatMode => _repeatMode;
   double get currentSpeed => _currentSpeed;
+
+  bool _isPlaying = false;
+  bool get isPlaying => _isPlaying;
+
   Stream<Duration> get positionStream => _player.positionStream;
-  AudioPlayer get player => _player;
-  
-
-  Stream<PlayerState> get playerStateStream =>
-      _player.playerStateStream.map((state) {
-        if (state.playing) {
-          return PlayerState.playing;
-        } else if (state.processingState == ProcessingState.completed) {
-          return PlayerState.stopped;
-        } else {
-          return PlayerState.paused;
-        }
-      });
-
-  Stream<SequenceState?> get sequenceStateStream => _player.sequenceStateStream;
-
   Duration? get sleepDuration => _sleepDuration;
-  bool get hasSleepTimer => _sleepTimer != null && _sleepTimer!.isActive;
+  bool get hasSleepTimer => _sleepTimer?.isActive ?? false;
 
+  // =====================
+  // INIT
+  // =====================
   PlaylistViewModel() {
     _initAudioSession();
-    _listenToPlayerStateAndSequence();
-  }
-  
- 
+    _listenToSequenceChanges();
 
-  // 🎵 Métodos de playlist (ajustados)
-  Future<void> createPlaylist(String name) async {
-    await _dbHelper.createPlaylist(name);
-    notifyListeners();
-  }
+    _player.playingStream.listen((playing) {
+      _isPlaying = playing;
+      notifyListeners();
+    });
 
-  Future<void> addMusicToPlaylist(int playlistId, Music music) async {
-    await _dbHelper.addMusicToPlaylist(playlistId, music);
-    notifyListeners();
+    loadAllMusics();
+    loadRecentMusics();
+    loadFavoriteMusics();
+    loadMostPlayed();
   }
 
-  Future<List<Map<String, dynamic>>> getPlaylists() async {
-    return await _dbHelper.getPlaylists();
-  }
-
-  Future<List<Music>> getMusicsFromPlaylist(int playlistId) async {
-    return await _dbHelper.getMusicsFromPlaylist(playlistId);
-  }
-
-  // NOVO MÉTODO: Remove uma música da playlist
-  Future<void> removeMusicFromPlaylist(int playlistId, int musicId) async {
-    await _dbHelper.removeMusicFromPlaylist(playlistId, musicId);
-    notifyListeners();
-  }
-
-  Future<void> deletePlaylist(int playlistId) async {
-    await _dbHelper.deletePlaylist(playlistId);
-    notifyListeners(); // Notifica a UI sobre a mudança
-  }
-
-  // 🎵 Métodos de player e áudio (originais)
-  // Carrega todas as músicas do banco de dados (ajustado para usar o DB)
-  Future<void> loadAllMusics() async {
-    _musics = await _dbHelper.getAllMusics();
-    _setAudioSource();
-    notifyListeners();
-  }
-
-  // Define músicas e cria playlist no player
-  void setMusics(List<Music> musics, {int startIndex = 0}) {
-    _musics = musics;
-    _setAudioSource(initialIndex: startIndex);
-    notifyListeners();
-  }
-
-  // Sessão de áudio
+  // =====================
+  // AUDIO SESSION
+  // =====================
   Future<void> _initAudioSession() async {
     final session = await AudioSession.instance;
     await session.configure(const AudioSessionConfiguration.music());
   }
 
-  // Define playlist no player
-  // Define playlist no player
-Future<void> _setAudioSource({int initialIndex = 0}) async {
-  if (_musics.isEmpty) return;
+  // =====================
+  // DATABASE — MUSICS
+  // =====================
+  Future<void> loadAllMusics() async {
+    _musics = await _dbHelper.getAllMusicsV2();
+    notifyListeners();
+  }
 
-  final playlist = ConcatenatingAudioSource(
-    children: _musics.map((music) {
-      Uri? uri;
-      // ✅ Usar Uri.file() para desktop e Android para garantir o caminho correto
-      if (music.data != null) {
-        uri = Uri.file(music.data!);
-      } else if (music.uri != null) {
-        // Fallback para URIs do OnAudioQuery em mobile se necessário
-        uri = Uri.parse(music.uri!);
-      } else {
-        // Se ambos forem nulos, retorne uma fonte de áudio vazia para evitar erros
-        return null;
-      }
-      
-      // ✅ A lógica para a capa do álbum
-      Uri? albumArtUri;
-      if (Platform.isAndroid || Platform.isIOS) {
-        // Lógica original do mobile
-        albumArtUri = music.albumId != null
-            ? Uri.parse("content://media/external/audio/albumart/${music.albumId}")
-            : Uri.parse("asset:///assets/images/notifica.png");
-      } else {
-        // Lógica para desktop (placeholder)
-        albumArtUri = Uri.parse("asset:///assets/images/notifica.png");
-      }
+  void setMusics(List<MusicEntity> musics) {
+    _musics = musics;
+    _setAudioSource();
+    notifyListeners();
+  }
 
-      // Adicionar uma verificação de segurança antes de retornar
-      if (uri == null) {
-        return null;
-      }
+  // =====================
+  // DATABASE — PLAYLISTS
+  // =====================
 
-      return AudioSource.uri(
-        uri,
-        tag: MediaItem(
-          id: music.id.toString(),
-          album: music.album ?? 'Álbum desconhecido',
-          title: music.title,
-          artist: music.artist,
-          artUri: albumArtUri,
-        ),
-      );
-    }).whereType<AudioSource>().toList(), // Filtrar elementos nulos
-  );
+  Future<void> createPlaylist(String name) async {
+    await _dbHelper.createPlaylist(name);
+    notifyListeners();
+  }
 
-  await _player.setAudioSource(
-    playlist,
-    initialIndex: initialIndex,
-  );
-  await _player.setShuffleModeEnabled(isShuffled);
-}
+  Future<void> deletePlaylist(int playlistId) async {
+    await _dbHelper.deletePlaylist(playlistId);
+    notifyListeners();
+  }
 
-  
+  Future<List<Map<String, dynamic>>> getPlaylists() {
+    return _dbHelper.getPlaylists();
+  }
 
-  // Listener de estados
-  void _listenToPlayerStateAndSequence() {
-    _player.playerStateStream.listen((state) {
-      if (state.playing) {
-        _playerState = PlayerState.playing;
-      } else if (state.processingState == ProcessingState.completed) {
-        _playerState = PlayerState.stopped;
-      } else {
-        _playerState = PlayerState.paused;
-      }
-      notifyListeners();
-    });
+  Future<List<Map<String, dynamic>>> getPlaylistsWithMusicCount() async {
+    final playlists = await _dbHelper.getPlaylists();
+    final List<Map<String, dynamic>> result = [];
 
-    _player.sequenceStateStream.listen((sequenceState) {
-      if (sequenceState != null && sequenceState.currentSource != null) {
-        final index = sequenceState.currentIndex;
-        if (index < _musics.length) {
-          final newMusic = _musics[index];
-          if (_currentMusic?.id != newMusic.id) {
-            _currentMusic = newMusic;
-            
-          }
-          
+    for (final playlist in playlists) {
+      final playlistId = playlist['id'] as int;
+      final count = await _dbHelper.getMusicCountForPlaylist(playlistId);
+
+      result.add({
+        'id': playlistId,
+        'name': playlist['name'],
+        'musicCount': count,
+      });
+    }
+
+    return result;
+  }
+
+  // =====================
+  // PLAYLIST ↔ MÚSICAS
+  // =====================
+
+  Future<List<MusicEntity>> getMusicsFromPlaylistV2(int playlistId) {
+    return _dbHelper.getMusicsFromPlaylistV2(playlistId);
+  }
+
+  Future<void> addMusicToPlaylistV2(int playlistId, int musicId) async {
+    await _dbHelper.addMusicToPlaylistV2(playlistId, musicId);
+    notifyListeners();
+  }
+
+  Future<void> removeMusicFromPlaylist(int playlistId, int musicId) async {
+    await _dbHelper.removeMusicFromPlaylistV2(playlistId, musicId);
+    notifyListeners();
+  }
+
+  // =====================
+  // AUDIO SOURCE
+  // =====================
+  Future<void> _setAudioSource({int? initialIndex}) async {
+    if (_musics.isEmpty) return;
+
+    final wasPlaying = _player.playing;
+    final currentIndex = initialIndex ?? _player.currentIndex ?? 0;
+
+    final playlist = ConcatenatingAudioSource(
+      useLazyPreparation: true,
+      children: _musics.map((music) {
+        return AudioSource.uri(
+          Uri.parse(music.audioUrl),
+          tag: MediaItem(
+            id: music.id?.toString() ?? music.audioUrl,
+            title: music.title,
+            artist: music.artist,
+            album: music.album,
+            artUri: music.artworkUrl != null
+                ? Uri.parse(music.artworkUrl!)
+                : null,
+          ),
+        );
+      }).toList(),
+    );
+
+    await _player.setAudioSource(
+      playlist,
+      initialIndex: currentIndex.clamp(0, _musics.length - 1),
+      preload: false,
+    );
+
+    await _player.setShuffleModeEnabled(_isShuffled);
+
+    if (wasPlaying) {
+      await _player.play();
+    }
+  }
+
+  // =====================
+  // PLAYER LISTENER (RECENTES)
+  // =====================
+  void _listenToSequenceChanges() {
+    _player.sequenceStateStream.listen((sequenceState) async {
+      if (sequenceState == null || sequenceState.currentIndex == null) return;
+
+      final index = sequenceState.currentIndex!;
+      if (index < 0 || index >= _musics.length) return;
+
+      final newMusic = _musics[index];
+
+      if (_currentMusic?.id != newMusic.id) {
+        _currentMusic = newMusic;
+
+        // 🔥 AQUI É O LUGAR CERTO
+        if (newMusic.id != null) {
+          await _dbHelper.registerRecentPlay(newMusic.id!);
+          await loadRecentMusics();
         }
-      } else {
-        _currentMusic = null;
-     
+        notifyListeners();
       }
-      notifyListeners();
     });
   }
 
-  
+  // =====================
+  // CONTROLS (PREMIUM)
+  // =====================
 
+  // ▶️ PLAY / PAUSE
+  Future<void> play() async {
+    await _player.play();
+  }
 
-
-
-  // 🎵 Controles do player
-  Future<void> play() async => await _player.play();
-  Future<void> pause() async => await _player.pause();
+  Future<void> pause() async {
+    await _player.pause();
+  }
 
   void playPause() {
     if (_player.playing) {
@@ -224,91 +238,204 @@ Future<void> _setAudioSource({int initialIndex = 0}) async {
     }
   }
 
-  Future<void> playMusic(List<Music> musics, int index) async {
-  if (index < 0 || index >= musics.length) return;
+  // 🎵 PLAY MÚSICA (contabiliza playCount + mantém fila correta)
+  Future<void> playMusic(List<MusicEntity> queue, int index) async {
+    if (queue.isEmpty) return;
 
-  // Se a lista atual é diferente da nova, recria o AudioSource
-  if (_musics.isEmpty || _musics.length != musics.length) {
-    _musics = musics;
-    await _setAudioSource(initialIndex: index);
+    final isDifferentQueue =
+        _musics.length != queue.length ||
+        _musics.isEmpty ||
+        _musics.first.id != queue.first.id;
+
+    if (isDifferentQueue) {
+      _musics = List.from(queue);
+      await _setAudioSource(initialIndex: index);
+    } else {
+      await _player.seek(Duration.zero, index: index);
+    }
+
+    if (_isShuffled) {
+      await _player.setShuffleModeEnabled(true);
+      await _player.shuffle();
+    }
+
     _currentMusic = _musics[index];
+    await _player.play();
+
     notifyListeners();
-    await play();
-    return;
   }
 
-  // Se a lista já é a mesma, apenas troca de índice
-  _currentMusic = musics[index];
-  notifyListeners();
-  await _player.seek(Duration.zero, index: index);
-  await play();
-}
+  // ⏭️ / ⏮️
+  Future<void> nextMusic() async {
+    await _player.seekToNext();
+  }
 
-  Future<void> nextMusic() async => await _player.seekToNext();
-  Future<void> previousMusic() async => await _player.seekToPrevious();
-  Future<void> seek(Duration position) async => await _player.seek(position);
+  Future<void> previousMusic() async {
+    await _player.seekToPrevious();
+  }
 
-  void toggleShuffle() {
+  // ⏱️ SEEK
+  Future<void> seek(Duration position) async {
+    await _player.seek(position);
+  }
+
+  Future<void> toggleShuffle() async {
     _isShuffled = !_isShuffled;
-    _player.setShuffleModeEnabled(_isShuffled);
+
+    await _player.setShuffleModeEnabled(_isShuffled);
+
     if (_isShuffled) {
-      _player.shuffle();
+      await _player.shuffle();
+    } else {
+      // volta para ordem original da fila atual
+      await _setAudioSource(initialIndex: _player.currentIndex ?? 0);
     }
+
     notifyListeners();
   }
 
   void toggleRepeatMode() {
     if (_repeatMode == LoopMode.off) {
       _repeatMode = LoopMode.all;
-      _player.setLoopMode(LoopMode.all);
     } else if (_repeatMode == LoopMode.all) {
       _repeatMode = LoopMode.one;
-      _player.setLoopMode(LoopMode.one);
     } else {
       _repeatMode = LoopMode.off;
-      _player.setLoopMode(LoopMode.off);
     }
+
+    _player.setLoopMode(_repeatMode);
     notifyListeners();
   }
 
-  Future<void> setPlaybackSpeed(double speed) async {
-    if (speed > 0.1 && speed <= 2.0) {
-      _currentSpeed = speed;
-      await _player.setSpeed(speed);
-      notifyListeners();
-    }
+  void playAllFromPlaylist(List<MusicEntity> musics) {
+    if (musics.isEmpty) return;
+
+    final list = _isShuffled
+        ? (List<MusicEntity>.from(musics)..shuffle())
+        : musics;
+
+    playMusic(list, 0);
   }
 
-  Future<List<Map<String, dynamic>>> getPlaylistsWithMusicCount() async {
-    final playlists = await _dbHelper.getPlaylists();
-    final playlistsWithCount = <Map<String, dynamic>>[];
+  // =====================
+  // velocidade reprodução
+  // =====================
 
-    for (var playlist in playlists) {
-      final playlistId = playlist['id'] as int;
-      final musicCount = await _dbHelper.getMusicCountForPlaylist(playlistId);
-      playlistsWithCount.add({
-        'id': playlistId,
-        'name': playlist['name'],
-        'musicCount': musicCount,
-      });
-    }
+  Future<void> setPlaybackSpeed(double speed) async {
+    if (speed < 0.5 || speed > 2.0) return;
 
-    return playlistsWithCount;
+    _currentSpeed = speed;
+    await _player.setSpeed(speed);
+    notifyListeners();
   }
 
   Future<void> setVolume(double volume) async {
-  // O volume deve estar entre 0.0 e 1.0 para ser válido
-  if (volume >= 0.0 && volume <= 1.0) {
+    if (volume < 0 || volume > 1) return;
     await _player.setVolume(volume);
     notifyListeners();
-    }
   }
 
-  //  Métodos para o temporizador de desligamento
+  // =====================
+  // FAVORITOS
+  // =====================
+  Future<void> loadFavoriteMusics() async {
+    _favoriteMusics = await _dbHelper.getFavoriteMusics();
+
+    if (_favoriteOrder == FavoriteOrder.az) {
+      _favoriteMusics.sort(
+        (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+      );
+    }
+
+    notifyListeners();
+  }
+
+  Future<bool> toggleFavorite(MusicEntity music) async {
+    final newValue = !music.isFavorite;
+
+    await _dbHelper.toggleFavorite(music.audioUrl, newValue);
+
+    final index = _musics.indexWhere((m) => m.id == music.id);
+    if (index != -1) {
+      _musics[index] = music.copyWith(isFavorite: newValue);
+    }
+
+    if (_currentMusic?.id == music.id) {
+      _currentMusic = _musics[index];
+    }
+
+    await loadFavoriteMusics();
+    notifyListeners();
+
+    return newValue;
+  }
+
+  Future<void> toggleFavoriteOrder() async {
+    _favoriteOrder = _favoriteOrder == FavoriteOrder.recent
+        ? FavoriteOrder.az
+        : FavoriteOrder.recent;
+
+    await loadFavoriteMusics();
+  }
+
+  // =====================
+  // RECENTES
+  // =====================
+  Future<void> loadRecentMusics() async {
+    _recentMusics = await _dbHelper.getRecentMusics();
+    notifyListeners();
+  }
+
+  Map<String, List<MusicEntity>> get recentGrouped {
+    final grouped = {
+      'Hoje': <MusicEntity>[],
+      'Ontem': <MusicEntity>[],
+      'Esta semana': <MusicEntity>[],
+    };
+
+    final now = DateTime.now();
+
+    for (final music in _recentMusics) {
+      if (music.lastPlayedAt == null) continue;
+
+      final played = DateTime.fromMillisecondsSinceEpoch(music.lastPlayedAt!);
+      final diff = now.difference(played).inDays;
+
+      if (diff == 0) {
+        grouped['Hoje']!.add(music);
+      } else if (diff == 1) {
+        grouped['Ontem']!.add(music);
+      } else if (diff <= 7) {
+        grouped['Esta semana']!.add(music);
+      }
+    }
+
+    return grouped;
+  }
+
+  Future<void> clearRecentHistory() async {
+    await _dbHelper.clearRecentHistory();
+    _recentMusics = [];
+    notifyListeners();
+  }
+
+  // =====================
+  // contador
+  // =====================
+
+  Future<void> loadMostPlayed() async {
+    _mostPlayed = await _dbHelper.getMostPlayed(limit: 20);
+    notifyListeners();
+  }
+
+  // =====================
+  // SLEEP TIMER
+  // =====================
   void setSleepTimer(Duration duration) {
     _sleepTimer?.cancel();
     _sleepDuration = duration;
     notifyListeners();
+
     _sleepTimer = Timer(duration, () {
       pause();
       _sleepTimer = null;
@@ -318,19 +445,20 @@ Future<void> _setAudioSource({int initialIndex = 0}) async {
   }
 
   void cancelSleepTimer() {
-    if (_sleepTimer != null) {
-      _sleepTimer!.cancel();
-      _sleepTimer = null;
-      _sleepDuration = null;
-      notifyListeners();
-    }
+    _sleepTimer?.cancel();
+    _sleepTimer = null;
+    _sleepDuration = null;
+    notifyListeners();
   }
 
   @override
   void dispose() {
-     
     _sleepTimer?.cancel();
     _player.dispose();
     super.dispose();
+  }
+
+  Future<void> playSingleMusic(MusicEntity music) async {
+    await playMusic([music], 0);
   }
 }
