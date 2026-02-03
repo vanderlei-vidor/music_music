@@ -67,18 +67,9 @@ class HomeViewModel extends ChangeNotifier {
 
       final processed = await compute(processScanIsolate, rawList);
 
-      final db = await _dbHelper.database;
-      final batch = db.batch();
-
       for (final music in processed) {
-        batch.insert(
-          'musics_v2',
-          music.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.ignore,
-        );
+        await _dbHelper.insertMusicIfNotExists(music);
       }
-
-      await batch.commit(noResult: true);
 
       await loadMusics();
 
@@ -102,18 +93,9 @@ class HomeViewModel extends ChangeNotifier {
 
       final processed = await compute(processScanIsolate, rawList);
 
-      final db = await _dbHelper.database;
-      final batch = db.batch();
-
       for (final music in processed) {
-        batch.insert(
-          'musics_v2',
-          music.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.ignore,
-        );
+        await _dbHelper.insertMusicIfNotExists(music);
       }
-
-      await batch.commit(noResult: true);
 
       await loadMusics();
 
@@ -168,68 +150,59 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   void searchMusics(String query) {
-  _currentQuery = query;
-  _searchDebounce?.cancel();
+    _currentQuery = query;
+    _searchDebounce?.cancel();
 
-  _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-    _searchResults.clear();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      _searchResults.clear();
 
-    if (query.isEmpty) {
+      if (query.isEmpty) {
+        notifyListeners();
+        return;
+      }
+
+      final q = query.toLowerCase();
+
+      /// 🎵 MÚSICAS (com ranking)
+      final matches = _musics.where((m) {
+        return m.title.toLowerCase().contains(q) ||
+            m.artist.toLowerCase().contains(q) ||
+            (m.album ?? '').toLowerCase().contains(q);
+      }).toList();
+
+      matches.sort(
+        (a, b) => _calculateSearchScore(b, q) - _calculateSearchScore(a, q),
+      );
+
+      for (final m in matches) {
+        _searchResults.add(
+          SearchResult(type: SearchType.music, title: m.title, music: m),
+        );
+      }
+
+      /// 👤 ARTISTAS
+      final artists = _musics
+          .map((m) => m.artist)
+          .toSet()
+          .where((a) => a.toLowerCase().contains(q));
+
+      for (final a in artists) {
+        _searchResults.add(SearchResult(type: SearchType.artist, title: a));
+      }
+
+      /// 💿 ÁLBUNS
+      final albums = _musics
+          .map((m) => m.album ?? '')
+          .toSet()
+          .where((a) => a.isNotEmpty && a.toLowerCase().contains(q));
+
+      for (final a in albums) {
+        _searchResults.add(SearchResult(type: SearchType.album, title: a));
+      }
+
       notifyListeners();
-      return;
-    }
-
-    final q = query.toLowerCase();
-
-    /// 🎵 MÚSICAS (com ranking)
-    final matches = _musics.where((m) {
-      return m.title.toLowerCase().contains(q) ||
-          m.artist.toLowerCase().contains(q) ||
-          (m.album ?? '').toLowerCase().contains(q);
-    }).toList();
-
-    matches.sort(
-      (a, b) => _calculateSearchScore(b, q) - _calculateSearchScore(a, q),
-    );
-
-    for (final m in matches) {
-      _searchResults.add(
-        SearchResult(
-          type: SearchType.music,
-          title: m.title,
-          music: m,
-        ),
-      );
-    }
-
-    /// 👤 ARTISTAS
-    final artists = _musics
-        .map((m) => m.artist)
-        .toSet()
-        .where((a) => a.toLowerCase().contains(q));
-
-    for (final a in artists) {
-      _searchResults.add(
-        SearchResult(type: SearchType.artist, title: a),
-      );
-    }
-
-    /// 💿 ÁLBUNS
-    final albums = _musics
-        .map((m) => m.album ?? '')
-        .toSet()
-        .where((a) => a.isNotEmpty && a.toLowerCase().contains(q));
-
-    for (final a in albums) {
-      _searchResults.add(
-        SearchResult(type: SearchType.album, title: a),
-      );
-    }
-
-    notifyListeners();
-  });
-}
-
+    });
+  }
 
   @override
   void dispose() {

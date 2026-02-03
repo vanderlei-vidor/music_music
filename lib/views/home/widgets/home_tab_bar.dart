@@ -12,10 +12,11 @@ class HomeTabBar extends StatelessWidget {
 
   static const tabs = [
     'Músicas',
-    'Favoritas',
-    'Playlists',
     'Álbuns',
     'Artistas',
+    'Pastas',
+    'Gêneros',
+    'Playlists',
   ];
 
   @override
@@ -50,8 +51,7 @@ class HomeTabBar extends StatelessWidget {
                   color: selected
                       ? theme.colorScheme.onPrimary
                       : theme.colorScheme.onSurface,
-                  fontWeight:
-                      selected ? FontWeight.bold : FontWeight.normal,
+                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
             ),

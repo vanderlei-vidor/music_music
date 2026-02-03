@@ -16,10 +16,12 @@ class DesktopMusicScanner implements MusicScanner {
 
     final files = dir
         .listSync(recursive: true)
-        .where((f) =>
-            f.path.toLowerCase().endsWith('.mp3') ||
-            f.path.toLowerCase().endsWith('.wav') ||
-            f.path.toLowerCase().endsWith('.m4a'))
+        .where(
+          (f) =>
+              f.path.toLowerCase().endsWith('.mp3') ||
+              f.path.toLowerCase().endsWith('.wav') ||
+              f.path.toLowerCase().endsWith('.m4a'),
+        )
         .toList();
 
     return files.map((file) {
@@ -28,6 +30,7 @@ class DesktopMusicScanner implements MusicScanner {
         title: path.basenameWithoutExtension(file.path),
         artist: 'Desconhecido',
         audioUrl: file.path,
+        folderPath: path.dirname(file.path),
       );
     }).toList();
   }

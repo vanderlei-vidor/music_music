@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:music_music/core/web_upload/web_drag_drop_area.dart';
 import 'package:music_music/core/web_upload/web_music_uploader.dart';
+import 'package:music_music/views/folders/folders_view.dart';
+import 'package:music_music/views/genres/genres_view.dart';
 
 import 'package:music_music/views/home/home_header.dart';
 import 'package:music_music/views/player/mini_player_view.dart';
@@ -106,10 +108,10 @@ class _HomeViewState extends State<_HomeView> {
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: WebDragDropArea(
-                      onFiles: (files) async { final uploaded = await WebMusicUploader.upload(files);
+                      onFiles: (files) async {
+                        final uploaded = await WebMusicUploader.upload(files);
 
-                        final vm =
-                            context.read<HomeViewModel>();
+                        final vm = context.read<HomeViewModel>();
 
                         for (final music in uploaded) {
                           await vm.insertWebMusic(music);
@@ -118,10 +120,7 @@ class _HomeViewState extends State<_HomeView> {
                     ),
                   ),
 
-                HomeTabBar(
-                  currentIndex: _currentIndex,
-                  onTap: _onTabChanged,
-                ),
+                HomeTabBar(currentIndex: _currentIndex, onTap: _onTabChanged),
 
                 Expanded(
                   child: PageView(
@@ -131,10 +130,11 @@ class _HomeViewState extends State<_HomeView> {
                     },
                     children: const [
                       HomeMusicsTab(),
-                      HomeFavoritesTab(),
-                      HomePlaylistsTab(),
                       HomeAlbumsTab(),
                       HomeArtistsTab(),
+                      FoldersView(),
+                      GenresView(),
+                      HomePlaylistsTab(),
                     ],
                   ),
                 ),
@@ -148,9 +148,7 @@ class _HomeViewState extends State<_HomeView> {
                   return const SizedBox.shrink();
                 }
 
-                return SlidingPlayerPanel(
-                  showGlow: homeVM.showMiniPlayerGlow,
-                );
+                return SlidingPlayerPanel(showGlow: homeVM.showMiniPlayerGlow);
               },
             ),
           ],
@@ -159,7 +157,6 @@ class _HomeViewState extends State<_HomeView> {
     );
   }
 }
-
 
 class _HomeDrawer extends StatelessWidget {
   const _HomeDrawer();

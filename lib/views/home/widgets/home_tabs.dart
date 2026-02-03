@@ -3,7 +3,9 @@ import 'package:music_music/core/ui/TextSpan_highlight.dart';
 
 import 'package:music_music/models/music_entity.dart';
 import 'package:music_music/models/search_result.dart';
+import 'package:music_music/views/album/album_detail_screen.dart';
 import 'package:music_music/views/artist/artist_detail_screen.dart';
+
 import 'package:music_music/views/home/home_view_model.dart';
 import 'package:music_music/views/home/widgets/permission_denied_view.dart';
 import 'package:music_music/views/player/player_view.dart';
@@ -49,13 +51,19 @@ class HomeMusicsTab extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (_) =>
-                          ArtistDetailScreen(artistName: result.title),
+                          ArtistDetailView(artistName: result.title),
                     ),
                   );
                   break;
 
                 case SearchType.album:
-                  // próximo passo depois
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          AlbumDetailScreen(albumName: result.title),
+                    ),
+                  );
                   break;
               }
             },
@@ -120,7 +128,7 @@ class HomeFavoritesTab extends StatelessWidget {
             final music = favorites[index];
 
             return ListTile(
-              leading: const Icon(Icons.favorite, color: Colors.redAccent),
+              leading: const CircleAvatar(child: Icon(Icons.music_note)),
               title: Text(music.title),
               subtitle: Text(music.artist),
               onTap: () async {
@@ -215,6 +223,15 @@ class HomePlaylistsTab extends StatelessWidget {
 class HomeAlbumsTab extends StatelessWidget {
   const HomeAlbumsTab({super.key});
 
+  String? _getAlbumArtwork(List<MusicEntity> musics) {
+    for (final m in musics) {
+      if (m.artworkUrl != null && m.artworkUrl!.isNotEmpty) {
+        return m.artworkUrl;
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final musics = context.watch<HomeViewModel>().musics;
@@ -224,14 +241,71 @@ class HomeAlbumsTab extends StatelessWidget {
       albums.putIfAbsent(m.album ?? 'Desconhecido', () => []).add(m);
     }
 
-    return ListView(
-      children: albums.keys.map((album) {
-        return ListTile(
-          leading: const Icon(Icons.album),
-          title: Text(album),
-          subtitle: Text('${albums[album]!.length} músicas'),
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 16,
+        childAspectRatio: 0.75,
+      ),
+      itemCount: albums.length,
+      itemBuilder: (context, index) {
+        final albumName = albums.keys.elementAt(index);
+        final albumMusics = albums[albumName]!;
+
+        final artwork = _getAlbumArtwork(albumMusics);
+
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AlbumDetailScreen(albumName: albumName),
+              ),
+            );
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 🎬 HERO AQUI
+              Hero(
+                tag: 'album_$albumName',
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: artwork != null
+                        ? Image.network(artwork, fit: BoxFit.cover)
+                        : Container(
+                            color: Colors.grey.shade800,
+                            child: const Icon(
+                              Icons.album,
+                              size: 64,
+                              color: Colors.white70,
+                            ),
+                          ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              Text(
+                albumName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+
+              Text(
+                '${albumMusics.length} músicas',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
         );
-      }).toList(),
+      },
     );
   }
 }
@@ -243,19 +317,57 @@ class HomeArtistsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final musics = context.watch<HomeViewModel>().musics;
 
-    final artists = <String, List<MusicEntity>>{};
+    // agrupa por artista
+    final Map<String, List<MusicEntity>> artists = {};
     for (final m in musics) {
-      artists.putIfAbsent(m.artist ?? 'Desconhecido', () => []).add(m);
+      final name = m.artist.isNotEmpty ? m.artist : 'Desconhecido';
+      artists.putIfAbsent(name, () => []).add(m);
     }
 
-    return ListView(
-      children: artists.keys.map((artist) {
-        return ListTile(
-          leading: const Icon(Icons.album),
-          title: Text(artist),
-          subtitle: Text('${artists[artist]!.length} músicas'),
+    if (artists.isEmpty) {
+      return const _EmptyState(
+        icon: Icons.person,
+        text: 'Nenhum artista encontrado',
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: artists.length,
+      itemBuilder: (context, index) {
+        final artist = artists.keys.elementAt(index);
+        final artistMusics = artists[artist]!;
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: ListTile(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            tileColor: Theme.of(context).colorScheme.surfaceVariant,
+            leading: Hero(
+              tag: 'artist_$artist',
+              child: CircleAvatar(radius: 24, child: const Icon(Icons.person)),
+            ),
+            title: Text(
+              artist,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            subtitle: Text('${artistMusics.length} músicas'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ArtistDetailView(artistName: artist),
+                ),
+              );
+            },
+          ),
         );
-      }).toList(),
+      },
     );
   }
 }

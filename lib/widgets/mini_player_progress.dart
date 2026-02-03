@@ -13,9 +13,7 @@ class MiniPlayerProgress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(20),
-      ),
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       child: LinearProgressIndicator(
         value: progress.clamp(0.0, 1.0),
         minHeight: 2.5,

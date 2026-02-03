@@ -1,10 +1,14 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:just_audio_background/just_audio_background.dart';
+import 'package:music_music/core/ui/genre_colors.dart';
+import 'package:music_music/core/utils/genre_normalizer.dart';
 
 import 'package:music_music/data/database_helper.dart';
+import 'package:palette_generator/palette_generator.dart';
 import '../../models/music_entity.dart';
 
 enum FavoriteOrder { recent, az }
@@ -58,6 +62,16 @@ class PlaylistViewModel extends ChangeNotifier {
   Duration? get sleepDuration => _sleepDuration;
   bool get hasSleepTimer => _sleepTimer?.isActive ?? false;
 
+  Color _currentDominantColor = Colors.blueGrey.shade600;
+
+  Color get currentDominantColor => _currentDominantColor;
+
+  String? _currentGenre;
+  Color? _currentGenreColor;
+
+  String? get currentGenre => _currentGenre;
+  Color? get currentGenreColor => _currentGenreColor;
+
   // =====================
   // INIT
   // =====================
@@ -89,6 +103,11 @@ class PlaylistViewModel extends ChangeNotifier {
   // =====================
   Future<void> loadAllMusics() async {
     _musics = await _dbHelper.getAllMusicsV2();
+
+    if (_musics.isNotEmpty) {
+      await _setAudioSource(initialIndex: 0);
+    }
+
     notifyListeners();
   }
 
@@ -161,11 +180,14 @@ class PlaylistViewModel extends ChangeNotifier {
     final wasPlaying = _player.playing;
     final currentIndex = initialIndex ?? _player.currentIndex ?? 0;
 
-    final playlist = ConcatenatingAudioSource(
-      useLazyPreparation: true,
-      children: _musics.map((music) {
-        return AudioSource.uri(
-          Uri.parse(music.audioUrl),
+    final children = <AudioSource>[];
+
+    for (final music in _musics) {
+      final uri = Uri.parse(music.audioUrl);
+
+      children.add(
+        AudioSource.uri(
+          uri,
           tag: MediaItem(
             id: music.id?.toString() ?? music.audioUrl,
             title: music.title,
@@ -175,14 +197,18 @@ class PlaylistViewModel extends ChangeNotifier {
                 ? Uri.parse(music.artworkUrl!)
                 : null,
           ),
-        );
-      }).toList(),
+        ),
+      );
+    }
+
+    final playlist = ConcatenatingAudioSource(
+      useLazyPreparation: true,
+      children: children,
     );
 
     await _player.setAudioSource(
       playlist,
-      initialIndex: currentIndex.clamp(0, _musics.length - 1),
-      preload: false,
+      initialIndex: currentIndex.clamp(0, children.length - 1),
     );
 
     await _player.setShuffleModeEnabled(_isShuffled);
@@ -206,12 +232,24 @@ class PlaylistViewModel extends ChangeNotifier {
 
       if (_currentMusic?.id != newMusic.id) {
         _currentMusic = newMusic;
+        // 🎼 gênero atual
+        _currentGenre = newMusic.genre;
+
+        // 🎨 cor do gênero
+        if (newMusic.genre != null && newMusic.genre!.isNotEmpty) {
+          _currentGenreColor = GenreColorHelper.getColor(newMusic.genre!);
+        } else {
+          _currentGenreColor = null;
+        }
+
+        await _updateDominantColor(newMusic);
 
         // 🔥 AQUI É O LUGAR CERTO
         if (newMusic.id != null) {
           await _dbHelper.registerRecentPlay(newMusic.id!);
           await loadRecentMusics();
         }
+
         notifyListeners();
       }
     });
@@ -242,10 +280,10 @@ class PlaylistViewModel extends ChangeNotifier {
   Future<void> playMusic(List<MusicEntity> queue, int index) async {
     if (queue.isEmpty) return;
 
-    final isDifferentQueue =
-        _musics.length != queue.length ||
-        _musics.isEmpty ||
-        _musics.first.id != queue.first.id;
+    final isDifferentQueue = !listEquals(
+      _musics.map((e) => e.id).toList(),
+      queue.map((e) => e.id).toList(),
+    );
 
     if (isDifferentQueue) {
       _musics = List.from(queue);
@@ -260,6 +298,7 @@ class PlaylistViewModel extends ChangeNotifier {
     }
 
     _currentMusic = _musics[index];
+    print('▶️ play chamado');
     await _player.play();
 
     notifyListeners();
@@ -460,5 +499,119 @@ class PlaylistViewModel extends ChangeNotifier {
 
   Future<void> playSingleMusic(MusicEntity music) async {
     await playMusic([music], 0);
+  }
+
+  void setDominantColor(Color color) {
+    _currentDominantColor = color;
+    notifyListeners();
+  }
+
+  Future<void> _updateDominantColor(MusicEntity music) async {
+    final artwork = music.artworkUrl;
+
+    // 🎨 cor fallback elegante (nunca preto)
+    final fallbackColor = Colors.blueGrey.shade600;
+
+    if (artwork == null || artwork.isEmpty) {
+      _currentDominantColor = fallbackColor;
+
+      debugPrint('🎨 sem artwork → fallback | música: ${music.title}');
+
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final palette = await PaletteGenerator.fromImageProvider(
+        NetworkImage(artwork),
+        maximumColorCount: 10,
+      );
+
+      _currentDominantColor =
+          palette.vibrantColor?.color ??
+          palette.lightVibrantColor?.color ??
+          palette.dominantColor?.color ??
+          fallbackColor;
+
+      debugPrint(
+        '🎨 nova cor: $_currentDominantColor | música: ${music.title}',
+      );
+    } catch (e) {
+      debugPrint('🎨 erro palette: $e');
+
+      _currentDominantColor = fallbackColor;
+    }
+
+    notifyListeners();
+  }
+
+  // =====================
+  // pastas
+  // =====================
+
+  Map<String, List<MusicEntity>> get folders {
+    final Map<String, List<MusicEntity>> result = {};
+
+    for (final m in _musics) {
+      print('🎧 ${m.title} | pasta: ${m.folderPath}');
+      final folder = m.folderPath ?? 'Desconhecido';
+
+      result.putIfAbsent(folder, () => []).add(m);
+    }
+
+    return result;
+  }
+
+  // =====================
+  // gêneros
+  // =====================
+
+  Map<String, List<MusicEntity>> get genres {
+    final Map<String, List<MusicEntity>> temp = {};
+
+    // 1️⃣ Normaliza os gêneros
+    for (final m in _musics) {
+      final genre = GenreNormalizer.normalize(m.genre);
+      temp.putIfAbsent(genre, () => []).add(m);
+    }
+
+    // 2️⃣ Agrupa gêneros pequenos em "Outros"
+    final Map<String, List<MusicEntity>> result = {};
+    final List<MusicEntity> others = [];
+
+    temp.forEach((genre, musics) {
+      if (musics.length < 3) {
+        others.addAll(musics);
+      } else {
+        result[genre] = musics;
+      }
+    });
+
+    if (others.isNotEmpty) {
+      result['Outros'] = others;
+    }
+
+    return result;
+  }
+
+  Map<String, List<MusicEntity>> normalizeGenreGroups(
+    Map<String, List<MusicEntity>> original,
+  ) {
+    final Map<String, List<MusicEntity>> result = {};
+    final List<MusicEntity> others = [];
+
+    original.forEach((genre, musics) {
+      if (musics.length < 3) {
+        others.addAll(musics);
+      } else {
+        result[genre] = musics;
+      }
+    });
+
+    if (others.isNotEmpty) {
+      result['Outros'] = others;
+    }
+
+    return result;
   }
 }

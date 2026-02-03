@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:on_audio_query/on_audio_query.dart';
 import 'dart:convert';
 
@@ -9,7 +11,9 @@ class MusicEntity {
   final String? artworkUrl;
   final int? duration;
   final String? album;
+  final String? genre;
   final bool isFavorite;
+  final String? folderPath;
 
   /// 🕒 timestamp em millis
   final int? lastPlayedAt;
@@ -23,42 +27,57 @@ class MusicEntity {
     this.artworkUrl,
     this.duration,
     this.album,
+    this.genre,
     this.isFavorite = false,
     this.lastPlayedAt,
     this.playCount = 0,
+    this.folderPath,
   });
 
-  // 🔥 VINDO DO SISTEMA (SongModel)
   factory MusicEntity.fromSongModel(SongModel song) {
+  String? folderPath;
+
+  try {
+    final uri = Uri.parse(song.uri ?? '');
+    final file = File(uri.toFilePath());
+
+    folderPath = file.parent.path;
+  } catch (e) {
+    folderPath = null;
+  }
+
     return MusicEntity(
       id: song.id,
       title: song.title,
       artist: song.artist ?? 'Artista desconhecido',
       album: song.album,
+      genre: song.genre,
       duration: song.duration,
-      audioUrl: song.uri!,
+      audioUrl: song.uri ?? '',
       artworkUrl: null,
-      lastPlayedAt: null, // ainda não tocada
+      lastPlayedAt: null,
       playCount: 0,
-      
+      folderPath: folderPath,
     );
   }
 
   // 🔥 VINDO DO BANCO
   factory MusicEntity.fromMap(Map<String, dynamic> map) {
-  return MusicEntity(
-    id: map['id'],
-    title: map['title'],
-    artist: map['artist'],
-    audioUrl: map['audioUrl'],
-    artworkUrl: map['artworkUrl'],
-    duration: map['duration'],
-    album: map['album'],
-    isFavorite: (map['isFavorite'] ?? 0) == 1,
-    lastPlayedAt: map['playedAt'] ?? map['lastPlayedAt'],
-    playCount: map['playCount'] ?? 0,
-  );
-}
+    return MusicEntity(
+      id: map['id'],
+      title: map['title'],
+      artist: map['artist'],
+      audioUrl: map['audioUrl'],
+      artworkUrl: map['artworkUrl'],
+      duration: map['duration'],
+      album: map['album'],
+      genre: map['genre'],
+      isFavorite: (map['isFavorite'] ?? 0) == 1,
+      lastPlayedAt: map['lastPlayedAt'],
+      playCount: map['playCount'] ?? 0,
+      folderPath: map['folderPath'],
+    );
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -69,13 +88,20 @@ class MusicEntity {
       'artworkUrl': artworkUrl,
       'duration': duration,
       'album': album,
+      'genre': genre,
       'isFavorite': isFavorite ? 1 : 0,
       'lastPlayedAt': lastPlayedAt,
       'playCount': playCount,
+      'folderPath': folderPath,
     };
   }
 
-  MusicEntity copyWith({bool? isFavorite, int? lastPlayedAt,int? playCount,}) {
+  MusicEntity copyWith({
+    bool? isFavorite,
+    int? lastPlayedAt,
+    int? playCount,
+    String? genre,
+  }) {
     return MusicEntity(
       id: id,
       title: title,
@@ -84,9 +110,11 @@ class MusicEntity {
       artworkUrl: artworkUrl,
       duration: duration,
       album: album,
+      genre: genre ?? this.genre,
       isFavorite: isFavorite ?? this.isFavorite,
       lastPlayedAt: lastPlayedAt ?? this.lastPlayedAt,
       playCount: playCount ?? this.playCount,
+      folderPath: folderPath ?? this.folderPath,
     );
   }
 
@@ -103,9 +131,11 @@ class MusicEntity {
       'artworkUrl': artworkUrl,
       'duration': duration,
       'album': album,
+      'genre': genre,
       'isFavorite': isFavorite,
       'lastPlayedAt': lastPlayedAt,
       'playCount': playCount,
+      'folderPath': folderPath,
     });
   }
 
@@ -120,9 +150,11 @@ class MusicEntity {
       artworkUrl: map['artworkUrl'],
       duration: map['duration'],
       album: map['album'],
+      genre: map['genre'],
       isFavorite: map['isFavorite'] ?? false,
       lastPlayedAt: map['lastPlayedAt'],
       playCount: map['playCount'] ?? 0,
+      folderPath: map['folderPath'],
     );
   }
 }

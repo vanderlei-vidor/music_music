@@ -121,15 +121,14 @@ class _PlayerViewState extends State<PlayerView> {
                   builder: (_, posSnap) {
                     final position = posSnap.data ?? Duration.zero;
 
-                    return StreamBuilder<Duration?>(
-                      stream: vm.player.durationStream,
-                      builder: (_, durSnap) {
-                        return ProgressSlider(
-                          position: position,
-                          duration: durSnap.data ?? Duration.zero,
-                          onSeek: vm.seek,
-                        );
-                      },
+                    final duration = Duration(
+                      milliseconds: music.duration ?? 0,
+                    );
+
+                    return ProgressSlider(
+                      position: position,
+                      duration: duration,
+                      onSeek: vm.seek,
                     );
                   },
                 ),
@@ -343,7 +342,7 @@ class _BackgroundArtwork extends StatelessWidget {
       children: [
         Image.network(image, fit: BoxFit.cover),
         BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(color: Colors.black.withOpacity(0.4)),
         ),
       ],
@@ -362,20 +361,70 @@ class _ArtworkCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return QueryArtworkWidget(
-      id: music.id!,
-      type: ArtworkType.AUDIO,
-      artworkFit: BoxFit.cover,
-      artworkBorder: BorderRadius.circular(28),
-      nullArtworkWidget: Container(
-        decoration: BoxDecoration(
-          color: Colors.grey.shade800,
-          borderRadius: BorderRadius.circular(28),
-        ),
-        child: const Icon(
-          Icons.music_note,
-          size: 80,
-          color: Colors.white70,
+    final size = MediaQuery.of(context).size.width * 0.78;
+    final audioQuery = OnAudioQuery();
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context)
+                .colorScheme
+                .primary
+                .withOpacity(0.45),
+            blurRadius: 40,
+            offset: const Offset(0, 18),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(32),
+        child: FutureBuilder<Uint8List?>(
+          future: audioQuery.queryArtwork(
+            music.id!,
+            ArtworkType.AUDIO,
+          ),
+          builder: (context, snapshot) {
+            Widget child;
+
+            // 🎵 sem capa
+            if (!snapshot.hasData || snapshot.data == null) {
+              child = Container(
+                key: const ValueKey('no-artwork'),
+                color: Colors.grey.shade900,
+                alignment: Alignment.center,
+                child: const Icon(
+                  Icons.music_note,
+                  size: 90,
+                  color: Colors.white70,
+                ),
+              );
+            } 
+            // 🖼️ com capa
+            else {
+              child = Image.memory(
+                snapshot.data!,
+                key: ValueKey(music.id),
+                fit: BoxFit.cover,
+              );
+            }
+
+            return AnimatedSwitcher(
+              duration: const Duration(milliseconds: 450),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: child,
+                );
+              },
+              child: child,
+            );
+          },
         ),
       ),
     );

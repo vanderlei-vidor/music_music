@@ -2,7 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:music_music/views/home/home_view_model.dart';
+import 'package:music_music/views/playlist/playlist_view_model.dart';
 import 'package:provider/provider.dart';
+import 'dart:ui';
 
 import 'mini_player_view.dart';
 import 'player_view.dart';
@@ -16,7 +18,8 @@ class SlidingPlayerPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final panel = context.watch<PlayerPanelController>();
-    final homeVM = context.watch<HomeViewModel>();
+    final playlistVM = context.read<PlaylistViewModel>();
+    final color = playlistVM.currentDominantColor;
 
     final screenHeight = MediaQuery.of(context).size.height;
 
@@ -72,21 +75,22 @@ class SlidingPlayerPanel extends StatelessWidget {
 
             // 🔥 GLOW PREMIUM AQUI
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 800),
-              curve: Curves.easeInOut,
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeOutCubic,
               decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [color.withOpacity(0.95), Colors.black],
+                ),
                 borderRadius: BorderRadius.circular(24),
-                boxShadow: homeVM.showMiniPlayerGlow
-                    ? [
-                        BoxShadow(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.primary.withOpacity(0.55),
-                          blurRadius: 28,
-                          spreadRadius: 4,
-                        ),
-                      ]
-                    : [],
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withOpacity(0.4),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
               ),
               child: const MiniPlayerView(),
             ),

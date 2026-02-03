@@ -17,7 +17,7 @@ class DatabaseHelper {
 
     _database = await openDatabase(
       path,
-      version: 13,
+      version: 22,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -35,6 +35,8 @@ class DatabaseHelper {
       artworkUrl TEXT,
       duration INTEGER,
       album TEXT,
+      genre TEXT,
+      folderPath TEXT,
       isFavorite INTEGER NOT NULL DEFAULT 0,
       favoritedAt INTEGER,
       lastPlayedAt INTEGER,
@@ -59,14 +61,24 @@ class DatabaseHelper {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 13) {
-      await db.execute(
-        'ALTER TABLE musics_v2 ADD COLUMN lastPlayedAt INTEGER',
-      ).catchError((_) {});
+    if (oldVersion < 22) {
+      await db
+          .execute('ALTER TABLE musics_v2 ADD COLUMN folderPath TEXT')
+          .catchError((_) {});
 
-      await db.execute(
-        'ALTER TABLE musics_v2 ADD COLUMN playCount INTEGER NOT NULL DEFAULT 0',
-      ).catchError((_) {});
+      await db
+          .execute('ALTER TABLE musics_v2 ADD COLUMN genre TEXT')
+          .catchError((_) {});
+
+      await db
+          .execute('ALTER TABLE musics_v2 ADD COLUMN lastPlayedAt INTEGER')
+          .catchError((_) {});
+
+      await db
+          .execute(
+            'ALTER TABLE musics_v2 ADD COLUMN playCount INTEGER NOT NULL DEFAULT 0',
+          )
+          .catchError((_) {});
     }
   }
 
@@ -82,21 +94,19 @@ class DatabaseHelper {
   Future<int> insertMusicV2(MusicEntity music) async {
     final db = await database;
 
-    return db.insert(
-      'musics_v2',
-      {
-        'title': music.title,
-        'artist': music.artist,
-        'audioUrl': music.audioUrl,
-        'artworkUrl': music.artworkUrl,
-        'duration': music.duration,
-        'album': music.album,
-        'isFavorite': music.isFavorite ? 1 : 0,
-        'lastPlayedAt': music.lastPlayedAt,
-        'playCount': music.playCount,
-      },
-      conflictAlgorithm: ConflictAlgorithm.ignore,
-    );
+    return db.insert('musics_v2', {
+      'title': music.title,
+      'artist': music.artist,
+      'audioUrl': music.audioUrl,
+      'artworkUrl': music.artworkUrl,
+      'duration': music.duration,
+      'album': music.album,
+      'genre': music.genre,
+      'folderPath': music.folderPath,
+      'isFavorite': music.isFavorite ? 1 : 0,
+      'lastPlayedAt': music.lastPlayedAt,
+      'playCount': music.playCount,
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
   }
 
   // =======================
@@ -188,21 +198,18 @@ class DatabaseHelper {
   // HISTÓRICO MUSICAS
   // =======================
 
- 
-
   Future<List<MusicEntity>> getRecentMusics() async {
-  final db = await database;
+    final db = await database;
 
-  final result = await db.query(
-    'musics_v2',
-    where: 'lastPlayedAt IS NOT NULL',
-    orderBy: 'lastPlayedAt DESC',
-    limit: 100,
-  );
+    final result = await db.query(
+      'musics_v2',
+      where: 'lastPlayedAt IS NOT NULL',
+      orderBy: 'lastPlayedAt DESC',
+      limit: 100,
+    );
 
-  return result.map((e) => MusicEntity.fromMap(e)).toList();
-}
-
+    return result.map((e) => MusicEntity.fromMap(e)).toList();
+  }
 
   Future<void> registerRecentPlay(int musicId) async {
     final db = await database;
@@ -251,24 +258,41 @@ class DatabaseHelper {
     return result.map((e) => MusicEntity.fromMap(e)).toList();
   }
 
-  Future<void> insertMusicIfNotExists(MusicEntity music) async {
+ Future<void> insertMusicIfNotExists(MusicEntity music) async {
   final db = await database;
 
   final existing = await db.query(
-    'musics_v2', // ✅ TABELA CERTA
+    'musics_v2',
     where: 'audioUrl = ?',
     whereArgs: [music.audioUrl],
     limit: 1,
   );
 
-  if (existing.isNotEmpty) return;
+  if (existing.isNotEmpty) {
+    final currentFolder = existing.first['folderPath'];
 
+    // 🔥 atualiza APENAS se estiver null ou vazio
+    if (currentFolder == null || (currentFolder as String).isEmpty) {
+      await db.update(
+        'musics_v2',
+        {'folderPath': music.folderPath},
+        where: 'audioUrl = ?',
+        whereArgs: [music.audioUrl],
+      );
+    }
+
+    return;
+  }
+
+  // ➕ INSERE SE NÃO EXISTIR
   await db.insert(
     'musics_v2',
     {
       'title': music.title,
       'artist': music.artist,
       'album': music.album,
+      'genre': music.genre,
+      'folderPath': music.folderPath,
       'audioUrl': music.audioUrl,
       'artworkUrl': music.artworkUrl,
       'duration': music.duration,
@@ -279,7 +303,5 @@ class DatabaseHelper {
     conflictAlgorithm: ConflictAlgorithm.ignore,
   );
 }
-
-
 
 }
