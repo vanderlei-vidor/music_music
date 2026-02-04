@@ -346,14 +346,14 @@ class PlaylistViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void playAllFromPlaylist(List<MusicEntity> musics) {
+  Future<void> playAllFromPlaylist(List<MusicEntity> musics) async {
     if (musics.isEmpty) return;
 
     final list = _isShuffled
         ? (List<MusicEntity>.from(musics)..shuffle())
         : musics;
 
-    playMusic(list, 0);
+    await playMusic(list, 0);
   }
 
   // =====================

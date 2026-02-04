@@ -43,6 +43,16 @@ class HomeTabBar extends StatelessWidget {
                     ? theme.colorScheme.primary
                     : theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(24),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color:
+                              theme.colorScheme.primary.withOpacity(0.35),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ]
+                    : null,
               ),
               alignment: Alignment.center,
               child: Text(

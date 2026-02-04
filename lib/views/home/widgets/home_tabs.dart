@@ -1,6 +1,5 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:music_music/core/ui/TextSpan_highlight.dart';
-
 import 'package:music_music/models/music_entity.dart';
 import 'package:music_music/models/search_result.dart';
 import 'package:music_music/views/album/album_detail_screen.dart';
@@ -11,6 +10,7 @@ import 'package:music_music/views/home/widgets/permission_denied_view.dart';
 import 'package:music_music/views/player/player_view.dart';
 import 'package:music_music/views/playlist/playlist_detail_screen.dart';
 import 'package:music_music/views/playlist/playlist_view_model.dart';
+import 'package:music_music/views/playlist/playlists_screen.dart';
 import 'package:music_music/widgets/search_results_view.dart';
 import 'package:provider/provider.dart';
 
@@ -22,14 +22,16 @@ class HomeMusicsTab extends StatelessWidget {
     return Consumer<HomeViewModel>(
       builder: (context, vm, _) {
         if (vm.permissionDenied) {
-          return const PermissionDeniedView();
+          return PermissionDeniedView(
+            onRetry: () => vm.manualRescan(),
+          );
         }
 
         if (vm.isLoading) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        // 🔍 BUSCA ATIVA
+        // ðŸ” BUSCA ATIVA
         if (vm.currentQuery.isNotEmpty) {
           return SearchResultsView(
             results: vm.searchResults,
@@ -70,11 +72,16 @@ class HomeMusicsTab extends StatelessWidget {
           );
         }
 
-        // 🎵 LISTA NORMAL
+        // ðŸŽµ LISTA NORMAL
         if (vm.visibleMusics.isEmpty) {
-          return const _EmptyState(
+          return _EmptyState(
             icon: Icons.library_music,
-            text: 'Nenhuma música encontrada',
+            text: 'Nenhuma mÃºsica encontrada',
+            subtitle: kIsWeb
+                ? 'Use a Ã¡rea de upload acima para adicionar suas mÃºsicas.'
+                : 'Escaneie seu dispositivo para importar suas mÃºsicas.',
+            actionLabel: kIsWeb ? null : 'Escanear agora',
+            onAction: kIsWeb ? null : () => vm.manualRescan(),
           );
         }
 
@@ -84,19 +91,41 @@ class HomeMusicsTab extends StatelessWidget {
           itemBuilder: (_, index) {
             final music = vm.visibleMusics[index];
 
-            return ListTile(
-              title: Text(music.title),
-              subtitle: Text(music.artist),
-              onTap: () async {
-                final playlistVM = context.read<PlaylistViewModel>();
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                tileColor: Theme.of(context).colorScheme.surfaceVariant,
+                leading: _ArtworkThumb(artworkUrl: music.artworkUrl),
+                title: Text(
+                  music.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  music.album == null || music.album!.isEmpty
+                      ? music.artist
+                      : '${music.artist} â€¢ ${music.album}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: Text(
+                  _formatDuration(music.duration),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                onTap: () async {
+                  final playlistVM = context.read<PlaylistViewModel>();
 
-                await playlistVM.playMusic(vm.visibleMusics, index);
+                  await playlistVM.playMusic(vm.visibleMusics, index);
 
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const PlayerView()),
-                );
-              },
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PlayerView()),
+                  );
+                },
+              ),
             );
           },
         );
@@ -117,7 +146,7 @@ class HomeFavoritesTab extends StatelessWidget {
         if (favorites.isEmpty) {
           return const _EmptyState(
             icon: Icons.favorite_border,
-            text: 'Nenhuma música favorita',
+            text: 'Nenhuma mÃºsica favorita',
           );
         }
 
@@ -128,7 +157,7 @@ class HomeFavoritesTab extends StatelessWidget {
             final music = favorites[index];
 
             return ListTile(
-              leading: const CircleAvatar(child: Icon(Icons.music_note)),
+              leading: _ArtworkThumb(artworkUrl: music.artworkUrl),
               title: Text(music.title),
               subtitle: Text(music.artist),
               onTap: () async {
@@ -164,9 +193,19 @@ class HomePlaylistsTab extends StatelessWidget {
             final playlists = snapshot.data as List<Map<String, dynamic>>;
 
             if (playlists.isEmpty) {
-              return const _EmptyState(
+              return _EmptyState(
                 icon: Icons.queue_music,
                 text: 'Nenhuma playlist criada',
+                subtitle: 'Crie sua primeira playlist para organizar sua vibe.',
+                actionLabel: 'Criar playlist',
+                onAction: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const PlaylistsScreen(),
+                    ),
+                  );
+                },
               );
             }
 
@@ -203,7 +242,7 @@ class HomePlaylistsTab extends StatelessWidget {
                           const SizedBox(height: 8),
                           Text(p['name'], textAlign: TextAlign.center),
                           Text(
-                            '${p['musicCount']} músicas',
+                            '${p['musicCount']} mÃºsicas',
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ],
@@ -268,7 +307,7 @@ class HomeAlbumsTab extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 🎬 HERO AQUI
+              // ðŸŽ¬ HERO AQUI
               Hero(
                 tag: 'album_$albumName',
                 child: ClipRRect(
@@ -276,15 +315,16 @@ class HomeAlbumsTab extends StatelessWidget {
                   child: AspectRatio(
                     aspectRatio: 1,
                     child: artwork != null
-                        ? Image.network(artwork, fit: BoxFit.cover)
-                        : Container(
-                            color: Colors.grey.shade800,
-                            child: const Icon(
-                              Icons.album,
-                              size: 64,
-                              color: Colors.white70,
-                            ),
-                          ),
+                        ? Image.network(
+                            artwork,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return _ArtworkFallback();
+                            },
+                            errorBuilder: (_, __, ___) => _ArtworkFallback(),
+                          )
+                        : _ArtworkFallback(),
                   ),
                 ),
               ),
@@ -299,7 +339,7 @@ class HomeAlbumsTab extends StatelessWidget {
               ),
 
               Text(
-                '${albumMusics.length} músicas',
+                '${albumMusics.length} mÃºsicas',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
@@ -347,7 +387,13 @@ class HomeArtistsTab extends StatelessWidget {
             tileColor: Theme.of(context).colorScheme.surfaceVariant,
             leading: Hero(
               tag: 'artist_$artist',
-              child: CircleAvatar(radius: 24, child: const Icon(Icons.person)),
+              child: CircleAvatar(
+                radius: 24,
+                child: Text(
+                  artist.isNotEmpty ? artist[0].toUpperCase() : '?',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
             ),
             title: Text(
               artist,
@@ -355,7 +401,7 @@ class HomeArtistsTab extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            subtitle: Text('${artistMusics.length} músicas'),
+            subtitle: Text('${artistMusics.length} mÃºsicas'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               Navigator.push(
@@ -375,22 +421,107 @@ class HomeArtistsTab extends StatelessWidget {
 class _EmptyState extends StatelessWidget {
   final IconData icon;
   final String text;
+  final String? subtitle;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
-  const _EmptyState({required this.icon, required this.text});
+  const _EmptyState({
+    required this.icon,
+    required this.text,
+    this.subtitle,
+    this.actionLabel,
+    this.onAction,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 72, color: theme.colorScheme.primary),
-          const SizedBox(height: 16),
-          Text(text, style: theme.textTheme.bodyLarge),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 72, color: theme.colorScheme.primary),
+            const SizedBox(height: 16),
+            Text(text, style: theme.textTheme.bodyLarge),
+            if (subtitle != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                subtitle!,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium,
+              ),
+            ],
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: onAction,
+                child: Text(actionLabel!),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
+}
+
+class _ArtworkThumb extends StatelessWidget {
+  final String? artworkUrl;
+
+  const _ArtworkThumb({required this.artworkUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        width: 48,
+        height: 48,
+        child: artworkUrl != null && artworkUrl!.isNotEmpty
+            ? Image.network(
+                artworkUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _ArtworkFallback(),
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return _ArtworkFallback();
+                },
+              )
+            : _ArtworkFallback(),
+      ),
+    );
+  }
+}
+
+class _ArtworkFallback extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            theme.colorScheme.primary.withOpacity(0.35),
+            theme.colorScheme.secondary.withOpacity(0.35),
+          ],
+        ),
+      ),
+      child: const Icon(
+        Icons.music_note,
+        color: Colors.white70,
+      ),
+    );
+  }
+}
+
+String _formatDuration(int? durationMs) {
+  if (durationMs == null || durationMs <= 0) return '--:--';
+  final totalSeconds = (durationMs / 1000).round();
+  final minutes = totalSeconds ~/ 60;
+  final seconds = totalSeconds % 60;
+  return '$minutes:${seconds.toString().padLeft(2, '0')}';
 }

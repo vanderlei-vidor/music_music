@@ -1,8 +1,11 @@
 // views/splash/splash_view.dart
-import 'package:flutter/material.dart';
-import 'package:music_music/views/home/home_screen.dart';
+import 'dart:async';
 
-import '../../core/theme/app_colors.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import 'package:music_music/views/home/home_screen.dart';
+import 'package:music_music/views/home/home_view_model.dart';
 
 class SplashView extends StatefulWidget {
   const SplashView({super.key});
@@ -12,61 +15,155 @@ class SplashView extends StatefulWidget {
 }
 
 class _SplashViewState extends State<SplashView> {
+  Timer? _canSkipTimer;
+  bool _canSkip = false;
+  bool _navigated = false;
+
   @override
   void initState() {
     super.initState();
-    _navigateToHome();
+    _start();
   }
 
-  _navigateToHome() async {
-    await Future.delayed(const Duration(seconds: 4));
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-      );
+  Future<void> _start() async {
+    final vm = context.read<HomeViewModel>();
+
+    _canSkipTimer = Timer(const Duration(milliseconds: 1400), () {
+      if (!mounted) return;
+      setState(() => _canSkip = true);
+    });
+
+    await Future.any([
+      _waitForReady(vm),
+      Future.delayed(const Duration(seconds: 4)),
+    ]);
+
+    if (!mounted) return;
+    await Future.delayed(const Duration(milliseconds: 400));
+
+    _goHome();
+  }
+
+  Future<void> _waitForReady(HomeViewModel vm) {
+    if (!vm.isLoading && !vm.isScanning) {
+      return Future.value();
     }
+
+    final completer = Completer<void>();
+
+    void listener() {
+      if (!vm.isLoading && !vm.isScanning) {
+        vm.removeListener(listener);
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      }
+    }
+
+    vm.addListener(listener);
+    return completer.future;
+  }
+
+  void _goHome() {
+    if (_navigated || !mounted) return;
+    _navigated = true;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const HomeScreen()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      // Remove o backgroundColor do Scaffold para que a imagem de fundo seja visível
-      // backgroundColor: AppColors.background, 
-      body: Stack( // ✅ Usamos um Stack para sobrepor widgets
+      body: Stack(
         children: [
-          // ✅ Imagem de Fundo
-          Positioned.fill( // Preenche todo o espaço disponível
+          Positioned.fill(
             child: Image.asset(
-              'assets/images/background.png', // ✅ Caminho para sua imagem
-              fit: BoxFit.cover, // ✅ Ajusta a imagem para cobrir toda a área
+              'assets/images/background.png',
+              fit: BoxFit.cover,
             ),
           ),
-          // Conteúdo da Tela de Splash (seu Icon e Text)
-       //   Center(
-       //     child: Column(
-       //       mainAxisAlignment: MainAxisAlignment.center,
-           //   children: [
-                // Substitua esta linha pelo seu logo
-          //      Icon(
-          //        Icons.music_note,
-           //       size: 100,
-          //        color: AppColors.accentPurple, // Mantendo a cor roxa
-         //       ),
-               // const SizedBox(height: 20),
-               // const Text(
-                //  'Music App',
-                //  style: TextStyle(
-                 //   fontSize: 24,
-                 //   fontWeight: FontWeight.bold,
-                 //   color: Colors.white, // Mantendo a cor branca para contraste com o fundo escuro
-                 // ),
-              //  ),
-        //      ],
-       //     ),
-      //    ),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.65),
+                    Colors.black.withOpacity(0.25),
+                    Colors.black.withOpacity(0.75),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Spacer(),
+                  Icon(
+                    Icons.music_note,
+                    size: 64,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Music Music',
+                    style: theme.textTheme.headlineLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Carregando sua biblioteca',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: Colors.white70,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Preparando tudo…',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Colors.white70,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (_canSkip)
+                        TextButton(
+                          onPressed: _goHome,
+                          child: const Text('Pular'),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _canSkipTimer?.cancel();
+    super.dispose();
   }
 }

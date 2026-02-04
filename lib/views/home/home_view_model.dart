@@ -60,6 +60,8 @@ class HomeViewModel extends ChangeNotifier {
 
       if (rawList.isEmpty) {
         _permissionDenied = true;
+        _isLoading = false;
+        notifyListeners();
         return;
       }
 
@@ -85,6 +87,7 @@ class HomeViewModel extends ChangeNotifier {
     if (_isScanning) return;
 
     _isScanning = true;
+    _permissionDenied = false;
     notifyListeners();
 
     try {

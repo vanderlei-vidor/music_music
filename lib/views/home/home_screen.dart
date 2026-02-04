@@ -8,7 +8,7 @@ import 'package:music_music/views/folders/folders_view.dart';
 import 'package:music_music/views/genres/genres_view.dart';
 
 import 'package:music_music/views/home/home_header.dart';
-import 'package:music_music/views/player/mini_player_view.dart';
+import 'package:music_music/views/player/player_view.dart';
 import 'package:music_music/views/player/sliding_player_panel.dart';
 import 'package:music_music/views/playlist/playlist_view_model.dart';
 import 'package:provider/provider.dart';
@@ -43,10 +43,10 @@ class _HomeViewState extends State<_HomeView> {
   void initState() {
     super.initState();
 
-    // pega o ViewModel uma única vez
+    // pega o ViewModel uma Ãºnica vez
     _homeVM = context.read<HomeViewModel>();
 
-    // escuta mudanças do ViewModel
+    // escuta mudanÃ§as do ViewModel
     _homeVM.addListener(_onHomeChanged);
   }
 
@@ -54,7 +54,7 @@ class _HomeViewState extends State<_HomeView> {
     if (_homeVM.showScanSuccess) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('🎧 Músicas carregadas com sucesso'),
+          content: const Text('ðŸŽ§ MÃºsicas carregadas com sucesso'),
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.all(16),
           shape: RoundedRectangleBorder(
@@ -89,35 +89,80 @@ class _HomeViewState extends State<_HomeView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    // só para rebuild de UI
-    context.watch<HomeViewModel>();
-
     return Scaffold(
       drawer: const _HomeDrawer(),
       backgroundColor: theme.scaffoldBackgroundColor,
-
       body: SafeArea(
         child: Stack(
           children: [
             Column(
               children: [
-                const HomeHeader(),
+                Consumer<HomeViewModel>(
+                  builder: (context, vm, _) {
+                    return HomeHeader(
+                      canPlay: vm.visibleMusics.isNotEmpty,
+                      onPlayAll: () async {
+                        final playlistVM =
+                            context.read<PlaylistViewModel>();
+                        final musics = vm.visibleMusics;
 
-                // 🌐 UPLOAD WEB
-                if (kIsWeb)
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: WebDragDropArea(
-                      onFiles: (files) async {
-                        final uploaded = await WebMusicUploader.upload(files);
+                        if (musics.isEmpty) return;
 
-                        final vm = context.read<HomeViewModel>();
-
-                        for (final music in uploaded) {
-                          await vm.insertWebMusic(music);
-                        }
+                        await playlistVM.playAllFromPlaylist(musics);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const PlayerView(),
+                          ),
+                        );
                       },
-                    ),
+                      onShuffleAll: () async {
+                        final playlistVM =
+                            context.read<PlaylistViewModel>();
+                        final musics = vm.visibleMusics;
+
+                        if (musics.isEmpty) return;
+
+                        if (!playlistVM.isShuffled) {
+                          await playlistVM.toggleShuffle();
+                        }
+
+                        await playlistVM.playAllFromPlaylist(musics);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const PlayerView(),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+
+                // ðŸŒ UPLOAD WEB
+                if (kIsWeb)
+                  Selector<HomeViewModel, bool>(
+                    selector: (_, vm) =>
+                        !vm.isLoading && vm.musics.isEmpty,
+                    builder: (context, showUpload, _) {
+                      if (!showUpload) return const SizedBox.shrink();
+
+                      return Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: WebDragDropArea(
+                          onFiles: (files) async {
+                            final uploaded =
+                                await WebMusicUploader.upload(files);
+
+                            final vm = context.read<HomeViewModel>();
+
+                            for (final music in uploaded) {
+                              await vm.insertWebMusic(music);
+                            }
+                          },
+                        ),
+                      );
+                    },
                   ),
 
                 HomeTabBar(currentIndex: _currentIndex, onTap: _onTabChanged),
@@ -141,7 +186,7 @@ class _HomeViewState extends State<_HomeView> {
               ],
             ),
 
-            // 🎵 MINI PLAYER
+            // ðŸŽµ MINI PLAYER
             Consumer2<PlaylistViewModel, HomeViewModel>(
               builder: (context, playerVM, homeVM, _) {
                 if (playerVM.currentMusic == null) {
@@ -193,7 +238,7 @@ class _HomeDrawer extends StatelessWidget {
             _DrawerItem(icon: Icons.favorite, label: 'Favoritas', onTap: () {}),
             _DrawerItem(
               icon: Icons.library_music,
-              label: 'Músicas',
+              label: 'MÃºsicas',
               onTap: () {},
             ),
             _DrawerItem(
@@ -201,7 +246,7 @@ class _HomeDrawer extends StatelessWidget {
               label: 'Playlists',
               onTap: () {},
             ),
-            _DrawerItem(icon: Icons.album, label: 'Álbuns', onTap: () {}),
+            _DrawerItem(icon: Icons.album, label: 'Ãlbuns', onTap: () {}),
             _DrawerItem(icon: Icons.person, label: 'Artistas', onTap: () {}),
             _DrawerItem(icon: Icons.folder, label: 'Pastas', onTap: () {}),
 
@@ -210,7 +255,7 @@ class _HomeDrawer extends StatelessWidget {
 
             _DrawerItem(
               icon: Icons.settings,
-              label: 'Configurações',
+              label: 'ConfiguraÃ§Ãµes',
               onTap: () {},
             ),
           ],

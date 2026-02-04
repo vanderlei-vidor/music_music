@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart' as Icons;
 import 'package:permission_handler/permission_handler.dart';
 
 class PermissionDeniedView extends StatelessWidget {
-  const PermissionDeniedView({super.key});
+  final VoidCallback? onRetry;
+
+  const PermissionDeniedView({super.key, this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -16,30 +17,35 @@ class PermissionDeniedView extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.Icons.library_music,
+              Icons.library_music,
               size: 96,
               color: theme.colorScheme.primary,
             ),
             const SizedBox(height: 24),
             Text(
-              'Permissão necessária',
+              'PermissÃ£o necessÃ¡ria',
               style: theme.textTheme.headlineSmall,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             Text(
-              'Para mostrar suas músicas, precisamos acessar o armazenamento do dispositivo.',
+              'Para mostrar suas mÃºsicas, precisamos acessar o armazenamento do dispositivo.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 28),
-
             ElevatedButton.icon(
-              icon: const Icon(Icons.Icons.tune_outlined),
-              label: const Text('Abrir configurações'),
+              icon: const Icon(Icons.settings),
+              label: const Text('Abrir configuraÃ§Ãµes'),
               onPressed: () {
                 openAppSettings();
               },
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.refresh),
+              label: const Text('Tentar novamente'),
+              onPressed: onRetry,
             ),
           ],
         ),
