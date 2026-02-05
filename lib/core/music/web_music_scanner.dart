@@ -4,7 +4,7 @@
 
 
 import 'package:music_music/core/music/music_scanner.dart';
-import 'package:music_music/models/music_entity.dart';
+import 'package:music_music/data/models/music_entity.dart';
 
 class WebMusicScanner implements MusicScanner {
   @override
@@ -13,3 +13,4 @@ class WebMusicScanner implements MusicScanner {
     return [];
   }
 }
+

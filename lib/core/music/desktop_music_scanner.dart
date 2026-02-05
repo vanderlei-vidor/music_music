@@ -4,7 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as path;
 
 import 'package:music_music/core/music/music_scanner.dart';
-import 'package:music_music/models/music_entity.dart';
+import 'package:music_music/data/models/music_entity.dart';
 
 class DesktopMusicScanner implements MusicScanner {
   @override
@@ -35,3 +35,4 @@ class DesktopMusicScanner implements MusicScanner {
     }).toList();
   }
 }
+

@@ -1,4 +1,4 @@
-import '../../models/music_entity.dart';
+import 'package:music_music/data/models/music_entity.dart';
 
 // O Windows lê esta classe. Ela PRECISA ter o mesmo nome da classe da Web.
 class WebMusicUploader {

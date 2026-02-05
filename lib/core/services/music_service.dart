@@ -2,8 +2,8 @@
 
 import 'package:on_audio_query/on_audio_query.dart';
 
-import '../../data/database_helper.dart';
-import '../../models/music_entity.dart';
+import 'package:music_music/data/local/database_helper.dart';
+import 'package:music_music/data/models/music_entity.dart';
 
 class MusicService {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
@@ -51,3 +51,4 @@ class MusicService {
     return await _dbHelper.getAllMusicsV2();
   }
 }
+

@@ -2,7 +2,7 @@
 
 
 import 'package:music_music/core/music/music_scanner.dart';
-import 'package:music_music/models/music_entity.dart';
+import 'package:music_music/data/models/music_entity.dart';
 import 'package:path_provider/path_provider.dart';
 
 class IOSMusicScanner implements MusicScanner {
@@ -28,3 +28,4 @@ class IOSMusicScanner implements MusicScanner {
     }).toList();
   }
 }
+

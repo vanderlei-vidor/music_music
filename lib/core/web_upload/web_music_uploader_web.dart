@@ -1,5 +1,5 @@
 import 'dart:html' as html;
-import '../../models/music_entity.dart';
+import 'package:music_music/data/models/music_entity.dart';
 
 class WebMusicUploader {
   // Use dynamic aqui na entrada para a HomeScreen não reclamar no Windows

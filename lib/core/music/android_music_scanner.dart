@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:on_audio_query/on_audio_query.dart';
-import '../../models/music_entity.dart';
+import 'package:music_music/data/models/music_entity.dart';
 import 'music_scanner.dart';
 
 class AndroidMusicScanner implements MusicScanner {
@@ -49,3 +49,4 @@ class AndroidMusicScanner implements MusicScanner {
 
   }
 }
+

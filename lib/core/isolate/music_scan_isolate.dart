@@ -1,5 +1,5 @@
 import 'dart:isolate';
-import '../../models/music_entity.dart';
+import 'package:music_music/data/models/music_entity.dart';
 
 Future<List<MusicEntity>> scanInIsolate(
   Future<List<MusicEntity>> Function() task,
@@ -18,3 +18,4 @@ void _entry(List args) async {
   final result = await task();
   sendPort.send(result);
 }
+

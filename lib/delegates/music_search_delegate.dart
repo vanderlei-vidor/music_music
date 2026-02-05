@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../models/music_entity.dart';
+import 'package:music_music/data/models/music_entity.dart';
 
 class MusicSearchDelegate extends SearchDelegate<String> {
   final List<MusicEntity> allMusics;
@@ -138,3 +138,4 @@ class MusicSearchDelegate extends SearchDelegate<String> {
     );
   }
 }
+
