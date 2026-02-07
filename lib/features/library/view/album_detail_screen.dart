@@ -7,6 +7,7 @@ import 'package:music_music/features/playlists/view_model/playlist_view_model.da
 import 'package:music_music/shared/widgets/vinyl_album_cover.dart';
 import 'package:music_music/shared/widgets/mini_equalizer.dart';
 import 'package:music_music/shared/widgets/mini_progress_bar.dart';
+import 'package:music_music/core/theme/app_shadows.dart';
 
 class AlbumDetailScreen extends StatelessWidget {
   final String albumName;
@@ -118,53 +119,70 @@ class AlbumDetailScreen extends StatelessWidget {
                       (context, index) {
                         final music = musics[index];
 
-                        return ListTile(
-                          leading: Consumer<PlaylistViewModel>(
-                            builder: (_, vm, __) {
-                              final isCurrent = vm.currentMusic?.id == music.id;
+                        final shadows =
+                            Theme.of(context).extension<AppShadows>()?.surface ??
+                                [];
 
-                              if (!isCurrent) {
-                                return Text('${index + 1}');
-                              }
+                        return Container(
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).cardColor,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: shadows,
+                          ),
+                          child: ListTile(
+                            leading: Consumer<PlaylistViewModel>(
+                              builder: (_, vm, __) {
+                                final isCurrent =
+                                    vm.currentMusic?.id == music.id;
 
-                              return MiniEqualizer(
-                                isPlaying: vm.isPlaying,
-                                color: dominantColor,
-                              );
+                                if (!isCurrent) {
+                                  return Text('${index + 1}');
+                                }
+
+                                return MiniEqualizer(
+                                  isPlaying: vm.isPlaying,
+                                  color: dominantColor,
+                                );
+                              },
+                            ),
+                            title: Text(music.title),
+                            subtitle: Consumer<PlaylistViewModel>(
+                              builder: (_, vm, __) {
+                                final isCurrent =
+                                    vm.currentMusic?.id == music.id;
+
+                                if (!isCurrent) {
+                                  return Text(music.artist);
+                                }
+
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(music.artist),
+                                    StreamBuilder<Duration>(
+                                      stream: vm.positionStream,
+                                      builder: (_, snapshot) {
+                                        return MiniProgressBar(
+                                          position:
+                                              snapshot.data ?? Duration.zero,
+                                          duration:
+                                              vm.player.duration ?? Duration.zero,
+                                          color: dominantColor,
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                            onTap: () {
+                              playlistVM.playMusic(musics, index);
                             },
                           ),
-                          title: Text(music.title),
-                          subtitle: Consumer<PlaylistViewModel>(
-                            builder: (_, vm, __) {
-                              final isCurrent = vm.currentMusic?.id == music.id;
-
-                              if (!isCurrent) {
-                                return Text(music.artist);
-                              }
-
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(music.artist),
-                                  StreamBuilder<Duration>(
-                                    stream: vm.positionStream,
-                                    builder: (_, snapshot) {
-                                      return MiniProgressBar(
-                                        position:
-                                            snapshot.data ?? Duration.zero,
-                                        duration:
-                                            vm.player.duration ?? Duration.zero,
-                                        color: dominantColor,
-                                      );
-                                    },
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
-                          onTap: () {
-                            playlistVM.playMusic(musics, index);
-                          },
                         );
                       },
                     ),

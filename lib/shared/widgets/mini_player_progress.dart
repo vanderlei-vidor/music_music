@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:music_music/core/theme/app_shadows.dart';
 
 class MiniPlayerProgress extends StatelessWidget {
   final double progress; // 0.0 → 1.0
@@ -12,13 +13,22 @@ class MiniPlayerProgress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final shadows = theme.extension<AppShadows>();
+
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      child: LinearProgressIndicator(
-        value: progress.clamp(0.0, 1.0),
-        minHeight: 2.5,
-        backgroundColor: color.withOpacity(0.2),
-        valueColor: AlwaysStoppedAnimation(color),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          boxShadow: shadows?.surface ?? const [],
+        ),
+        child: LinearProgressIndicator(
+          value: progress.clamp(0.0, 1.0),
+          minHeight: 2.5,
+          backgroundColor: color.withOpacity(0.2),
+          valueColor: AlwaysStoppedAnimation(color),
+        ),
       ),
     );
   }

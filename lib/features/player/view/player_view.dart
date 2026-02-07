@@ -10,6 +10,7 @@ import 'package:just_audio/just_audio.dart' hide PlayerState;
 import 'package:music_music/data/models/music_entity.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 
+import 'package:music_music/core/theme/app_shadows.dart';
 import 'package:music_music/shared/widgets/animated_favorite_icon.dart';
 import 'package:music_music/shared/widgets/audio_wave.dart';
 import 'package:music_music/shared/widgets/play_pause_button.dart';
@@ -360,6 +361,8 @@ class _ArtworkCover extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size.width * 0.78;
     final audioQuery = OnAudioQuery();
+    final theme = Theme.of(context);
+    final shadows = theme.extension<AppShadows>();
 
     return Container(
       width: size,
@@ -367,11 +370,9 @@ class _ArtworkCover extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
+          ...(shadows?.elevated ?? const []),
           BoxShadow(
-            color: Theme.of(context)
-                .colorScheme
-                .primary
-                .withOpacity(0.45),
+            color: theme.colorScheme.primary.withOpacity(0.45),
             blurRadius: 40,
             offset: const Offset(0, 18),
           ),

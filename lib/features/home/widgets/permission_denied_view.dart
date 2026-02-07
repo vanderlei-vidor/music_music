@@ -23,20 +23,20 @@ class PermissionDeniedView extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'PermissÃ£o necessÃ¡ria',
+              'Permissão necessária',
               style: theme.textTheme.headlineSmall,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             Text(
-              'Para mostrar suas mÃºsicas, precisamos acessar o armazenamento do dispositivo.',
+              'Para mostrar suas músicas, precisamos acessar o armazenamento do dispositivo.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 28),
             ElevatedButton.icon(
               icon: const Icon(Icons.settings),
-              label: const Text('Abrir configuraÃ§Ãµes'),
+              label: const Text('Abrir configurações'),
               onPressed: () {
                 openAppSettings();
               },

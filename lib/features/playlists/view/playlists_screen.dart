@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:music_music/delegates/music_search_delegate.dart';
 import 'package:music_music/app/routes.dart';
+import 'package:music_music/core/theme/app_shadows.dart';
 import 'package:provider/provider.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 
@@ -58,8 +59,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
               if (controller.text.isNotEmpty) {
                 viewModel.createPlaylist(controller.text);
                 setState(() {
-                  _playlistsFuture =
-                      viewModel.getPlaylistsWithMusicCount();
+                  _playlistsFuture = viewModel.getPlaylistsWithMusicCount();
                 });
                 Navigator.pop(context);
               }
@@ -99,8 +99,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
             onPressed: () {
               viewModel.deletePlaylist(playlistId);
               setState(() {
-                _playlistsFuture =
-                    viewModel.getPlaylistsWithMusicCount();
+                _playlistsFuture = viewModel.getPlaylistsWithMusicCount();
               });
               Navigator.pop(context);
             },
@@ -129,8 +128,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () =>
-                _showCreatePlaylistDialog(context, viewModel),
+            onPressed: () => _showCreatePlaylistDialog(context, viewModel),
           ),
           IconButton(
             icon: const Icon(Icons.search),
@@ -170,6 +168,8 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
               final id = playlist['id'] as int;
               final name = playlist['name'] as String;
               final count = playlist['musicCount'] as int;
+              final shadows =
+                  Theme.of(context).extension<AppShadows>()?.elevated ?? [];
 
               return Hero(
                 tag: 'playlist_$id',
@@ -182,11 +182,12 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
                 },
                 child: Material(
                   color: Colors.transparent,
-                  child: Card(
+                  child: Container(
                     margin: const EdgeInsets.only(bottom: 16),
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
+                    decoration: BoxDecoration(
+                      color: theme.cardColor,
                       borderRadius: BorderRadius.circular(16),
+                      boxShadow: shadows,
                     ),
                     child: ListTile(
                       leading: const Icon(Icons.queue_music),
@@ -201,8 +202,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
                       ),
                       trailing: IconButton(
                         icon: const Icon(Icons.delete),
-                        onPressed: () =>
-                            _showDeleteConfirmationDialog(
+                        onPressed: () => _showDeleteConfirmationDialog(
                           context,
                           viewModel,
                           id,
@@ -210,17 +210,17 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
                         ),
                       ),
                       onTap: () {
-                      Navigator.pushNamed(
-                        context,
-                        AppRoutes.playlistDetail,
-                        arguments: PlaylistDetailArgs(
-                          playlistId: id,
-                          playlistName: name,
-                        ),
-                      );
-                    },
+                        Navigator.pushNamed(
+                          context,
+                          AppRoutes.playlistDetail,
+                          arguments: PlaylistDetailArgs(
+                            playlistId: id,
+                            playlistName: name,
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                ),
                 ),
               );
             },
@@ -230,5 +230,3 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
     );
   }
 }
-
-

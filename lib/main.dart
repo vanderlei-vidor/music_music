@@ -6,6 +6,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 
 import 'package:music_music/app/app.dart';
+import 'package:music_music/core/theme/theme_manager.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,6 +40,7 @@ Future<void> main() async {
     );
   }
 
-  runApp(const MusicApp());
+  final preset = await ThemeManager.loadPreset();
+  runApp(MusicApp(initialPreset: preset));
 }
 

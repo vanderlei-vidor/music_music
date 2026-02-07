@@ -3,12 +3,16 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:music_music/core/theme/app_colors.dart';
+import 'package:music_music/core/ui/neumorphic_wrapper.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:provider/provider.dart';
 
+import 'package:music_music/core/theme/app_shadows.dart';
 import 'package:music_music/shared/widgets/mini_equalizer.dart';
 import 'package:music_music/shared/widgets/animated_favorite_icon.dart';
 import 'package:music_music/shared/widgets/animated_play_pause.dart';
+import 'package:music_music/shared/widgets/mini_player_progress.dart';
 import 'package:music_music/app/routes.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 
@@ -21,11 +25,11 @@ class MiniPlayerView extends StatefulWidget {
 
 class _MiniPlayerViewState extends State<MiniPlayerView>
     with TickerProviderStateMixin {
-  // 🎵 pulsação
+  // ðŸŽµ pulsaÃ§Ã£o
   late AnimationController _pulseController;
   late Animation<double> _pulse;
 
-  // 🎨 cor animada
+  // ðŸŽ¨ cor animada
   late AnimationController _colorController;
   late Animation<Color?> _colorAnimation;
 
@@ -59,7 +63,7 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
     final vm = context.watch<PlaylistViewModel>();
     final newColor = vm.currentDominantColor;
 
-    // 🎨 anima mudança de cor
+    // ðŸŽ¨ anima mudanÃ§a de cor
     if (newColor != _currentColor) {
       _colorAnimation = ColorTween(begin: _currentColor, end: newColor).animate(
         CurvedAnimation(parent: _colorController, curve: Curves.easeOutCubic),
@@ -69,7 +73,7 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
       _colorController.forward(from: 0);
     }
 
-    // 🔊 pulsação se tocando
+    // ðŸ”Š pulsaÃ§Ã£o se tocando
     if (vm.isPlaying) {
       if (!_pulseController.isAnimating) {
         _pulseController.repeat(reverse: true);
@@ -90,6 +94,7 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final shadows = theme.extension<AppShadows>();
 
     return Consumer<PlaylistViewModel>(
       builder: (context, vm, _) {
@@ -108,7 +113,7 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
               child: GestureDetector(
                 behavior: HitTestBehavior.translucent,
 
-                // ⬅️➡️ swipe música
+                // â¬…ï¸âž¡ï¸ swipe mÃºsica
                 onHorizontalDragEnd: (details) {
                   final velocity = details.primaryVelocity ?? 0;
 
@@ -124,7 +129,7 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
                 child: InkWell(
                   borderRadius: BorderRadius.circular(20),
 
-                  // 👉 abre player
+                  // ðŸ‘‰ abre player
                   onTap: () {
                     Navigator.pushNamed(context, AppRoutes.player);
                   },
@@ -150,90 +155,173 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
                                   ],
                           ),
                           borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: animatedColor.withOpacity(0.35),
-                              blurRadius: 30,
-                              offset: const Offset(0, 12),
-                            ),
-                          ],
+                          boxShadow: shadows?.neumorphic ??
+                              [
+                                BoxShadow(
+                                  color: animatedColor.withOpacity(0.35),
+                                  blurRadius: 30,
+                                  offset: const Offset(0, 12),
+                                ),
+                              ],
                         ),
-
-                        child: Row(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            // 🎨 capa
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: QueryArtworkWidget(
-                                id: music.id!,
-                                type: ArtworkType.AUDIO,
-                                artworkFit: BoxFit.cover,
-                                size: 200,
-                                nullArtworkWidget: _defaultArtwork(theme),
-                              ),
-                            ),
-
-                            const SizedBox(width: 12),
-
-                            // 🎵 texto
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    music.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
+                            Row(
+                              children: [
+                                // ðŸŽ¨ CAPA PREMIUM (com profundidade)
+                                Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.6),
+                                        blurRadius: 16,
+                                        offset: const Offset(0, 10),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: QueryArtworkWidget(
+                                      id: music.id!,
+                                      type: ArtworkType.AUDIO,
+                                      artworkFit: BoxFit.cover,
+                                      size: 200,
+                                      nullArtworkWidget: _defaultArtwork(theme),
                                     ),
                                   ),
-                                  Text(
-                                    music.artist,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: theme.colorScheme.onSurface
-                                          .withOpacity(0.7),
-                                    ),
+                                ),
+
+                                const SizedBox(width: 12),
+
+                                // ðŸŽµ texto
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        music.title,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text(
+                                        music.artist,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style:
+                                            theme.textTheme.bodySmall?.copyWith(
+                                          color: theme.colorScheme.onSurface
+                                              .withOpacity(0.7),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                ),
+
+                                const SizedBox(width: 8),
+
+                                MiniEqualizer(
+                                  isPlaying: vm.isPlaying,
+                                  color: theme.colorScheme.primary,
+                                  size: 18,
+                                ),
+
+                                NeumorphicWrapper(
+                                  child: Icon(
+                                    Icons.skip_previous,
+                                    size: 20,
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                  onTap: vm.previousMusic, // ðŸ‘ˆ explico abaixo
+                                ),
+
+                                Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient:
+                                        theme.brightness == Brightness.light
+                                            ? LinearGradient(
+                                                colors: [
+                                                  theme.colorScheme.primary,
+                                                  theme.colorScheme.primary
+                                                      .withOpacity(0.85),
+                                                ],
+                                              )
+                                            : PremiumGradients.accentOrange,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color:
+                                            theme.brightness == Brightness.light
+                                                ? theme.colorScheme.primary
+                                                    .withOpacity(0.35)
+                                                : animatedColor
+                                                    .withOpacity(0.6),
+                                        blurRadius: theme.brightness ==
+                                                Brightness.light
+                                            ? 18
+                                            : 26,
+                                        offset: theme.brightness ==
+                                                Brightness.light
+                                            ? const Offset(0, 8)
+                                            : const Offset(0, 10),
+                                      ),
+                                    ],
+                                  ),
+                                  padding: const EdgeInsets.all(10),
+                                  child: PlayPauseButton(
+                                    isPlaying: vm.isPlaying,
+                                    color: Colors.white,
+                                    onTap: () {
+                                      HapticFeedback.mediumImpact();
+                                      vm.playPause();
+                                    },
+                                  ),
+                                ),
+
+                                NeumorphicWrapper(
+                                  child: Icon(
+                                    Icons.skip_next,
+                                    size: 20,
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                  onTap: vm.nextMusic, // ðŸ‘ˆ explico abaixo
+                                ),
+
+                                AnimatedFavoriteIcon(
+                                  isFavorite: music.isFavorite,
+                                  size: 26,
+                                  onTap: () {
+                                    HapticFeedback.lightImpact();
+                                    vm.toggleFavorite(music);
+                                  },
+                                ),
+                              ],
                             ),
+                            const SizedBox(height: 8),
+                            StreamBuilder<Duration>(
+                              stream: vm.positionStream,
+                              builder: (_, posSnap) {
+                                final position = posSnap.data ?? Duration.zero;
+                                final duration = Duration(
+                                  milliseconds: music.duration ?? 0,
+                                );
+                                final total = duration.inMilliseconds;
+                                final current = position.inMilliseconds
+                                    .clamp(0, total);
+                                final progress =
+                                    total == 0 ? 0.0 : current / total;
 
-                            const SizedBox(width: 8),
-
-                            MiniEqualizer(
-                              isPlaying: vm.isPlaying,
-                              color: theme.colorScheme.primary,
-                              size: 18,
-                            ),
-
-                            IconButton(
-                              icon: const Icon(Icons.skip_previous),
-                              onPressed: vm.previousMusic,
-                            ),
-
-                            PlayPauseButton(
-                              isPlaying: vm.isPlaying,
-                              onTap: () {
-                                HapticFeedback.lightImpact();
-                                vm.playPause();
-                              },
-                            ),
-
-                            IconButton(
-                              icon: const Icon(Icons.skip_next),
-                              onPressed: vm.nextMusic,
-                            ),
-
-                            AnimatedFavoriteIcon(
-                              isFavorite: music.isFavorite,
-                              size: 26,
-                              onTap: () {
-                                HapticFeedback.lightImpact();
-                                vm.toggleFavorite(music);
+                                return MiniPlayerProgress(
+                                  progress: progress,
+                                  color: theme.colorScheme.primary,
+                                );
                               },
                             ),
                           ],
@@ -262,4 +350,3 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
     );
   }
 }
-

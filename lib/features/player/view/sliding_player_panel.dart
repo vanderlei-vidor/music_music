@@ -52,12 +52,12 @@ class SlidingPlayerPanel extends StatelessWidget {
         ),
 
         // ======================
-        // 🎵 MINI PLAYER
+        // 🎵 MINI PLAYER (PREMIUM)
         // ======================
         Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
+          bottom: 16,
+          left: 16,
+          right: 16,
           child: GestureDetector(
             onVerticalDragUpdate: (details) {
               final delta = details.primaryDelta! / screenHeight;
@@ -72,27 +72,49 @@ class SlidingPlayerPanel extends StatelessWidget {
                 context.read<PlayerPanelController>().close();
               }
             },
-
-            // 🔥 GLOW PREMIUM AQUI
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 500),
-              curve: Curves.easeOutCubic,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [color.withOpacity(0.95), Colors.black],
-                ),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withOpacity(0.4),
-                    blurRadius: 24,
-                    offset: const Offset(0, 12),
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 300),
+              opacity: panel.progress < 0.05 ? 1 : 0,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(28),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 500),
+                    curve: Curves.easeOutCubic,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          color.withOpacity(0.25),
+                          Theme.of(context).cardColor.withOpacity(0.95),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        // Glow controlado (não estoura)
+                        BoxShadow(
+                          color: color.withOpacity(0.35),
+                          blurRadius: 30,
+                          offset: const Offset(0, 16),
+                        ),
+                        // Sombra profunda (flutuação)
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.5),
+                          blurRadius: 40,
+                          offset: const Offset(0, 24),
+                        ),
+                      ],
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.06),
+                        width: 1,
+                      ),
+                    ),
+                    child: const MiniPlayerView(),
                   ),
-                ],
+                ),
               ),
-              child: const MiniPlayerView(),
             ),
           ),
         ),
@@ -100,4 +122,3 @@ class SlidingPlayerPanel extends StatelessWidget {
     );
   }
 }
-

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import 'package:music_music/core/theme/app_shadows.dart';
 import 'package:music_music/core/ui/genre_colors.dart';
 
 class GenreCard extends StatelessWidget {
@@ -17,6 +19,10 @@ class GenreCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = GenreColorHelper.getColor(genre);
+    final shadows = theme.extension<AppShadows>();
+    final cardShadows = theme.brightness == Brightness.dark
+        ? (shadows?.neumorphic ?? [])
+        : (shadows?.elevated ?? []);
 
     return GestureDetector(
       onTap: onTap,
@@ -31,19 +37,13 @@ class GenreCard extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: [color.withOpacity(0.25), theme.colorScheme.surface],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.35),
-              blurRadius: 26,
-              offset: const Offset(0, 14),
-            ),
-          ],
+          boxShadow: cardShadows,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 🎼 ÍCONE COM GLOW
+            // ICONE COM GLOW
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -55,27 +55,20 @@ class GenreCard extends StatelessWidget {
               ),
               child: Icon(Icons.music_note, size: 24, color: color),
             ),
-
             const SizedBox(height: 12),
-
-            // 🎧 NOME DO GÊNERO
+            // NOME DO GENERO
             Expanded(
-              // Envolva em Expanded para ele não empurrar o resto pra fora
               child: Text(
                 genre,
-                maxLines:
-                    1, // Reduzir para 1 linha ajuda a evitar overflow no Grid
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  fontSize: 14, // Force um tamanho menor se necessário
+                  fontSize: 14,
                 ),
               ),
             ),
-
-            
-
-            // 🔢 CONTAGEM
+            // CONTAGEM
             Text(
               '$count músicas',
               style: theme.textTheme.bodySmall?.copyWith(

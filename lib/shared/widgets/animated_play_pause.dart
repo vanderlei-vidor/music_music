@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 class PlayPauseButton extends StatefulWidget {
   final bool isPlaying;
   final VoidCallback onTap;
+  final Color? color;
 
   const PlayPauseButton({
     super.key,
     required this.isPlaying,
     required this.onTap,
+    this.color,
   });
 
   @override
@@ -53,7 +55,7 @@ class _PlayPauseButtonState extends State<PlayPauseButton>
         icon: AnimatedIcons.play_pause,
         progress: _controller,
         size: 56,
-        color: Theme.of(context).colorScheme.primary,
+        color: widget.color ?? Theme.of(context).colorScheme.primary,
       ),
     );
   }

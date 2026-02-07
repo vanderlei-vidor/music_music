@@ -5,6 +5,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:music_music/shared/widgets/playlist_sticky_controls.dart';
 import 'package:music_music/shared/widgets/swipe_to_reveal_actions.dart';
+import 'package:music_music/core/theme/app_shadows.dart';
 import 'package:provider/provider.dart';
 
 import 'package:music_music/data/models/music_entity.dart';
@@ -315,6 +316,9 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           final music = musics[index];
           final isPlaying = viewModel.currentMusic?.id == music.id;
 
+          final shadows =
+              Theme.of(context).extension<AppShadows>()?.surface ?? [];
+
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             child: SwipeToRevealActions(
@@ -366,9 +370,11 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                 );
               },
 
-              child: Card(
-                shape: RoundedRectangleBorder(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
                   borderRadius: BorderRadius.circular(12),
+                  boxShadow: shadows,
                 ),
                 child: ListTile(
                   title: Text(music.title),

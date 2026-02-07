@@ -12,17 +12,21 @@ final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey =
 
 class MusicApp extends StatelessWidget {
   final List<NavigatorObserver>? navigatorObservers;
+  final ThemePreset? initialPreset;
 
   const MusicApp({
     super.key,
     this.navigatorObservers,
+    this.initialPreset,
   });
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ThemeManager()),
+        ChangeNotifierProvider(
+          create: (_) => ThemeManager(initialPreset: initialPreset),
+        ),
         ChangeNotifierProvider(create: (_) => HomeViewModel()),
         ChangeNotifierProvider(create: (_) => PlaylistViewModel()),
         ChangeNotifierProvider(create: (_) => PlayerPanelController()),

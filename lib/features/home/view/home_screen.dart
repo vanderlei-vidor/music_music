@@ -13,7 +13,6 @@ import 'package:music_music/features/playlists/view_model/playlist_view_model.da
 import 'package:provider/provider.dart';
 import 'package:music_music/app/routes.dart';
 
-import 'package:music_music/features/home/widgets/home_tab_bar.dart';
 import 'package:music_music/features/home/widgets/home_tabs.dart';
 import 'package:music_music/features/home/view_model/home_view_model.dart';
 
@@ -34,7 +33,6 @@ class _HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<_HomeView> {
-  final PageController _pageController = PageController();
   int _currentIndex = 0;
 
   late HomeViewModel _homeVM;
@@ -54,7 +52,7 @@ class _HomeViewState extends State<_HomeView> {
     if (_homeVM.showScanSuccess) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('ðŸŽ§ MÃºsicas carregadas com sucesso'),
+          content: const Text('suas Músicas carregadas com sucesso'),
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.all(16),
           shape: RoundedRectangleBorder(
@@ -70,24 +68,19 @@ class _HomeViewState extends State<_HomeView> {
 
   void _onTabChanged(int index) {
     setState(() => _currentIndex = index);
-
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOutCubic,
-    );
   }
 
   @override
   void dispose() {
     _homeVM.removeListener(_onHomeChanged);
-    _pageController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final width = MediaQuery.of(context).size.width;
+    final isCompact = width < 420;
 
     return Scaffold(
       drawer: const _HomeDrawer(),
@@ -155,22 +148,58 @@ class _HomeViewState extends State<_HomeView> {
                     },
                   ),
 
-                HomeTabBar(currentIndex: _currentIndex, onTap: _onTabChanged),
-
                 Expanded(
-                  child: PageView(
-                    controller: _pageController,
-                    onPageChanged: (index) {
-                      setState(() => _currentIndex = index);
-                    },
-                    children: const [
-                      HomeMusicsTab(),
-                      HomeAlbumsTab(),
-                      HomeArtistsTab(),
-                      FoldersView(),
-                      GenresView(),
-                      HomePlaylistsTab(),
-                    ],
+                  child: DefaultTabController(
+                    length: 6,
+                    initialIndex: _currentIndex,
+                    child: Column(
+                      children: [
+                        TabBar(
+                          isScrollable: true,
+                          tabAlignment: TabAlignment.start,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isCompact ? 8 : 16,
+                          ),
+                          indicator: BoxDecoration(
+                            color: theme.colorScheme.primary,
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          indicatorPadding: const EdgeInsets.symmetric(
+                            vertical: 6,
+                          ),
+                          labelColor: theme.colorScheme.onPrimary,
+                          unselectedLabelColor: theme.colorScheme.onSurface,
+                          labelStyle: theme.textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                          unselectedLabelStyle:
+                              theme.textTheme.labelLarge,
+                          tabs: const [
+                            Tab(text: 'Músicas'),
+                            Tab(text: 'Álbuns'),
+                            Tab(text: 'Artistas'),
+                            Tab(text: 'Pastas'),
+                            Tab(text: 'Gêneros'),
+                            Tab(text: 'Playlists'),
+                          ],
+                          onTap: (index) => setState(
+                            () => _currentIndex = index,
+                          ),
+                        ),
+                        Expanded(
+                          child: TabBarView(
+                            children: const [
+                              HomeMusicsTab(),
+                              HomeAlbumsTab(),
+                              HomeArtistsTab(),
+                              FoldersView(),
+                              GenresView(),
+                              HomePlaylistsTab(),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -228,7 +257,7 @@ class _HomeDrawer extends StatelessWidget {
             _DrawerItem(icon: Icons.favorite, label: 'Favoritas', onTap: () {}),
             _DrawerItem(
               icon: Icons.library_music,
-              label: 'MÃºsicas',
+              label: 'Músicas',
               onTap: () {},
             ),
             _DrawerItem(
@@ -236,7 +265,7 @@ class _HomeDrawer extends StatelessWidget {
               label: 'Playlists',
               onTap: () {},
             ),
-            _DrawerItem(icon: Icons.album, label: 'Ãlbuns', onTap: () {}),
+            _DrawerItem(icon: Icons.album, label: 'Albuns', onTap: () {}),
             _DrawerItem(icon: Icons.person, label: 'Artistas', onTap: () {}),
             _DrawerItem(icon: Icons.folder, label: 'Pastas', onTap: () {}),
 
@@ -245,8 +274,11 @@ class _HomeDrawer extends StatelessWidget {
 
             _DrawerItem(
               icon: Icons.settings,
-              label: 'ConfiguraÃ§Ãµes',
-              onTap: () {},
+              label: 'Temas',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, AppRoutes.themes);
+              },
             ),
           ],
         ),
@@ -277,4 +309,3 @@ class _DrawerItem extends StatelessWidget {
     );
   }
 }
-

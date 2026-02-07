@@ -49,7 +49,7 @@ class _HomeHeaderState extends State<HomeHeader> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Sua MÃºsica',
+            'Sua Música',
             style: theme.textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -62,7 +62,7 @@ class _HomeHeaderState extends State<HomeHeader> {
               vm.searchMusics(value);
             },
             decoration: InputDecoration(
-              hintText: 'Buscar mÃºsicas, artistas...',
+              hintText: 'Buscar músicas, artistas...',
               prefixIcon: const Icon(Icons.search),
               suffixIcon: _hasText
                   ? IconButton(
@@ -97,7 +97,7 @@ class _HomeHeaderState extends State<HomeHeader> {
                       ? () => widget.onShuffleAll?.call()
                       : null,
                   icon: const Icon(Icons.shuffle),
-                  label: const Text('AleatÃ³rio'),
+                  label: const Text('Aleatório'),
                 ),
               ),
             ],

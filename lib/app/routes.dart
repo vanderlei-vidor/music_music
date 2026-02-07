@@ -16,6 +16,7 @@ import 'package:music_music/features/playlists/view/music_selection_screen.dart'
 import 'package:music_music/features/playlists/view/playlist_detail_screen.dart';
 import 'package:music_music/features/playlists/view/playlists_screen.dart';
 import 'package:music_music/features/splash/view/splash_view.dart';
+import 'package:music_music/features/settings/view/theme_settings_view.dart';
 import 'package:music_music/data/models/music_entity.dart';
 
 class AppRoutes {
@@ -24,6 +25,7 @@ class AppRoutes {
   static const player = '/player';
   static const playlists = '/playlists';
   static const playlistView = '/library';
+  static const themes = '/themes';
   static const favorites = '/favorites';
   static const folders = '/folders';
   static const folderDetail = '/folder';
@@ -45,6 +47,7 @@ class AppRoutes {
     player: (_) => const PlayerView(),
     playlists: (_) => const PlaylistsScreen(),
     playlistView: (_) => const PlaylistView(),
+    themes: (_) => const ThemeSettingsView(),
     favorites: (_) => const FavoritesView(),
     folders: (_) => const FoldersView(),
     genres: (_) => const GenresView(),
@@ -64,6 +67,8 @@ class AppRoutes {
         return const PlaylistsScreen();
       case playlistView:
         return const PlaylistView();
+      case themes:
+        return const ThemeSettingsView();
       case favorites:
         return const FavoritesView();
       case folders:
