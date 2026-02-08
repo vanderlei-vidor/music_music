@@ -65,16 +65,16 @@ class _PlayerViewState extends State<PlayerView> {
       appBar: _buildAppBar(context, music),
       body: Stack(
         children: [
-          /// 🌈 BACKGROUND PREMIUM
+          /// BACKGROUND PREMIUM
           Positioned.fill(child: _BackgroundArtwork(music: music)),
 
-          /// 🎧 CONTEÚDO
+          /// CONTEUDO
           SafeArea(
             child: Column(
               children: [
                 const Spacer(),
 
-                /// 🎵 CAPA
+                /// CAPA
                 Hero(
                   tag: music.audioUrl,
                   child: _ArtworkCover(music: music),
@@ -82,7 +82,7 @@ class _PlayerViewState extends State<PlayerView> {
 
                 const SizedBox(height: 28),
 
-                /// 📝 TÍTULO
+                /// TITULO
                 Text(
                   music.title,
                   style: theme.textTheme.headlineMedium?.copyWith(
@@ -106,7 +106,7 @@ class _PlayerViewState extends State<PlayerView> {
 
                 const SizedBox(height: 32),
 
-                /// 🌊 WAVE + SLIDER
+                /// WAVE + SLIDER
                 AudioWave(
                   isPlaying: vm.isPlaying,
                   color: theme.colorScheme.primary,
@@ -133,22 +133,18 @@ class _PlayerViewState extends State<PlayerView> {
 
                 const SizedBox(height: 32),
 
-                /// 🎮 CONTROLES
+                /// CONTROLES (AAA)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    ShuffleButton(
-                      isActive: vm.isShuffled,
-                      onTap: vm.toggleShuffle,
-                    ),
                     IconButton(
-                      iconSize: 32,
+                      iconSize: 36,
                       icon: const Icon(Icons.skip_previous),
                       onPressed: vm.previousMusic,
                     ),
                     PlayPauseButton(
                       isPlaying: vm.isPlaying,
-                      size: 72,
+                      size: 80,
                       color: theme.colorScheme.primary,
                       onTap: () {
                         HapticFeedback.lightImpact();
@@ -156,17 +152,9 @@ class _PlayerViewState extends State<PlayerView> {
                       },
                     ),
                     IconButton(
-                      iconSize: 32,
+                      iconSize: 36,
                       icon: const Icon(Icons.skip_next),
                       onPressed: vm.nextMusic,
-                    ),
-                    RepeatButton(
-                      mode: vm.repeatMode,
-                      onTap: vm.toggleRepeatMode,
-                    ),
-                    SpeedButton(
-                      speed: vm.currentSpeed,
-                      onTap: () => _openSpeed(context, vm),
                     ),
                   ],
                 ),
@@ -176,7 +164,7 @@ class _PlayerViewState extends State<PlayerView> {
             ),
           ),
 
-          /// 🎚 VOLUME
+          /// VOLUME
           VolumeEqualizer(volume: vm.player.volume),
 
           if (_showVolumeSlider)
@@ -220,6 +208,10 @@ class _PlayerViewState extends State<PlayerView> {
             AppRoutes.playlists,
           ),
         ),
+        IconButton(
+          icon: const Icon(Icons.tune_rounded),
+          onPressed: () => _openSideSheet(context),
+        ),
         IconButton(icon: const Icon(Icons.volume_up), onPressed: _toggleVolume),
       ],
     );
@@ -242,7 +234,7 @@ class _PlayerViewState extends State<PlayerView> {
                 const Icon(Icons.music_note, size: 42, color: Colors.white),
                 const SizedBox(height: 12),
                 Text(
-                  'Music Music 🎧',
+                  'Music Music',
                   style: theme.textTheme.titleLarge?.copyWith(
                     color: theme.colorScheme.onPrimary,
                     fontWeight: FontWeight.bold,
@@ -316,10 +308,426 @@ class _PlayerViewState extends State<PlayerView> {
       ),
     );
   }
+
+  void _openSideSheet(BuildContext context) {
+    showGeneralDialog(
+      context: context,
+      barrierLabel: 'Fechar',
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.35),
+      transitionDuration: const Duration(milliseconds: 260),
+      pageBuilder: (_, __, ___) {
+        return SafeArea(
+          child: Stack(
+            children: [
+              BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(color: Colors.transparent),
+              ),
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: () => Navigator.of(context).pop(),
+                  child: const SizedBox.expand(),
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: _PlayerSideSheet(
+                  child: _PlayerControlsSheet(
+                    onOpenSpeed: () {
+                      final vm = context.read<PlaylistViewModel>();
+                      Navigator.of(context).pop();
+                      _openSpeed(context, vm);
+                    },
+                    onOpenTimer: () {
+                      final vm = context.read<PlaylistViewModel>();
+                      Navigator.of(context).pop();
+                      _openTimerSheet(context, vm);
+                    },
+                    onOpenPlaylists: () {
+                      Navigator.of(context).pop();
+                      Navigator.pushNamed(context, AppRoutes.playlists);
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+      transitionBuilder: (_, animation, __, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(1, 0),
+            end: Offset.zero,
+          ).animate(curved),
+          child: FadeTransition(opacity: curved, child: child),
+        );
+      },
+    );
+  }
+
+  void _openTimerSheet(BuildContext context, PlaylistViewModel vm) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _SleepTimerSheet(vm: vm),
+    );
+  }
+}
+
+class _PlayerSideSheet extends StatelessWidget {
+  final Widget child;
+
+  const _PlayerSideSheet({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final width = MediaQuery.of(context).size.width * 0.78;
+
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: width,
+        margin: const EdgeInsets.only(right: 12),
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface.withOpacity(0.98),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.25),
+              blurRadius: 24,
+              offset: const Offset(-6, 8),
+            ),
+          ],
+          border: Border.all(
+            color: theme.colorScheme.onSurface.withOpacity(0.06),
+            width: 1,
+          ),
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _PlayerControlsSheet extends StatelessWidget {
+  final VoidCallback onOpenSpeed;
+  final VoidCallback onOpenTimer;
+  final VoidCallback onOpenPlaylists;
+
+  const _PlayerControlsSheet({
+    required this.onOpenSpeed,
+    required this.onOpenTimer,
+    required this.onOpenPlaylists,
+  });
+
+  String _formatBadge(Duration? remaining) {
+    if (remaining == null) return '';
+    final totalSeconds = remaining.inSeconds;
+    if (totalSeconds <= 0) return '0';
+    final minutes = remaining.inMinutes;
+    if (minutes >= 60) {
+      final hours = (minutes / 60).floor();
+      final mins = minutes % 60;
+      return mins == 0 ? '${hours}h' : '${hours}h${mins}m';
+    }
+    if (minutes >= 1) return '${minutes}m';
+    return '${totalSeconds}s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Consumer<PlaylistViewModel>(
+      builder: (context, vm, _) {
+        final badgeText = vm.hasSleepTimer ? _formatBadge(vm.sleepRemaining) : '';
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.onSurface.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  ShuffleButton(
+                    isActive: vm.isShuffled,
+                    onTap: vm.toggleShuffle,
+                  ),
+                  RepeatButton(
+                    mode: vm.repeatMode,
+                    onTap: vm.toggleRepeatMode,
+                  ),
+                  SpeedButton(
+                    speed: vm.currentSpeed,
+                    onTap: onOpenSpeed,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.equalizer),
+                    onPressed: () {},
+                  ),
+                  IconButton(
+                    icon: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        const Icon(Icons.timer),
+                        if (vm.hasSleepTimer)
+                          Positioned(
+                            right: -6,
+                            top: -6,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary,
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: theme.colorScheme.primary
+                                        .withOpacity(0.35),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                badgeText,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.colorScheme.onPrimary,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    onPressed: onOpenTimer,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.queue_music),
+                    onPressed: onOpenPlaylists,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SleepTimerSheet extends StatefulWidget {
+  final PlaylistViewModel vm;
+
+  const _SleepTimerSheet({required this.vm});
+
+  @override
+  State<_SleepTimerSheet> createState() => _SleepTimerSheetState();
+}
+
+class _SleepTimerSheetState extends State<_SleepTimerSheet> {
+  final TextEditingController _minutesController = TextEditingController();
+
+  @override
+  void dispose() {
+    _minutesController.dispose();
+    super.dispose();
+  }
+
+  void _setMinutes(int minutes) {
+    if (minutes <= 0) return;
+    widget.vm.setSleepTimer(Duration(minutes: minutes));
+    Navigator.of(context).pop();
+  }
+
+  String _formatDuration(Duration d) {
+    final minutes = d.inMinutes;
+    final seconds = d.inSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final presets = [5, 10, 15, 30, 60];
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          12,
+          20,
+          20 + MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Consumer<PlaylistViewModel>(
+          builder: (_, vm, __) {
+            final isActive = vm.hasSleepTimer;
+            final activeMinutes = vm.sleepDuration?.inMinutes;
+            final remaining = vm.sleepRemaining;
+            final mode = vm.sleepMode;
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.onSurface.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                ),
+                Text(
+                  'Sleep Timer',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  isActive
+                      ? (mode == SleepTimerMode.duration
+                          ? 'Ativo por $activeMinutes min'
+                          : mode == SleepTimerMode.endOfSong
+                              ? 'Ativo até o fim da música'
+                              : mode == SleepTimerMode.endOfPlaylist
+                                  ? 'Ativo até o fim da playlist'
+                                  : 'Ativo')
+                      : 'Escolha um tempo para parar a música',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+                if (remaining != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Restante: ${_formatDuration(remaining)}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withOpacity(0.8),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: presets.map((m) {
+                    final selected = activeMinutes == m && isActive;
+                    return ChoiceChip(
+                      label: Text('$m min'),
+                      selected: selected,
+                      onSelected: (_) => _setMinutes(m),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ChoiceChip(
+                      label: const Text('Fim da música'),
+                      selected: vm.sleepMode == SleepTimerMode.endOfSong,
+                      onSelected: (_) {
+                        vm.setSleepTimerEndOfSong();
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                    ChoiceChip(
+                      label: const Text('Fim da playlist'),
+                      selected: vm.sleepMode == SleepTimerMode.endOfPlaylist,
+                      onSelected: (_) {
+                        vm.setSleepTimerEndOfPlaylist();
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _minutesController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Digite o número de minutos',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  onSubmitted: (value) {
+                    final minutes = int.tryParse(value.trim());
+                    if (minutes != null) _setMinutes(minutes);
+                  },
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          final minutes =
+                              int.tryParse(_minutesController.text.trim());
+                          if (minutes != null) _setMinutes(minutes);
+                        },
+                        child: const Text('Ativar'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    if (isActive)
+                      TextButton(
+                        onPressed: () {
+                          vm.cancelSleepTimer();
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text('Cancelar'),
+                      ),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
 }
 
 /// =======================================================
-/// 🎨 BACKGROUND COM BLUR DA CAPA
+/// BACKGROUND COM BLUR DA CAPA
 /// =======================================================
 
 class _BackgroundArtwork extends StatelessWidget {
@@ -349,7 +757,7 @@ class _BackgroundArtwork extends StatelessWidget {
 }
 
 /// =======================================================
-/// 🎧 CAPA
+/// CAPA
 /// =======================================================
 
 class _ArtworkCover extends StatelessWidget {
@@ -388,7 +796,7 @@ class _ArtworkCover extends StatelessWidget {
           builder: (context, snapshot) {
             Widget child;
 
-            // 🎵 sem capa
+            // sem capa
             if (!snapshot.hasData || snapshot.data == null) {
               child = Container(
                 key: const ValueKey('no-artwork'),
@@ -400,9 +808,7 @@ class _ArtworkCover extends StatelessWidget {
                   color: Colors.white70,
                 ),
               );
-            } 
-            // 🖼️ com capa
-            else {
+            } else {
               child = Image.memory(
                 snapshot.data!,
                 key: ValueKey(music.id),
@@ -428,6 +834,3 @@ class _ArtworkCover extends StatelessWidget {
     );
   }
 }
-
-
-

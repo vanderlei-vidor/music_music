@@ -13,6 +13,8 @@ import 'package:music_music/data/models/music_entity.dart';
 
 enum FavoriteOrder { recent, az }
 
+enum SleepTimerMode { off, duration, endOfSong, endOfPlaylist }
+
 class PlaylistViewModel extends ChangeNotifier {
   // 🎧 PLAYER
   final AudioPlayer _player = AudioPlayer();
@@ -43,7 +45,14 @@ class PlaylistViewModel extends ChangeNotifier {
   double _currentSpeed = 1.0;
 
   Timer? _sleepTimer;
+  Timer? _sleepTick;
   Duration? _sleepDuration;
+  DateTime? _sleepEndTime;
+  SleepTimerMode _sleepMode = SleepTimerMode.off;
+  int _lastEndOfSongSecond = -1;
+  StreamSubscription<Duration>? _positionSub;
+  StreamSubscription<PlayerState>? _playerStateSub;
+  Duration? _sleepPausedRemaining;
 
   // =====================
   // GETTERS
@@ -61,6 +70,13 @@ class PlaylistViewModel extends ChangeNotifier {
   Stream<Duration> get positionStream => _player.positionStream;
   Duration? get sleepDuration => _sleepDuration;
   bool get hasSleepTimer => _sleepTimer?.isActive ?? false;
+  DateTime? get sleepEndTime => _sleepEndTime;
+  SleepTimerMode get sleepMode => _sleepMode;
+  Duration? get sleepRemaining {
+    if (_sleepEndTime == null) return null;
+    final remaining = _sleepEndTime!.difference(DateTime.now());
+    return remaining.isNegative ? Duration.zero : remaining;
+  }
 
   Color _currentDominantColor = Colors.blueGrey.shade600;
 
@@ -82,6 +98,32 @@ class PlaylistViewModel extends ChangeNotifier {
     _player.playingStream.listen((playing) {
       _isPlaying = playing;
       notifyListeners();
+
+      if (!playing) {
+        _pauseSleepTimer();
+      } else {
+        _resumeSleepTimerIfNeeded();
+      }
+    });
+
+    _positionSub = _player.positionStream.listen((position) {
+      if (_sleepMode == SleepTimerMode.endOfSong) {
+        if (position.inSeconds != _lastEndOfSongSecond) {
+          _lastEndOfSongSecond = position.inSeconds;
+          _syncEndOfSongTimer(position: position);
+
+          
+        }
+      } else if (_sleepMode == SleepTimerMode.endOfPlaylist) {
+        _syncEndOfPlaylistTimer(position: position);
+      }
+    });
+
+    _playerStateSub = _player.playerStateStream.listen((state) {
+      if (_sleepMode == SleepTimerMode.endOfPlaylist &&
+          state.processingState == ProcessingState.completed) {
+        _clearSleepTimer();
+      }
     });
 
     loadAllMusics();
@@ -243,6 +285,12 @@ class PlaylistViewModel extends ChangeNotifier {
         }
 
         await _updateDominantColor(newMusic);
+
+        if (_sleepMode == SleepTimerMode.endOfSong) {
+          _syncEndOfSongTimer();
+        } else if (_sleepMode == SleepTimerMode.endOfPlaylist) {
+          _syncEndOfPlaylistTimer();
+        }
 
         // 🔥 AQUI É O LUGAR CERTO
         if (newMusic.id != null) {
@@ -471,30 +519,141 @@ class PlaylistViewModel extends ChangeNotifier {
   // SLEEP TIMER
   // =====================
   void setSleepTimer(Duration duration) {
-    _sleepTimer?.cancel();
+    _sleepMode = SleepTimerMode.duration;
     _sleepDuration = duration;
-    notifyListeners();
-
-    _sleepTimer = Timer(duration, () {
-      pause();
-      _sleepTimer = null;
-      _sleepDuration = null;
-      notifyListeners();
-    });
+    _startSleepCountdown(duration, force: true);
   }
 
   void cancelSleepTimer() {
-    _sleepTimer?.cancel();
-    _sleepTimer = null;
+    _clearSleepTimer();
+  }
+
+  void setSleepTimerEndOfSong() {
+    _sleepMode = SleepTimerMode.endOfSong;
     _sleepDuration = null;
-    notifyListeners();
+    _syncEndOfSongTimer();
+  }
+
+  void setSleepTimerEndOfPlaylist() {
+    _sleepMode = SleepTimerMode.endOfPlaylist;
+    _sleepDuration = null;
+    _syncEndOfPlaylistTimer();
   }
 
   @override
   void dispose() {
     _sleepTimer?.cancel();
+    _sleepTick?.cancel();
+    _positionSub?.cancel();
+    _playerStateSub?.cancel();
     _player.dispose();
     super.dispose();
+  }
+
+  void _startSleepCountdown(Duration remaining, {bool force = true}) {
+    if (!_player.playing) {
+      _sleepPausedRemaining = remaining;
+      notifyListeners();
+      return;
+    }
+
+    final newEndTime = DateTime.now().add(remaining);
+    if (!force && _sleepEndTime != null && _sleepTimer?.isActive == true) {
+      final delta = _sleepEndTime!.difference(newEndTime).abs();
+      if (delta < const Duration(seconds: 2)) {
+        return;
+      }
+    }
+
+    _sleepTimer?.cancel();
+    _sleepTick?.cancel();
+
+    _sleepEndTime = newEndTime;
+    notifyListeners();
+
+    _sleepTimer = Timer(remaining, () {
+      pause();
+      _clearSleepTimer();
+    });
+
+    _sleepTick = Timer.periodic(const Duration(seconds: 1), (_) {
+      notifyListeners();
+    });
+  }
+
+  void _clearSleepTimer() {
+    _sleepTimer?.cancel();
+    _sleepTick?.cancel();
+    _sleepTimer = null;
+    _sleepTick = null;
+    _sleepDuration = null;
+    _sleepEndTime = null;
+    _sleepMode = SleepTimerMode.off;
+    _sleepPausedRemaining = null;
+    notifyListeners();
+  }
+
+  void _pauseSleepTimer() {
+    if (_sleepTimer == null) return;
+    if (_sleepEndTime == null) return;
+
+    final remaining = _sleepEndTime!.difference(DateTime.now());
+    _sleepPausedRemaining =
+        remaining.isNegative ? Duration.zero : remaining;
+    _sleepTimer?.cancel();
+    _sleepTick?.cancel();
+    _sleepTimer = null;
+    _sleepTick = null;
+    notifyListeners();
+  }
+
+  void _resumeSleepTimerIfNeeded() {
+    if (_sleepMode == SleepTimerMode.off) return;
+
+    if (_sleepMode == SleepTimerMode.duration) {
+      if (_sleepPausedRemaining != null) {
+        _startSleepCountdown(_sleepPausedRemaining!, force: true);
+        _sleepPausedRemaining = null;
+      }
+      return;
+    }
+
+    if (_sleepMode == SleepTimerMode.endOfSong) {
+      _syncEndOfSongTimer();
+      return;
+    }
+
+    if (_sleepMode == SleepTimerMode.endOfPlaylist) {
+      _syncEndOfPlaylistTimer();
+    }
+  }
+
+  void _syncEndOfSongTimer({Duration? position}) {
+    if (_currentMusic == null) return;
+    final durationMs = _currentMusic?.duration ?? 0;
+    if (durationMs <= 0) return;
+
+    final pos = position ?? _player.position;
+    final remainingMs = (durationMs - pos.inMilliseconds).clamp(0, durationMs);
+    _startSleepCountdown(Duration(milliseconds: remainingMs), force: false);
+  }
+
+  void _syncEndOfPlaylistTimer({Duration? position}) {
+    if (_musics.isEmpty) return;
+    final index = _player.currentIndex ?? 0;
+    if (index < 0 || index >= _musics.length) return;
+
+    final pos = position ?? _player.position;
+    final currentMs = _musics[index].duration ?? 0;
+    if (currentMs <= 0) return;
+
+    var remainingMs = (currentMs - pos.inMilliseconds).clamp(0, currentMs);
+
+    for (var i = index + 1; i < _musics.length; i++) {
+      remainingMs += _musics[i].duration ?? 0;
+    }
+
+    _startSleepCountdown(Duration(milliseconds: remainingMs), force: false);
   }
 
   Future<void> playSingleMusic(MusicEntity music) async {
