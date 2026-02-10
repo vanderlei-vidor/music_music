@@ -21,18 +21,16 @@ class SearchResultsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final musics = results.where((r) => r.type == SearchType.music).toList();
-    final artists = results.where((r) => r.type == SearchType.artist).toList();
-    final albums = results.where((r) => r.type == SearchType.album).toList();
+    final sections = _SearchSections.from(results);
 
     final style = Theme.of(context).textTheme.bodyLarge!;
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        if (musics.isNotEmpty) ...[
+        if (sections.musics.isNotEmpty) ...[
           _SectionTitle('Músicas'),
-          ...musics.map(
+          ...sections.musics.map(
             (r) => ListTile(
               leading: const Icon(Icons.music_note),
               title: RichText(text: highlight(r.title, query, style)),
@@ -41,10 +39,10 @@ class SearchResultsView extends StatelessWidget {
           ),
         ],
 
-        if (artists.isNotEmpty) ...[
+        if (sections.artists.isNotEmpty) ...[
           const SizedBox(height: 16),
           _SectionTitle('Artistas'),
-          ...artists.map(
+          ...sections.artists.map(
             (r) => ListTile(
               leading: const Icon(Icons.person),
               title: RichText(text: highlight(r.title, query, style)),
@@ -53,10 +51,10 @@ class SearchResultsView extends StatelessWidget {
           ),
         ],
 
-        if (albums.isNotEmpty) ...[
+        if (sections.albums.isNotEmpty) ...[
           const SizedBox(height: 16),
           _SectionTitle('Álbuns'),
-          ...albums.map(
+          ...sections.albums.map(
             (r) => ListTile(
               leading: const Icon(Icons.album),
               title: RichText(text: highlight(r.title, query, style)),
@@ -64,6 +62,44 @@ class SearchResultsView extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+class _SearchSections {
+  final List<SearchResult> musics;
+  final List<SearchResult> artists;
+  final List<SearchResult> albums;
+
+  const _SearchSections({
+    required this.musics,
+    required this.artists,
+    required this.albums,
+  });
+
+  static _SearchSections from(List<SearchResult> results) {
+    final musics = <SearchResult>[];
+    final artists = <SearchResult>[];
+    final albums = <SearchResult>[];
+
+    for (final r in results) {
+      switch (r.type) {
+        case SearchType.music:
+          musics.add(r);
+          break;
+        case SearchType.artist:
+          artists.add(r);
+          break;
+        case SearchType.album:
+          albums.add(r);
+          break;
+      }
+    }
+
+    return _SearchSections(
+      musics: musics,
+      artists: artists,
+      albums: albums,
     );
   }
 }

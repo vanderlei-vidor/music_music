@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:music_music/core/theme/app_styles.dart';
 import 'package:music_music/core/theme/app_shadows.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:music_music/shared/widgets/artwork_image.dart';
 import 'app_colors.dart';
 
 class ThemeManager with ChangeNotifier {
@@ -22,6 +23,10 @@ class ThemeManager with ChangeNotifier {
     if (_preset == value) return;
     _preset = value;
     _persistPreset();
+    ArtworkCache.clear();
+    ArtworkCache.configure(
+      maxEntries: _preset == ThemePreset.neumorphicDark ? 220 : 180,
+    );
     notifyListeners();
   }
 

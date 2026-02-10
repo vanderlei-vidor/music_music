@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 
 class RepeatButton extends StatelessWidget {
@@ -35,15 +36,35 @@ class RepeatButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      child: AnimatedScale(
-        scale: mode == LoopMode.off ? 1.0 : 1.15,
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutBack,
-        child: Icon(
-          _icon,
-          size: 30,
-          color: _color(context),
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: mode == LoopMode.off
+              ? []
+              : [
+                  BoxShadow(
+                    color: _color(context).withOpacity(0.35),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+        ),
+        child: AnimatedScale(
+          scale: mode == LoopMode.off ? 1.0 : 1.12,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutBack,
+          child: Icon(
+            _icon,
+            size: 30,
+            color: _color(context),
+          ),
         ),
       ),
     );

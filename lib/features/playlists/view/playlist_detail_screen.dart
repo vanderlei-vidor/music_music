@@ -3,6 +3,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:music_music/shared/widgets/playlist_sticky_controls.dart';
 import 'package:music_music/shared/widgets/swipe_to_reveal_actions.dart';
 import 'package:music_music/core/theme/app_shadows.dart';
@@ -11,6 +12,7 @@ import 'package:provider/provider.dart';
 import 'package:music_music/data/models/music_entity.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 import 'package:music_music/app/routes.dart';
+import 'package:music_music/shared/widgets/artwork_image.dart';
 
 class PlaylistDetailScreen extends StatefulWidget {
   final int playlistId;
@@ -33,6 +35,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   bool _isSearching = false;
   List<MusicEntity> _allMusics = [];
   List<MusicEntity> _filteredMusics = [];
+  final ValueNotifier<List<MusicEntity>> _displayedMusics =
+      ValueNotifier<List<MusicEntity>>(<MusicEntity>[]);
 
   @override
   void initState() {
@@ -53,6 +57,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _displayedMusics.dispose();
     super.dispose();
   }
 
@@ -61,26 +66,29 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
         .read<PlaylistViewModel>()
         .getMusicsFromPlaylistV2(widget.playlistId)
         .then((musics) {
-          setState(() {
-            _allMusics = musics;
-            _filteredMusics = musics;
-          });
+          _allMusics = musics;
+          _filteredMusics = musics;
+          _syncDisplayedMusics();
           return musics;
         });
   }
 
   void _filterMusics() {
     final query = _searchController.text.toLowerCase();
-    setState(() {
-      if (query.isEmpty) {
-        _filteredMusics = _allMusics;
-      } else {
-        _filteredMusics = _allMusics.where((music) {
-          return music.title.toLowerCase().contains(query) ||
-              music.artist.toLowerCase().contains(query);
-        }).toList();
-      }
-    });
+    if (query.isEmpty) {
+      _filteredMusics = _allMusics;
+    } else {
+      _filteredMusics = _allMusics.where((music) {
+        return music.title.toLowerCase().contains(query) ||
+            music.artist.toLowerCase().contains(query);
+      }).toList();
+    }
+    _syncDisplayedMusics();
+  }
+
+  void _syncDisplayedMusics() {
+    _displayedMusics.value =
+        List<MusicEntity>.unmodifiable(_isSearching ? _filteredMusics : _allMusics);
   }
 
   void _removeMusic(int musicId) {
@@ -124,6 +132,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
         onPressed: () async {
+          HapticFeedback.selectionClick();
           await Navigator.pushNamed(
             context,
             AppRoutes.musicSelection,
@@ -171,7 +180,12 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           ),
 
           // 🎵 LISTA
-          _buildMusicSliverList(theme, viewModel),
+          ValueListenableBuilder<List<MusicEntity>>(
+            valueListenable: _displayedMusics,
+            builder: (_, musics, __) {
+              return _buildMusicSliverList(theme, viewModel, musics);
+            },
+          ),
         ],
       ),
     );
@@ -246,9 +260,11 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     );
   }
 
-  Widget _buildMusicSliverList(ThemeData theme, PlaylistViewModel viewModel) {
-    final musics = _isSearching ? _filteredMusics : _allMusics;
-
+  Widget _buildMusicSliverList(
+    ThemeData theme,
+    PlaylistViewModel viewModel,
+    List<MusicEntity> musics,
+  ) {
     if (musics.isEmpty) {
       return SliverFillRemaining(
         hasScrollBody: false,
@@ -291,23 +307,24 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                onPressed: () async {
-                  await Navigator.pushNamed(
-                    context,
-                    AppRoutes.musicSelection,
+              onPressed: () async {
+                HapticFeedback.selectionClick();
+                await Navigator.pushNamed(
+                  context,
+                  AppRoutes.musicSelection,
                     arguments: MusicSelectionArgs(
                       playlistId: widget.playlistId,
                       playlistName: widget.playlistName,
                     ),
-                  );
-                  setState(_reloadMusics);
-                },
-              ),
-            ],
-          ),
+                );
+                _reloadMusics();
+              },
+            ),
+          ],
         ),
-      );
-    }
+      ),
+    );
+  }
 
     return SliverPadding(
       padding: const EdgeInsets.only(bottom: 96),
@@ -319,6 +336,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           final shadows =
               Theme.of(context).extension<AppShadows>()?.surface ?? [];
 
+          ArtworkCache.preload(context, music.artworkUrl);
+
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             child: SwipeToRevealActions(
@@ -326,41 +345,41 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               onToggleFavorite: () async {
                 final vm = context.read<PlaylistViewModel>();
 
+                HapticFeedback.selectionClick();
                 final newValue = await vm.toggleFavorite(music);
 
-                setState(() {
-                  final index = _allMusics.indexWhere((m) => m.id == music.id);
-                  if (index != -1) {
-                    _allMusics[index] = _allMusics[index].copyWith(
-                      isFavorite: newValue,
-                    );
-                  }
-
-                  final filteredIndex = _filteredMusics.indexWhere(
-                    (m) => m.id == music.id,
+                final index = _allMusics.indexWhere((m) => m.id == music.id);
+                if (index != -1) {
+                  _allMusics[index] = _allMusics[index].copyWith(
+                    isFavorite: newValue,
                   );
-                  if (filteredIndex != -1) {
-                    _filteredMusics[filteredIndex] =
-                        _filteredMusics[filteredIndex].copyWith(
-                          isFavorite: newValue,
-                        );
-                  }
-                });
+                }
+
+                final filteredIndex = _filteredMusics.indexWhere(
+                  (m) => m.id == music.id,
+                );
+                if (filteredIndex != -1) {
+                  _filteredMusics[filteredIndex] =
+                      _filteredMusics[filteredIndex].copyWith(
+                        isFavorite: newValue,
+                      );
+                }
+                _syncDisplayedMusics();
               },
 
               onDelete: () {
                 final musicId = music.id;
                 if (musicId == null) return;
 
+                HapticFeedback.selectionClick();
                 context.read<PlaylistViewModel>().removeMusicFromPlaylist(
                   widget.playlistId,
                   musicId,
                 );
 
-                setState(() {
-                  _allMusics.removeWhere((m) => m.id == musicId);
-                  _filteredMusics.removeWhere((m) => m.id == musicId);
-                });
+                _allMusics.removeWhere((m) => m.id == musicId);
+                _filteredMusics.removeWhere((m) => m.id == musicId);
+                _syncDisplayedMusics();
 
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -370,27 +389,42 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                 );
               },
 
-              child: Container(
-                decoration: BoxDecoration(
-                  color: theme.cardColor,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: shadows,
-                ),
-                child: ListTile(
-                  title: Text(music.title),
-                  subtitle: Text(music.artist),
-                  trailing: viewModel.currentMusic?.id == music.id
-                      ? Icon(Icons.equalizer, color: theme.colorScheme.primary)
-                      : null,
-                  onTap: () {
-                    if (viewModel.isShuffled) {
-                      final shuffled = List<MusicEntity>.from(_allMusics)
-                        ..shuffle();
-                      viewModel.playMusic(shuffled, 0);
-                    } else {
-                      viewModel.playMusic(_allMusics, index);
-                    }
-                  },
+              child: _PressableTile(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  if (viewModel.isShuffled) {
+                    final shuffled = List<MusicEntity>.from(_allMusics)
+                      ..shuffle();
+                    viewModel.playMusic(shuffled, 0);
+                  } else {
+                    viewModel.playMusic(_allMusics, index);
+                  }
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: shadows,
+                  ),
+                  child: ListTile(
+                    leading: ArtworkThumb(artworkUrl: music.artworkUrl),
+                    title: Text(music.title),
+                    subtitle: Text(music.artist),
+                    trailing: Selector<PlaylistViewModel, _NowPlayingState>(
+                      selector: (_, vm) => _NowPlayingState(
+                        id: vm.currentMusic?.id,
+                        isPlaying: vm.isPlaying,
+                      ),
+                      builder: (_, state, __) {
+                        final isCurrent = state.id == music.id;
+                        if (!isCurrent) return const SizedBox.shrink();
+                        return Icon(
+                          Icons.equalizer,
+                          color: theme.colorScheme.primary,
+                        );
+                      },
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -425,6 +459,67 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       ],
     );
   }
+}
+
+class _PressableTile extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+
+  const _PressableTile({
+    required this.child,
+    required this.onTap,
+  });
+
+  @override
+  State<_PressableTile> createState() => _PressableTileState();
+}
+
+class _PressableTileState extends State<_PressableTile> {
+  bool _pressed = false;
+
+  void _setPressed(bool value) {
+    if (_pressed == value) return;
+    setState(() => _pressed = value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTapDown: (_) => _setPressed(true),
+      onTapUp: (_) => _setPressed(false),
+      onTapCancel: () => _setPressed(false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _pressed ? 0.985 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOutCubic,
+        child: AnimatedOpacity(
+          opacity: _pressed ? 0.92 : 1.0,
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOutCubic,
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}
+
+class _NowPlayingState {
+  final int? id;
+  final bool isPlaying;
+
+  const _NowPlayingState({required this.id, required this.isPlaying});
+
+  @override
+  bool operator ==(Object other) {
+    return other is _NowPlayingState &&
+        other.id == id &&
+        other.isPlaying == isPlaying;
+  }
+
+  @override
+  int get hashCode => Object.hash(id, isPlaying);
 }
 
 

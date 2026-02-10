@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:music_music/features/favorites/view/favorites_view.dart';
 import 'package:music_music/features/folders/view/folder_detail_view.dart';
@@ -110,7 +111,10 @@ class AppRoutes {
         if (args is AlbumDetailArgs) {
           return _slideRoute(
             settings,
-            AlbumDetailScreen(albumName: args.albumName),
+            AlbumDetailScreen(
+              albumName: args.albumName,
+              artistName: args.artistName,
+            ),
           );
         }
         break;
@@ -159,35 +163,69 @@ class AppRoutes {
 }
 
 PageRoute<dynamic> _fadeRoute(RouteSettings settings, Widget page) {
-  return PageRouteBuilder(
+  return _HapticRoute(
     settings: settings,
     pageBuilder: (_, animation, __) => page,
     transitionsBuilder: (_, animation, __, child) {
-      return FadeTransition(opacity: animation, child: child);
+      final curve = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+      );
+      return FadeTransition(opacity: curve, child: child);
     },
   );
 }
 
 PageRoute<dynamic> _slideRoute(RouteSettings settings, Widget page) {
-  return PageRouteBuilder(
+  return _HapticRoute(
     settings: settings,
     pageBuilder: (_, animation, __) => page,
     transitionsBuilder: (_, animation, __, child) {
+      final curve = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+      );
       final tween = Tween<Offset>(
         begin: const Offset(0.08, 0.0),
         end: Offset.zero,
       ).chain(CurveTween(curve: Curves.easeOutCubic));
       return FadeTransition(
-        opacity: animation,
+        opacity: curve,
         child: SlideTransition(position: animation.drive(tween), child: child),
       );
     },
   );
 }
 
+class _HapticRoute<T> extends PageRouteBuilder<T> {
+  _HapticRoute({
+    required RouteSettings settings,
+    required RoutePageBuilder pageBuilder,
+    required RouteTransitionsBuilder transitionsBuilder,
+  }) : super(
+          settings: settings,
+          pageBuilder: pageBuilder,
+          transitionsBuilder: transitionsBuilder,
+        );
+
+  @override
+  TickerFuture didPush() {
+    final result = super.didPush();
+    HapticFeedback.selectionClick();
+    return result;
+  }
+
+  @override
+  bool didPop(T? result) {
+    HapticFeedback.selectionClick();
+    return super.didPop(result);
+  }
+}
+
 class AlbumDetailArgs {
   final String albumName;
-  const AlbumDetailArgs({required this.albumName});
+  final String? artistName;
+  const AlbumDetailArgs({required this.albumName, this.artistName});
 }
 
 class ArtistDetailArgs {

@@ -5,6 +5,8 @@ import 'package:music_music/data/models/music_entity.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 import 'package:music_music/app/routes.dart';
 import 'package:music_music/features/genres/widgets/genre_card.dart';
+import 'package:music_music/shared/widgets/skeleton.dart';
+import 'package:music_music/core/theme/app_shadows.dart';
 
 class GenresView extends StatefulWidget {
   const GenresView({super.key});
@@ -49,6 +51,10 @@ class _GenresViewState extends State<GenresView>
     }
 
     final genreNames = genres.keys.toList()..sort();
+
+    if (genreNames.isEmpty) {
+      return const _GenresSkeleton();
+    }
 
     return GridView.builder(
       padding: const EdgeInsets.all(16),
@@ -106,6 +112,50 @@ class _GenresViewState extends State<GenresView>
               ),
             );
           },
+        );
+      },
+    );
+  }
+}
+
+class _GenresSkeleton extends StatelessWidget {
+  const _GenresSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final shadows = theme.extension<AppShadows>()?.elevated ?? [];
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 16,
+        childAspectRatio: 0.9,
+      ),
+      itemCount: 6,
+      itemBuilder: (_, __) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceVariant,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: shadows,
+              ),
+              child: const Skeleton(
+                width: double.infinity,
+                height: 140,
+                borderRadius: BorderRadius.all(Radius.circular(16)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Skeleton(width: double.infinity, height: 12),
+            const SizedBox(height: 6),
+            const Skeleton(width: 80, height: 10),
+          ],
         );
       },
     );

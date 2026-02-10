@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:music_music/data/models/music_entity.dart';
 import 'package:music_music/data/models/search_result.dart';
 import 'package:music_music/app/routes.dart';
@@ -9,6 +10,8 @@ import 'package:music_music/features/home/widgets/permission_denied_view.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 import 'package:music_music/shared/widgets/search_results_view.dart';
 import 'package:music_music/shared/widgets/skeleton.dart';
+import 'package:music_music/shared/widgets/artwork_image.dart';
+
 import 'package:music_music/core/theme/app_shadows.dart';
 import 'package:provider/provider.dart';
 
@@ -84,42 +87,45 @@ class HomeMusicsTab extends StatelessWidget {
             final shadows =
                 Theme.of(context).extension<AppShadows>()?.surface ?? [];
 
+            ArtworkCache.preload(context, music.artworkUrl);
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceVariant,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: shadows,
-                ),
-                child: ListTile(
-                  shape: RoundedRectangleBorder(
+              child: _PressableTile(
+                onTap: () async {
+                  HapticFeedback.selectionClick();
+                  final playlistVM = context.read<PlaylistViewModel>();
+                  await playlistVM.playMusic(vm.visibleMusics, index);
+                  Navigator.pushNamed(context, AppRoutes.player);
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceVariant,
                     borderRadius: BorderRadius.circular(16),
+                    boxShadow: shadows,
                   ),
-                  leading: _ArtworkThumb(artworkUrl: music.artworkUrl),
-                  title: Text(
-                    music.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: ListTile(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    leading: ArtworkThumb(artworkUrl: music.artworkUrl),
+                    title: Text(
+                      music.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      music.album == null || music.album!.isEmpty
+                          ? music.artist
+                          : '${music.artist} álb ${music.album}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: Text(
+                      _formatDuration(music.duration),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ),
-                  subtitle: Text(
-                    music.album == null || music.album!.isEmpty
-                        ? music.artist
-                        : '${music.artist} álb ${music.album}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  trailing: Text(
-                    _formatDuration(music.duration),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  onTap: () async {
-                    final playlistVM = context.read<PlaylistViewModel>();
-
-                    await playlistVM.playMusic(vm.visibleMusics, index);
-
-                    Navigator.pushNamed(context, AppRoutes.player);
-                  },
                 ),
               ),
             );
@@ -135,9 +141,9 @@ class HomeFavoritesTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<PlaylistViewModel>(
-      builder: (context, vm, _) {
-        final favorites = vm.favoriteMusics;
+    return Selector<PlaylistViewModel, List<MusicEntity>>(
+      selector: (_, vm) => vm.favoriteMusics,
+      builder: (context, favorites, _) {
 
         if (favorites.isEmpty) {
           return const _EmptyState(
@@ -154,25 +160,33 @@ class HomeFavoritesTab extends StatelessWidget {
             final shadows =
                 Theme.of(context).extension<AppShadows>()?.surface ?? [];
 
+            ArtworkCache.preload(context, music.artworkUrl);
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceVariant,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: shadows,
-                ),
-                child: ListTile(
-                  shape: RoundedRectangleBorder(
+              child: _PressableTile(
+                onTap: () async {
+                  HapticFeedback.selectionClick();
+                  await context.read<PlaylistViewModel>().playMusic(
+                        favorites,
+                        index,
+                      );
+                  Navigator.pushNamed(context, AppRoutes.player);
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceVariant,
                     borderRadius: BorderRadius.circular(16),
+                    boxShadow: shadows,
                   ),
-                  leading: _ArtworkThumb(artworkUrl: music.artworkUrl),
-                  title: Text(music.title),
-                  subtitle: Text(music.artist),
-                  onTap: () async {
-                    await vm.playMusic(favorites, index);
-                    Navigator.pushNamed(context, AppRoutes.player);
-                  },
+                  child: ListTile(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    leading: ArtworkThumb(artworkUrl: music.artworkUrl),
+                    title: Text(music.title),
+                    subtitle: Text(music.artist),
+                  ),
                 ),
               ),
             );
@@ -225,8 +239,9 @@ class HomePlaylistsTab extends StatelessWidget {
                 final shadows =
                     Theme.of(context).extension<AppShadows>()?.elevated ?? [];
 
-                return GestureDetector(
+                return _PressableTile(
                   onTap: () {
+                    HapticFeedback.selectionClick();
                     Navigator.pushNamed(
                       context,
                       AppRoutes.playlistDetail,
@@ -281,14 +296,10 @@ class HomeAlbumsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final musics = context.watch<HomeViewModel>().musics;
+    final albumGroups =
+        context.select<HomeViewModel, List<AlbumGroup>>((vm) => vm.albumGroups);
 
-    final albums = <String, List<MusicEntity>>{};
-    for (final m in musics) {
-      albums.putIfAbsent(m.album ?? 'Desconhecido', () => []).add(m);
-    }
-
-    if (musics.isEmpty) {
+    if (albumGroups.isEmpty) {
       return const _GridSkeleton();
     }
 
@@ -300,19 +311,22 @@ class HomeAlbumsTab extends StatelessWidget {
         crossAxisSpacing: 16,
         childAspectRatio: 0.75,
       ),
-      itemCount: albums.length,
+      itemCount: albumGroups.length,
       itemBuilder: (context, index) {
-        final albumName = albums.keys.elementAt(index);
-        final albumMusics = albums[albumName]!;
+        final group = albumGroups[index];
+        final artwork = _getAlbumArtwork(group.musics);
+        ArtworkCache.preload(context, artwork);
 
-        final artwork = _getAlbumArtwork(albumMusics);
-
-        return GestureDetector(
+        return _PressableTile(
           onTap: () {
+            HapticFeedback.selectionClick();
             Navigator.pushNamed(
               context,
               AppRoutes.albumDetail,
-              arguments: AlbumDetailArgs(albumName: albumName),
+              arguments: AlbumDetailArgs(
+                albumName: group.album,
+                artistName: group.artist,
+              ),
             );
           },
           child: Column(
@@ -320,22 +334,15 @@ class HomeAlbumsTab extends StatelessWidget {
             children: [
               // ðŸŽ¬ HERO AQUI
               Hero(
-                tag: 'album_$albumName',
+                tag: 'album_${group.album}__${group.artist}',
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
                   child: AspectRatio(
                     aspectRatio: 1,
-                    child: artwork != null
-                        ? Image.network(
-                            artwork,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return _ArtworkFallback();
-                            },
-                            errorBuilder: (_, __, ___) => _ArtworkFallback(),
-                          )
-                        : _ArtworkFallback(),
+                    child: ArtworkSquare(
+                      artworkUrl: artwork,
+                      borderRadius: 16,
+                    ),
                   ),
                 ),
               ),
@@ -343,14 +350,14 @@ class HomeAlbumsTab extends StatelessWidget {
               const SizedBox(height: 8),
 
               Text(
-                albumName,
+                group.album,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
 
               Text(
-                '${albumMusics.length} músicas',
+                '${group.artist} � ${group.musics.length} músicas',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
@@ -366,14 +373,8 @@ class HomeArtistsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final musics = context.watch<HomeViewModel>().musics;
-
-    // agrupa por artista
-    final Map<String, List<MusicEntity>> artists = {};
-    for (final m in musics) {
-      final name = m.artist.isNotEmpty ? m.artist : 'Desconhecido';
-      artists.putIfAbsent(name, () => []).add(m);
-    }
+    final artists = context.select<HomeViewModel,
+        Map<String, List<MusicEntity>>>((vm) => vm.artistsGrouped);
 
     if (artists.isEmpty) {
       return const _ListSkeleton();
@@ -388,46 +389,93 @@ class HomeArtistsTab extends StatelessWidget {
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceVariant,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow:
-                  Theme.of(context).extension<AppShadows>()?.surface ?? [],
-            ),
-            child: ListTile(
-              shape: RoundedRectangleBorder(
+          child: _PressableTile(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              Navigator.pushNamed(
+                context,
+                AppRoutes.artistDetail,
+                arguments: ArtistDetailArgs(artistName: artist),
+              );
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceVariant,
                 borderRadius: BorderRadius.circular(16),
+                boxShadow:
+                    Theme.of(context).extension<AppShadows>()?.surface ?? [],
               ),
-              leading: Hero(
-                tag: 'artist_$artist',
-                child: CircleAvatar(
-                  radius: 24,
-                  child: Text(
-                    artist.isNotEmpty ? artist[0].toUpperCase() : '?',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+              child: ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                leading: Hero(
+                  tag: 'artist_$artist',
+                  child: CircleAvatar(
+                    radius: 24,
+                    child: Text(
+                      artist.isNotEmpty ? artist[0].toUpperCase() : '?',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
+                title: Text(
+                  artist,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                subtitle: Text('${artistMusics.length} músicas'),
+                trailing: const Icon(Icons.chevron_right),
               ),
-              title: Text(
-                artist,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              subtitle: Text('${artistMusics.length} músicas'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.pushNamed(
-                  context,
-                  AppRoutes.artistDetail,
-                  arguments: ArtistDetailArgs(artistName: artist),
-                );
-              },
             ),
           ),
         );
       },
+    );
+  }
+}
+
+class _PressableTile extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+
+  const _PressableTile({
+    required this.child,
+    required this.onTap,
+  });
+
+  @override
+  State<_PressableTile> createState() => _PressableTileState();
+}
+
+class _PressableTileState extends State<_PressableTile> {
+  bool _pressed = false;
+
+  void _setPressed(bool value) {
+    if (_pressed == value) return;
+    setState(() => _pressed = value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTapDown: (_) => _setPressed(true),
+      onTapUp: (_) => _setPressed(false),
+      onTapCancel: () => _setPressed(false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _pressed ? 0.985 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOutCubic,
+        child: AnimatedOpacity(
+          opacity: _pressed ? 0.92 : 1.0,
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOutCubic,
+          child: widget.child,
+        ),
+      ),
     );
   }
 }
@@ -482,84 +530,50 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class _ArtworkThumb extends StatelessWidget {
-  final String? artworkUrl;
-
-  const _ArtworkThumb({required this.artworkUrl});
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: SizedBox(
-        width: 48,
-        height: 48,
-        child: artworkUrl != null && artworkUrl!.isNotEmpty
-            ? Image.network(
-                artworkUrl!,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _ArtworkFallback(),
-                loadingBuilder: (context, child, progress) {
-                  if (progress == null) return child;
-                  return _ArtworkFallback();
-                },
-              )
-            : _ArtworkFallback(),
-      ),
-    );
-  }
-}
-
-class _ArtworkFallback extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            theme.colorScheme.primary.withOpacity(0.35),
-            theme.colorScheme.secondary.withOpacity(0.35),
-          ],
-        ),
-      ),
-      child: const Icon(
-        Icons.music_note,
-        color: Colors.white70,
-      ),
-    );
-  }
-}
 
 class _MusicListSkeleton extends StatelessWidget {
   const _MusicListSkeleton();
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final shadows = theme.extension<AppShadows>()?.surface ?? [];
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: 8,
       itemBuilder: (_, __) {
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
-          child: Row(
-            children: const [
-              Skeleton(width: 48, height: 48),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Skeleton(width: double.infinity, height: 14),
-                    SizedBox(height: 8),
-                    Skeleton(width: 140, height: 12),
-                  ],
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceVariant,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: shadows,
+            ),
+            child: const Row(
+              children: [
+                Skeleton(
+                  width: 48,
+                  height: 48,
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
                 ),
-              ),
-              SizedBox(width: 12),
-              Skeleton(width: 36, height: 12),
-            ],
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Skeleton(width: double.infinity, height: 14),
+                      SizedBox(height: 8),
+                      Skeleton(width: 140, height: 12),
+                    ],
+                  ),
+                ),
+                SizedBox(width: 12),
+                Skeleton(width: 36, height: 12),
+              ],
+            ),
           ),
         );
       },
@@ -572,6 +586,9 @@ class _GridSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final shadows = theme.extension<AppShadows>()?.elevated ?? [];
+
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -584,12 +601,23 @@ class _GridSkeleton extends StatelessWidget {
       itemBuilder: (_, __) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Skeleton(width: double.infinity, height: 140),
-            SizedBox(height: 10),
-            Skeleton(width: double.infinity, height: 12),
-            SizedBox(height: 6),
-            Skeleton(width: 80, height: 10),
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceVariant,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: shadows,
+              ),
+              child: const Skeleton(
+                width: double.infinity,
+                height: 140,
+                borderRadius: BorderRadius.all(Radius.circular(16)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Skeleton(width: double.infinity, height: 12),
+            const SizedBox(height: 6),
+            const Skeleton(width: 80, height: 10),
           ],
         );
       },
@@ -602,31 +630,42 @@ class _ListSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final shadows = theme.extension<AppShadows>()?.surface ?? [];
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: 6,
       itemBuilder: (_, __) {
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
-          child: Row(
-            children: const [
-              Skeleton(
-                width: 48,
-                height: 48,
-                borderRadius: BorderRadius.all(Radius.circular(24)),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Skeleton(width: double.infinity, height: 14),
-                    SizedBox(height: 8),
-                    Skeleton(width: 120, height: 12),
-                  ],
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceVariant,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: shadows,
+            ),
+            child: const Row(
+              children: [
+                Skeleton(
+                  width: 48,
+                  height: 48,
+                  borderRadius: BorderRadius.all(Radius.circular(24)),
                 ),
-              ),
-            ],
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Skeleton(width: double.infinity, height: 14),
+                      SizedBox(height: 8),
+                      Skeleton(width: 120, height: 12),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -641,3 +680,4 @@ String _formatDuration(int? durationMs) {
   final seconds = totalSeconds % 60;
   return '$minutes:${seconds.toString().padLeft(2, '0')}';
 }
+

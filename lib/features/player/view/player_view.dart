@@ -20,6 +20,7 @@ import 'package:music_music/shared/widgets/RepeatButton.dart';
 import 'package:music_music/shared/widgets/speed_button.dart';
 import 'package:music_music/shared/widgets/vertical_volume_slider.dart';
 import 'package:music_music/shared/widgets/volume_equalizer.dart';
+import 'package:music_music/shared/widgets/artwork_image.dart';
 
 import 'package:music_music/app/routes.dart';
 
@@ -137,24 +138,36 @@ class _PlayerViewState extends State<PlayerView> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    IconButton(
-                      iconSize: 36,
-                      icon: const Icon(Icons.skip_previous),
-                      onPressed: vm.previousMusic,
+                    _PressableScale(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        vm.previousMusic();
+                      },
+                      child: const Icon(Icons.skip_previous, size: 36),
                     ),
-                    PlayPauseButton(
-                      isPlaying: vm.isPlaying,
-                      size: 80,
-                      color: theme.colorScheme.primary,
+                    const SizedBox(width: 6),
+                    _PressableScale(
                       onTap: () {
                         HapticFeedback.lightImpact();
                         vm.playPause();
                       },
+                      scale: 0.97,
+                      child: IgnorePointer(
+                        child: PlayPauseButton(
+                          isPlaying: vm.isPlaying,
+                          size: 80,
+                          color: theme.colorScheme.primary,
+                          onTap: () {},
+                        ),
+                      ),
                     ),
-                    IconButton(
-                      iconSize: 36,
-                      icon: const Icon(Icons.skip_next),
-                      onPressed: vm.nextMusic,
+                    const SizedBox(width: 6),
+                    _PressableScale(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        vm.nextMusic();
+                      },
+                      child: const Icon(Icons.skip_next, size: 36),
                     ),
                   ],
                 ),
@@ -210,7 +223,10 @@ class _PlayerViewState extends State<PlayerView> {
         ),
         IconButton(
           icon: const Icon(Icons.tune_rounded),
-          onPressed: () => _openSideSheet(context),
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            _openSideSheet(context);
+          },
         ),
         IconButton(icon: const Icon(Icons.volume_up), onPressed: _toggleVolume),
       ],
@@ -421,6 +437,50 @@ class _PlayerSideSheet extends StatelessWidget {
   }
 }
 
+class _PressableScale extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  final double scale;
+
+  const _PressableScale({
+    required this.child,
+    required this.onTap,
+    this.scale = 0.98,
+  });
+
+  @override
+  State<_PressableScale> createState() => _PressableScaleState();
+}
+
+class _PressableScaleState extends State<_PressableScale> {
+  bool _pressed = false;
+
+  void _setPressed(bool value) {
+    if (_pressed == value) return;
+    setState(() => _pressed = value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTapDown: (_) => _setPressed(true),
+      onTapUp: (_) => _setPressed(false),
+      onTapCancel: () => _setPressed(false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _pressed ? widget.scale : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOutCubic,
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}
+
 class _PlayerControlsSheet extends StatelessWidget {
   final VoidCallback onOpenSpeed;
   final VoidCallback onOpenTimer;
@@ -488,12 +548,18 @@ class _PlayerControlsSheet extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.equalizer),
-                    onPressed: () {},
+                  _PressableScale(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                    },
+                    child: const Icon(Icons.equalizer),
                   ),
-                  IconButton(
-                    icon: Stack(
+                  _PressableScale(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      onOpenTimer();
+                    },
+                    child: Stack(
                       clipBehavior: Clip.none,
                       children: [
                         const Icon(Icons.timer),
@@ -530,11 +596,13 @@ class _PlayerControlsSheet extends StatelessWidget {
                           ),
                       ],
                     ),
-                    onPressed: onOpenTimer,
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.queue_music),
-                    onPressed: onOpenPlaylists,
+                  _PressableScale(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      onOpenPlaylists();
+                    },
+                    child: const Icon(Icons.queue_music),
                   ),
                 ],
               ),
@@ -743,10 +811,13 @@ class _BackgroundArtwork extends StatelessWidget {
       return Container(color: Theme.of(context).scaffoldBackgroundColor);
     }
 
+    ArtworkCache.preload(context, image);
+    final provider = ArtworkCache.provider(image);
+
     return Stack(
       fit: StackFit.expand,
       children: [
-        Image.network(image, fit: BoxFit.cover),
+        if (provider != null) Image(image: provider, fit: BoxFit.cover),
         BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(color: Colors.black.withOpacity(0.4)),

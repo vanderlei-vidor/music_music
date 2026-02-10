@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 
 import 'package:music_music/data/models/music_entity.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
+import 'package:music_music/core/theme/app_shadows.dart';
+import 'package:music_music/shared/widgets/skeleton.dart';
 
 class FoldersView extends StatefulWidget {
   const FoldersView({super.key});
@@ -41,9 +43,7 @@ class _FoldersViewState extends State<FoldersView>
     final folderPaths = folders.keys.toList()..sort();
 
     if (folderPaths.isEmpty) {
-      return const Center(
-        child: Text('Nenhuma pasta encontrada'),
-      );
+      return const _FoldersSkeleton();
     }
 
     return GridView.builder(
@@ -98,6 +98,51 @@ class _FoldersViewState extends State<FoldersView>
               ),
             );
           },
+        );
+      },
+    );
+  }
+}
+
+class _FoldersSkeleton extends StatelessWidget {
+  const _FoldersSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final shadows = theme.extension<AppShadows>()?.elevated ?? [];
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      physics: const BouncingScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 16,
+        childAspectRatio: 1,
+      ),
+      itemCount: 6,
+      itemBuilder: (_, __) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceVariant,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: shadows,
+              ),
+              child: const Skeleton(
+                width: double.infinity,
+                height: 140,
+                borderRadius: BorderRadius.all(Radius.circular(16)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Skeleton(width: double.infinity, height: 12),
+            const SizedBox(height: 6),
+            const Skeleton(width: 80, height: 10),
+          ],
         );
       },
     );

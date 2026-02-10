@@ -14,6 +14,11 @@ class HomeViewModel extends ChangeNotifier {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
 
   final List<MusicEntity> _musics = [];
+  int _musicsVersion = 0;
+  List<AlbumGroup>? _albumGroupsCache;
+  int _albumGroupsCacheVersion = -1;
+  Map<String, List<MusicEntity>>? _artistsCache;
+  int _artistsCacheVersion = -1;
 
   bool _isLoading = true;
   bool _isScanning = false;
@@ -24,6 +29,46 @@ class HomeViewModel extends ChangeNotifier {
   bool _showMiniPlayerGlow = false;
 
   List<MusicEntity> get musics => _musics;
+  List<AlbumGroup> get albumGroups {
+    if (_albumGroupsCacheVersion == _musicsVersion &&
+        _albumGroupsCache != null) {
+      return _albumGroupsCache!;
+    }
+    final Map<String, List<MusicEntity>> grouped = {};
+    for (final m in _musics) {
+      final album = (m.album == null || m.album!.isEmpty)
+          ? 'Desconhecido'
+          : m.album!;
+      final artist = m.artist.isNotEmpty ? m.artist : 'Desconhecido';
+      final key = '$album||$artist';
+      grouped.putIfAbsent(key, () => []).add(m);
+    }
+    final groups = grouped.entries.map((entry) {
+      final parts = entry.key.split('||');
+      return AlbumGroup(
+        album: parts.first,
+        artist: parts.length > 1 ? parts[1] : 'Desconhecido',
+        musics: entry.value,
+      );
+    }).toList();
+    _albumGroupsCache = groups;
+    _albumGroupsCacheVersion = _musicsVersion;
+    return groups;
+  }
+
+  Map<String, List<MusicEntity>> get artistsGrouped {
+    if (_artistsCacheVersion == _musicsVersion && _artistsCache != null) {
+      return _artistsCache!;
+    }
+    final Map<String, List<MusicEntity>> artists = {};
+    for (final m in _musics) {
+      final name = m.artist.isNotEmpty ? m.artist : 'Desconhecido';
+      artists.putIfAbsent(name, () => []).add(m);
+    }
+    _artistsCache = artists;
+    _artistsCacheVersion = _musicsVersion;
+    return artists;
+  }
   bool get isLoading => _isLoading;
   bool get isScanning => _isScanning;
   bool get permissionDenied => _permissionDenied;
@@ -126,6 +171,10 @@ class HomeViewModel extends ChangeNotifier {
       _visibleMusics
         ..clear()
         ..addAll(_musics);
+
+      _musicsVersion++;
+      _albumGroupsCacheVersion = -1;
+      _artistsCacheVersion = -1;
     } catch (e) {
       debugPrint('Erro ao carregar músicas: $e');
     } finally {
@@ -217,6 +266,18 @@ class HomeViewModel extends ChangeNotifier {
 
 List<MusicEntity> processScanIsolate(List<MusicEntity> musics) {
   return musics.where((m) => m.audioUrl.isNotEmpty).toList();
+}
+
+class AlbumGroup {
+  final String album;
+  final String artist;
+  final List<MusicEntity> musics;
+
+  const AlbumGroup({
+    required this.album,
+    required this.artist,
+    required this.musics,
+  });
 }
 
 int _calculateSearchScore(MusicEntity m, String q) {

@@ -1,11 +1,13 @@
 // lib/views/playlist/music_selection_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'package:music_music/data/local/database_helper.dart';
 import 'package:music_music/data/models/music_entity.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
+import 'package:music_music/shared/widgets/artwork_image.dart';
 
 class MusicSelectionScreen extends StatefulWidget {
   final int playlistId;
@@ -28,8 +30,9 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
   List<MusicEntity> _allMusics = [];
   List<MusicEntity> _filteredMusics = [];
 
-  final Set<int> _selectedMusicIds = <int>{};
   final Set<int> _existingMusicIds = <int>{};
+  final ValueNotifier<Set<int>> _selectedMusicIds =
+      ValueNotifier<Set<int>>(<int>{});
 
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
@@ -45,6 +48,7 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _selectedMusicIds.dispose();
     super.dispose();
   }
 
@@ -61,9 +65,7 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
         ..clear()
         ..addAll(playlistMusics.where((m) => m.id != null).map((m) => m.id!));
 
-      _selectedMusicIds
-        ..clear()
-        ..addAll(_existingMusicIds);
+      _selectedMusicIds.value = Set<int>.from(_existingMusicIds);
 
       setState(() {
         _allMusics = allMusics;
@@ -77,7 +79,7 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
   }
 
   void _confirmSelection() async {
-    for (final musicId in _selectedMusicIds) {
+    for (final musicId in _selectedMusicIds.value) {
       if (!_existingMusicIds.contains(musicId)) {
         await _viewModel.addMusicToPlaylistV2(widget.playlistId, musicId);
       }
@@ -119,6 +121,7 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
           IconButton(
             icon: Icon(_isSearching ? Icons.close : Icons.search),
             onPressed: () {
+              HapticFeedback.selectionClick();
               setState(() {
                 _isSearching = !_isSearching;
                 if (!_isSearching) {
@@ -129,7 +132,11 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
             },
           ),
           TextButton(
-            onPressed: _selectedMusicIds.isNotEmpty ? _confirmSelection : null,
+            onPressed: () {
+              if (_selectedMusicIds.value.isEmpty) return;
+              HapticFeedback.selectionClick();
+              _confirmSelection();
+            },
             child: Text(
               'Confirmar',
               style: TextStyle(color: theme.colorScheme.primary),
@@ -154,29 +161,96 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
                 }
 
                 final isExisting = _existingMusicIds.contains(musicId);
-                final isSelected = _selectedMusicIds.contains(musicId);
 
-                return ListTile(
-                  leading: const Icon(Icons.music_note),
-                  title: Text(music.title),
-                  subtitle: Text(music.artist),
-                  trailing: Checkbox(
-                    value: isSelected,
-                    onChanged: isExisting
-                        ? null
-                        : (value) {
-                            setState(() {
-                              if (value == true) {
-                                _selectedMusicIds.add(musicId);
+                ArtworkCache.preload(context, music.artworkUrl);
+
+                return ValueListenableBuilder<Set<int>>(
+                  valueListenable: _selectedMusicIds,
+                  builder: (_, selectedSet, __) {
+                    final isSelected = selectedSet.contains(musicId);
+
+                    return _PressableTile(
+                      onTap: isExisting
+                          ? null
+                          : () {
+                              HapticFeedback.selectionClick();
+                              final next = Set<int>.from(selectedSet);
+                              if (isSelected) {
+                                next.remove(musicId);
                               } else {
-                                _selectedMusicIds.remove(musicId);
+                                next.add(musicId);
                               }
-                            });
-                          },
-                  ),
+                              _selectedMusicIds.value = next;
+                            },
+                      child: ListTile(
+                        leading: ArtworkThumb(artworkUrl: music.artworkUrl),
+                        title: Text(music.title),
+                        subtitle: Text(music.artist),
+                        trailing: Checkbox(
+                          value: isSelected,
+                          onChanged: isExisting
+                              ? null
+                              : (value) {
+                                  HapticFeedback.selectionClick();
+                                  final next = Set<int>.from(selectedSet);
+                                  if (value == true) {
+                                    next.add(musicId);
+                                  } else {
+                                    next.remove(musicId);
+                                  }
+                                  _selectedMusicIds.value = next;
+                                },
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
             ),
+    );
+  }
+}
+
+class _PressableTile extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+
+  const _PressableTile({
+    required this.child,
+    required this.onTap,
+  });
+
+  @override
+  State<_PressableTile> createState() => _PressableTileState();
+}
+
+class _PressableTileState extends State<_PressableTile> {
+  bool _pressed = false;
+
+  void _setPressed(bool value) {
+    if (_pressed == value) return;
+    setState(() => _pressed = value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTapDown: (_) => _setPressed(true),
+      onTapUp: (_) => _setPressed(false),
+      onTapCancel: () => _setPressed(false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _pressed ? 0.985 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOutCubic,
+        child: AnimatedOpacity(
+          opacity: _pressed ? 0.92 : 1.0,
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOutCubic,
+          child: widget.child,
+        ),
+      ),
     );
   }
 }

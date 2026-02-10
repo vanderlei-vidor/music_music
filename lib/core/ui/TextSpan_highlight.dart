@@ -1,10 +1,21 @@
 
 
+import 'dart:collection';
 import 'package:flutter/material.dart';
 
 
 
+final _highlightCache = LinkedHashMap<String, TextSpan>();
+const _highlightCacheLimit = 500;
+
 TextSpan highlight(String text, String query, TextStyle style) {
+  final key = '${style.hashCode}|$query|$text';
+  final cached = _highlightCache.remove(key);
+  if (cached != null) {
+    _highlightCache[key] = cached;
+    return cached;
+  }
+
   if (query.isEmpty) return TextSpan(text: text, style: style);
 
   final lowerText = text.toLowerCase();
@@ -13,7 +24,7 @@ TextSpan highlight(String text, String query, TextStyle style) {
   final start = lowerText.indexOf(lowerQuery);
   if (start < 0) return TextSpan(text: text, style: style);
 
-  return TextSpan(
+  final result = TextSpan(
     children: [
       TextSpan(text: text.substring(0, start), style: style),
       TextSpan(
@@ -29,4 +40,9 @@ TextSpan highlight(String text, String query, TextStyle style) {
       ),
     ],
   );
+  _highlightCache[key] = result;
+  if (_highlightCache.length > _highlightCacheLimit) {
+    _highlightCache.remove(_highlightCache.keys.first);
+  }
+  return result;
 }

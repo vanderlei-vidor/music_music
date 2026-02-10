@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class SpeedButton extends StatelessWidget {
   final double speed;
@@ -15,9 +16,13 @@ class SpeedButton extends StatelessWidget {
     final theme = Theme.of(context);
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
@@ -89,9 +94,13 @@ class SpeedSheet extends StatelessWidget {
               final isActive = s == currentSpeed;
 
               return GestureDetector(
-                onTap: () => onChanged(s),
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  onChanged(s);
+                },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(

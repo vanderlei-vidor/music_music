@@ -10,6 +10,7 @@ import 'package:music_music/shared/widgets/collection_sticky_controls.dart';
 import 'package:music_music/shared/widgets/mini_equalizer.dart';
 import 'package:music_music/shared/widgets/mini_progress_bar.dart';
 import 'package:music_music/core/theme/app_shadows.dart';
+import 'package:music_music/shared/widgets/artwork_image.dart';
 
 class ArtistDetailView extends StatelessWidget {
   final String artistName;
@@ -21,10 +22,12 @@ class ArtistDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final playlistVM = context.watch<PlaylistViewModel>();
+    final playlistVM = context.read<PlaylistViewModel>();
+    final allMusics =
+        context.select<PlaylistViewModel, List<MusicEntity>>((vm) => vm.musics);
 
     // 🎶 músicas do artista
-    final musics = playlistVM.musics
+    final musics = allMusics
         .where(
           (m) => m.artist.toLowerCase() == artistName.toLowerCase(),
         )
@@ -141,6 +144,7 @@ class ArtistDetailView extends StatelessWidget {
               childCount: musics.length,
               (context, index) {
                 final music = musics[index];
+                ArtworkCache.preload(context, music.artworkUrl);
 
                 final shadows =
                     Theme.of(context).extension<AppShadows>()?.surface ?? [];
@@ -156,43 +160,45 @@ class ArtistDetailView extends StatelessWidget {
                     boxShadow: shadows,
                   ),
                   child: ListTile(
-                    leading: Consumer<PlaylistViewModel>(
-                      builder: (context, vm, _) {
-                        final isCurrent =
-                            vm.currentMusic?.id == music.id;
-
+                    leading: Selector<PlaylistViewModel, _NowPlayingState>(
+                      selector: (_, vm) => _NowPlayingState(
+                        id: vm.currentMusic?.id,
+                        isPlaying: vm.isPlaying,
+                      ),
+                      builder: (_, state, __) {
+                        final isCurrent = state.id == music.id;
                         if (!isCurrent) {
                           return const Icon(Icons.music_note);
                         }
-
                         return MiniEqualizer(
-                          isPlaying: vm.isPlaying,
+                          isPlaying: state.isPlaying,
                           color: color,
                           size: 22,
                         );
                       },
                     ),
                     title: Text(music.title),
-                    subtitle: Consumer<PlaylistViewModel>(
-                      builder: (context, vm, _) {
-                        final isCurrent =
-                            vm.currentMusic?.id == music.id;
-
+                    subtitle: Selector<PlaylistViewModel, _NowPlayingState>(
+                      selector: (_, vm) => _NowPlayingState(
+                        id: vm.currentMusic?.id,
+                        isPlaying: vm.isPlaying,
+                      ),
+                      builder: (_, state, __) {
+                        final isCurrent = state.id == music.id;
                         if (!isCurrent) {
                           return Text(music.album ?? '');
                         }
-
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(music.album ?? ''),
                             StreamBuilder<Duration>(
-                              stream: vm.positionStream,
+                              stream: playlistVM.positionStream,
                               builder: (context, snapshot) {
                                 final position =
                                     snapshot.data ?? Duration.zero;
                                 final duration =
-                                    vm.player.duration ?? Duration.zero;
+                                    playlistVM.player.duration ?? Duration.zero;
 
                                 return MiniProgressBar(
                                   position: position,
@@ -221,6 +227,23 @@ class ArtistDetailView extends StatelessWidget {
       ),
     );
   }
+}
+
+class _NowPlayingState {
+  final int? id;
+  final bool isPlaying;
+
+  const _NowPlayingState({required this.id, required this.isPlaying});
+
+  @override
+  bool operator ==(Object other) {
+    return other is _NowPlayingState &&
+        other.id == id &&
+        other.isPlaying == isPlaying;
+  }
+
+  @override
+  int get hashCode => Object.hash(id, isPlaying);
 }
 
 

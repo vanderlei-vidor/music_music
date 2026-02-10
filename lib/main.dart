@@ -7,6 +7,7 @@ import 'package:just_audio_background/just_audio_background.dart';
 
 import 'package:music_music/app/app.dart';
 import 'package:music_music/core/theme/theme_manager.dart';
+import 'package:music_music/shared/widgets/artwork_image.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,6 +42,28 @@ Future<void> main() async {
   }
 
   final preset = await ThemeManager.loadPreset();
+  final maxEntries = _artworkCacheMaxEntries(preset);
+  ArtworkCache.configure(maxEntries: maxEntries);
   runApp(MusicApp(initialPreset: preset));
+}
+
+int _artworkCacheMaxEntries(ThemePreset preset) {
+  final isDark = preset == ThemePreset.neumorphicDark;
+
+  if (kIsWeb) return isDark ? 220 : 180;
+
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.android:
+      // Conservador por causa de dispositivos mais antigos (ex.: Android 9)
+      return isDark ? 180 : 140;
+    case TargetPlatform.iOS:
+      return isDark ? 220 : 180;
+    case TargetPlatform.macOS:
+    case TargetPlatform.linux:
+    case TargetPlatform.windows:
+      return isDark ? 260 : 220;
+    default:
+      return isDark ? 200 : 160;
+  }
 }
 

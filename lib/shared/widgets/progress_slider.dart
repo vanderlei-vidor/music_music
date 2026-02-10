@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class ProgressSlider extends StatefulWidget {
   final Duration position;
@@ -46,12 +47,14 @@ class _ProgressSliderState extends State<ProgressSlider> {
             max: max > 0 ? max : 1,
             value: value,
             onChangeStart: (_) {
+              HapticFeedback.selectionClick();
               setState(() => _isDragging = true);
             },
             onChanged: (v) {
               setState(() => _dragValue = v);
             },
             onChangeEnd: (v) {
+              HapticFeedback.selectionClick();
               setState(() {
                 _isDragging = false;
                 _dragValue = null;
@@ -69,8 +72,28 @@ class _ProgressSliderState extends State<ProgressSlider> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _time(widget.position),
-              _time(widget.duration),
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 160),
+                curve: Curves.easeOutCubic,
+                style: theme.textTheme.bodySmall!.copyWith(
+                  letterSpacing: 0.3,
+                  color: theme.colorScheme.onSurface
+                      .withOpacity(_isDragging ? 0.95 : 0.7),
+                  fontWeight: _isDragging ? FontWeight.w600 : FontWeight.w500,
+                ),
+                child: _time(widget.position),
+              ),
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 160),
+                curve: Curves.easeOutCubic,
+                style: theme.textTheme.bodySmall!.copyWith(
+                  letterSpacing: 0.3,
+                  color: theme.colorScheme.onSurface
+                      .withOpacity(_isDragging ? 0.95 : 0.7),
+                  fontWeight: _isDragging ? FontWeight.w600 : FontWeight.w500,
+                ),
+                child: _time(widget.duration),
+              ),
             ],
           ),
         ),

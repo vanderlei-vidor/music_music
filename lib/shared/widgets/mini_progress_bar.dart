@@ -23,11 +23,18 @@ class MiniProgressBar extends StatelessWidget {
       padding: const EdgeInsets.only(top: 6),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(4),
-        child: LinearProgressIndicator(
-          value: progress,
-          minHeight: 3,
-          backgroundColor: color.withOpacity(0.15),
-          valueColor: AlwaysStoppedAnimation(color),
+        child: TweenAnimationBuilder<double>(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          tween: Tween<double>(begin: 0, end: progress),
+          builder: (_, value, __) {
+            return LinearProgressIndicator(
+              value: value,
+              minHeight: 3,
+              backgroundColor: color.withOpacity(0.15),
+              valueColor: AlwaysStoppedAnimation(color),
+            );
+          },
         ),
       ),
     );

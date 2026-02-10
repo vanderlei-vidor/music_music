@@ -13,6 +13,7 @@ import 'package:music_music/shared/widgets/mini_equalizer.dart';
 import 'package:music_music/shared/widgets/animated_favorite_icon.dart';
 import 'package:music_music/shared/widgets/animated_play_pause.dart';
 import 'package:music_music/shared/widgets/mini_player_progress.dart';
+import 'package:music_music/shared/widgets/artwork_image.dart';
 import 'package:music_music/app/routes.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 
@@ -104,6 +105,8 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
         if (music == null) {
           return const SizedBox.shrink();
         }
+
+        ArtworkCache.preload(context, music.artworkUrl);
 
         return ScaleTransition(
           scale: _pulse,
