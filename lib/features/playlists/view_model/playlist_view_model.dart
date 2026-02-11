@@ -53,6 +53,10 @@ class PlaylistViewModel extends ChangeNotifier {
   StreamSubscription<Duration>? _positionSub;
   StreamSubscription<PlayerState>? _playerStateSub;
   Duration? _sleepPausedRemaining;
+  bool _restoringQueue = false;
+  bool _isPersistingQueue = false;
+  DateTime? _lastQueuePersistAt;
+  Duration _lastPersistedPosition = Duration.zero;
 
   // =====================
   // GETTERS
@@ -101,12 +105,19 @@ class PlaylistViewModel extends ChangeNotifier {
 
       if (!playing) {
         _pauseSleepTimer();
+        _persistPlaybackQueue(force: true);
       } else {
         _resumeSleepTimerIfNeeded();
       }
     });
 
+    _player.currentIndexStream.listen((_) {
+      _persistPlaybackQueue();
+    });
+
     _positionSub = _player.positionStream.listen((position) {
+      _persistPlaybackQueue();
+
       if (_sleepMode == SleepTimerMode.endOfSong) {
         if (position.inSeconds != _lastEndOfSongSecond) {
           _lastEndOfSongSecond = position.inSeconds;
@@ -144,18 +155,26 @@ class PlaylistViewModel extends ChangeNotifier {
   // DATABASE — MUSICS
   // =====================
   Future<void> loadAllMusics() async {
-    _musics = await _dbHelper.getAllMusicsV2();
+    final allMusics = await _dbHelper.getAllMusicsV2();
+    _musics = allMusics;
 
     if (_musics.isNotEmpty) {
-      await _setAudioSource(initialIndex: 0);
+      final restored = await _restorePlaybackQueue(allMusics);
+      if (!restored) {
+        await _setAudioSource(initialIndex: 0);
+      }
+    } else {
+      await _dbHelper.clearPlaybackQueue();
     }
 
     notifyListeners();
+    _persistPlaybackQueue();
   }
 
   void setMusics(List<MusicEntity> musics) {
     _musics = musics;
     _setAudioSource();
+    _persistPlaybackQueue();
     notifyListeners();
   }
 
@@ -258,6 +277,7 @@ class PlaylistViewModel extends ChangeNotifier {
     if (wasPlaying) {
       await _player.play();
     }
+    _persistPlaybackQueue();
   }
 
   // =====================
@@ -265,9 +285,9 @@ class PlaylistViewModel extends ChangeNotifier {
   // =====================
   void _listenToSequenceChanges() {
     _player.sequenceStateStream.listen((sequenceState) async {
-      if (sequenceState == null || sequenceState.currentIndex == null) return;
+      if (sequenceState == null) return;
 
-      final index = sequenceState.currentIndex!;
+      final index = sequenceState.currentIndex;
       if (index < 0 || index >= _musics.length) return;
 
       final newMusic = _musics[index];
@@ -349,21 +369,25 @@ class PlaylistViewModel extends ChangeNotifier {
     print('▶️ play chamado');
     await _player.play();
 
+    _persistPlaybackQueue();
     notifyListeners();
   }
 
   // ⏭️ / ⏮️
   Future<void> nextMusic() async {
     await _player.seekToNext();
+    _persistPlaybackQueue();
   }
 
   Future<void> previousMusic() async {
     await _player.seekToPrevious();
+    _persistPlaybackQueue();
   }
 
   // ⏱️ SEEK
   Future<void> seek(Duration position) async {
     await _player.seek(position);
+    _persistPlaybackQueue();
   }
 
   Future<void> toggleShuffle() async {
@@ -402,6 +426,30 @@ class PlaylistViewModel extends ChangeNotifier {
         : musics;
 
     await playMusic(list, 0);
+    _persistPlaybackQueue();
+  }
+
+  Future<void> reorderQueue(int oldIndex, int newIndex) async {
+    if (_musics.isEmpty) return;
+    if (oldIndex < 0 || oldIndex >= _musics.length) return;
+    if (newIndex < 0 || newIndex > _musics.length) return;
+
+    final currentId = _currentMusic?.id;
+    final targetIndex = oldIndex < newIndex ? newIndex - 1 : newIndex;
+    final moved = _musics.removeAt(oldIndex);
+    _musics.insert(targetIndex, moved);
+
+    var nextCurrentIndex = 0;
+    if (currentId != null) {
+      final idx = _musics.indexWhere((m) => m.id == currentId);
+      nextCurrentIndex = idx == -1 ? 0 : idx;
+    } else {
+      nextCurrentIndex = targetIndex.clamp(0, _musics.length - 1);
+    }
+
+    await _setAudioSource(initialIndex: nextCurrentIndex);
+    notifyListeners();
+    _persistPlaybackQueue();
   }
 
   // =====================
@@ -542,6 +590,7 @@ class PlaylistViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    unawaited(_persistPlaybackQueueOnDispose());
     _sleepTimer?.cancel();
     _sleepTick?.cancel();
     _positionSub?.cancel();
@@ -591,6 +640,103 @@ class PlaylistViewModel extends ChangeNotifier {
     _sleepMode = SleepTimerMode.off;
     _sleepPausedRemaining = null;
     notifyListeners();
+  }
+
+  Future<bool> _restorePlaybackQueue(List<MusicEntity> allMusics) async {
+    final saved = await _dbHelper.loadPlaybackQueue();
+    if (saved == null) return false;
+
+    final savedUrls = (saved['audioUrls'] as List<dynamic>? ?? [])
+        .whereType<String>()
+        .toList();
+    if (savedUrls.isEmpty) return false;
+
+    final byUrl = <String, MusicEntity>{};
+    for (final music in allMusics) {
+      byUrl[music.audioUrl] = music;
+    }
+
+    final restoredQueue = <MusicEntity>[];
+    for (final url in savedUrls) {
+      final music = byUrl[url];
+      if (music != null) restoredQueue.add(music);
+    }
+    if (restoredQueue.isEmpty) return false;
+
+    _restoringQueue = true;
+    _musics = restoredQueue;
+
+    final rawIndex = saved['currentIndex'] as int? ?? 0;
+    final currentIndex = rawIndex.clamp(0, _musics.length - 1);
+    await _setAudioSource(initialIndex: currentIndex);
+
+    final positionMs = saved['positionMs'] as int? ?? 0;
+    if (positionMs > 0) {
+      await _player.seek(
+        Duration(milliseconds: positionMs),
+        index: currentIndex,
+      );
+    }
+    _restoringQueue = false;
+    _persistPlaybackQueue();
+    return true;
+  }
+
+  Future<void> _persistPlaybackQueue({bool force = false}) async {
+    if (_restoringQueue) return;
+    if (_musics.isEmpty) {
+      await _dbHelper.clearPlaybackQueue();
+      return;
+    }
+    if (_isPersistingQueue) return;
+
+    final now = DateTime.now();
+    final sinceLastPersist = _lastQueuePersistAt == null
+        ? null
+        : now.difference(_lastQueuePersistAt!);
+    final movedMs = (_player.position - _lastPersistedPosition).inMilliseconds.abs();
+    final shouldThrottle =
+        !force &&
+        sinceLastPersist != null &&
+        sinceLastPersist < const Duration(seconds: 5) &&
+        movedMs < 3000;
+
+    if (shouldThrottle) return;
+
+    final currentIndex = (_player.currentIndex ?? 0).clamp(0, _musics.length - 1);
+    final positionMs = _player.position.inMilliseconds;
+
+    _isPersistingQueue = true;
+    try {
+      await _dbHelper.savePlaybackQueue(
+        audioUrls: _musics.map((m) => m.audioUrl).toList(),
+        currentIndex: currentIndex,
+        positionMs: positionMs,
+      );
+      _lastQueuePersistAt = now;
+      _lastPersistedPosition = _player.position;
+    } finally {
+      _isPersistingQueue = false;
+    }
+  }
+
+  Future<void> _persistPlaybackQueueOnDispose() async {
+    if (_restoringQueue) return;
+
+    if (_musics.isEmpty) {
+      await _dbHelper.clearPlaybackQueue();
+      return;
+    }
+
+    final currentIndex = (_player.currentIndex ?? 0).clamp(0, _musics.length - 1);
+    final positionMs = _player.position.inMilliseconds;
+    final urls = _musics.map((m) => m.audioUrl).toList();
+
+    await _dbHelper.savePlaybackQueue(
+      audioUrls: urls,
+      currentIndex: currentIndex,
+      positionMs: positionMs,
+    );
   }
 
   void _pauseSleepTimer() {

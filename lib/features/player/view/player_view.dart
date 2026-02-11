@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:provider/provider.dart';
-import 'package:just_audio/just_audio.dart' hide PlayerState;
 
 import 'package:music_music/data/models/music_entity.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
@@ -361,9 +360,9 @@ class _PlayerViewState extends State<PlayerView> {
                       Navigator.of(context).pop();
                       _openTimerSheet(context, vm);
                     },
-                    onOpenPlaylists: () {
+                    onOpenQueue: () {
                       Navigator.of(context).pop();
-                      Navigator.pushNamed(context, AppRoutes.playlists);
+                      _openQueueSheet(context);
                     },
                   ),
                 ),
@@ -396,6 +395,18 @@ class _PlayerViewState extends State<PlayerView> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (_) => _SleepTimerSheet(vm: vm),
+    );
+  }
+
+  void _openQueueSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => const _QueueSheet(),
     );
   }
 }
@@ -484,12 +495,12 @@ class _PressableScaleState extends State<_PressableScale> {
 class _PlayerControlsSheet extends StatelessWidget {
   final VoidCallback onOpenSpeed;
   final VoidCallback onOpenTimer;
-  final VoidCallback onOpenPlaylists;
+  final VoidCallback onOpenQueue;
 
   const _PlayerControlsSheet({
     required this.onOpenSpeed,
     required this.onOpenTimer,
-    required this.onOpenPlaylists,
+    required this.onOpenQueue,
   });
 
   String _formatBadge(Duration? remaining) {
@@ -600,13 +611,149 @@ class _PlayerControlsSheet extends StatelessWidget {
                   _PressableScale(
                     onTap: () {
                       HapticFeedback.selectionClick();
-                      onOpenPlaylists();
+                      onOpenQueue();
                     },
                     child: const Icon(Icons.queue_music),
                   ),
                 ],
               ),
             ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _QueueSheet extends StatelessWidget {
+  const _QueueSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final maxHeight = MediaQuery.of(context).size.height * 0.78;
+
+    return Consumer<PlaylistViewModel>(
+      builder: (context, queueVm, _) {
+        final queue = queueVm.musics;
+        final currentIndex = queueVm.player.currentIndex ?? 0;
+
+        return SizedBox(
+          height: maxHeight,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.onSurface.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                ),
+                Text(
+                  'Fila de reprodução',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Arraste para reordenar',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (queue.isEmpty)
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        'Fila vazia',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: ReorderableListView.builder(
+                      itemCount: queue.length,
+                      onReorder: (oldIndex, newIndex) async {
+                        HapticFeedback.lightImpact();
+                        await queueVm.reorderQueue(oldIndex, newIndex);
+                      },
+                      buildDefaultDragHandles: false,
+                      itemBuilder: (context, index) {
+                        final music = queue[index];
+                        final isCurrent = index == currentIndex;
+
+                        return Container(
+                          key: ValueKey('queue-item-${music.audioUrl}'),
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: isCurrent
+                                ? theme.colorScheme.primary.withOpacity(0.1)
+                                : theme.colorScheme.surface,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isCurrent
+                                  ? theme.colorScheme.primary.withOpacity(0.35)
+                                  : theme.colorScheme.outline.withOpacity(0.15),
+                            ),
+                          ),
+                          child: ListTile(
+                            onTap: () async {
+                              HapticFeedback.selectionClick();
+                              await queueVm.playMusic(queueVm.musics, index);
+                              if (context.mounted) Navigator.of(context).pop();
+                            },
+                            leading: ArtworkThumb(artworkUrl: music.artworkUrl),
+                            title: Text(
+                              music.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            subtitle: Text(
+                              music.artist,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isCurrent)
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 6),
+                                    child: Icon(
+                                      Icons.equalizer_rounded,
+                                      size: 18,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                  ),
+                                ReorderableDragStartListener(
+                                  index: index,
+                                  child: Icon(
+                                    Icons.drag_handle_rounded,
+                                    color: theme.colorScheme.onSurface
+                                        .withOpacity(0.65),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
           ),
         );
       },

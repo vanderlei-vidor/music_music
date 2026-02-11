@@ -17,7 +17,7 @@ class DatabaseHelper {
 
     _database = await openDatabase(
       path,
-      version: 22,
+      version: 23,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -58,6 +58,22 @@ class DatabaseHelper {
       PRIMARY KEY (playlistId, musicId)
     )
     ''');
+
+    await db.execute('''
+    CREATE TABLE playback_queue_state(
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      currentIndex INTEGER NOT NULL DEFAULT 0,
+      positionMs INTEGER NOT NULL DEFAULT 0,
+      updatedAt INTEGER
+    )
+    ''');
+
+    await db.execute('''
+    CREATE TABLE playback_queue_items(
+      position INTEGER PRIMARY KEY,
+      audioUrl TEXT NOT NULL
+    )
+    ''');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -78,6 +94,28 @@ class DatabaseHelper {
           .execute(
             'ALTER TABLE musics_v2 ADD COLUMN playCount INTEGER NOT NULL DEFAULT 0',
           )
+          .catchError((_) {});
+    }
+
+    if (oldVersion < 23) {
+      await db
+          .execute('''
+        CREATE TABLE IF NOT EXISTS playback_queue_state(
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          currentIndex INTEGER NOT NULL DEFAULT 0,
+          positionMs INTEGER NOT NULL DEFAULT 0,
+          updatedAt INTEGER
+        )
+      ''')
+          .catchError((_) {});
+
+      await db
+          .execute('''
+        CREATE TABLE IF NOT EXISTS playback_queue_items(
+          position INTEGER PRIMARY KEY,
+          audioUrl TEXT NOT NULL
+        )
+      ''')
           .catchError((_) {});
     }
   }
@@ -258,7 +296,7 @@ class DatabaseHelper {
     return result.map((e) => MusicEntity.fromMap(e)).toList();
   }
 
- Future<void> insertMusicIfNotExists(MusicEntity music) async {
+  Future<void> insertMusicIfNotExists(MusicEntity music) async {
   final db = await database;
 
   final existing = await db.query(
@@ -303,6 +341,63 @@ class DatabaseHelper {
     conflictAlgorithm: ConflictAlgorithm.ignore,
   );
 }
+
+  // =======================
+  // PLAYBACK QUEUE STATE
+  // =======================
+  Future<void> savePlaybackQueue({
+    required List<String> audioUrls,
+    required int currentIndex,
+    required int positionMs,
+  }) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('playback_queue_items');
+      for (var i = 0; i < audioUrls.length; i++) {
+        await txn.insert('playback_queue_items', {
+          'position': i,
+          'audioUrl': audioUrls[i],
+        });
+      }
+
+      await txn.insert('playback_queue_state', {
+        'id': 1,
+        'currentIndex': currentIndex,
+        'positionMs': positionMs,
+        'updatedAt': DateTime.now().millisecondsSinceEpoch,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    });
+  }
+
+  Future<Map<String, dynamic>?> loadPlaybackQueue() async {
+    final db = await database;
+    final state = await db.query(
+      'playback_queue_state',
+      where: 'id = ?',
+      whereArgs: [1],
+      limit: 1,
+    );
+    if (state.isEmpty) return null;
+
+    final items = await db.query(
+      'playback_queue_items',
+      orderBy: 'position ASC',
+    );
+
+    return {
+      'currentIndex': state.first['currentIndex'] as int? ?? 0,
+      'positionMs': state.first['positionMs'] as int? ?? 0,
+      'audioUrls': items.map((e) => e['audioUrl'] as String).toList(),
+    };
+  }
+
+  Future<void> clearPlaybackQueue() async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('playback_queue_items');
+      await txn.delete('playback_queue_state', where: 'id = ?', whereArgs: [1]);
+    });
+  }
 
 }
 
