@@ -40,7 +40,8 @@ class SleepTimerButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16.0),
           ),
-          backgroundColor: theme.dialogBackgroundColor ?? theme.cardColor, // ✅ Cor de fundo do diálogo
+          backgroundColor:
+              theme.dialogTheme.backgroundColor ?? theme.colorScheme.surface,
           title: Text(
             "Temporizador de Desligamento",
             style: TextStyle(

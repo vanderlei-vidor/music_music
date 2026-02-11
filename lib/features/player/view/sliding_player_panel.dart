@@ -1,7 +1,6 @@
 // lib/views/player/sliding_player_panel.dart
 
 import 'package:flutter/material.dart';
-import 'package:music_music/features/home/view_model/home_view_model.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';

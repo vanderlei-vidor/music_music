@@ -1,13 +1,10 @@
-import 'package:flutter/material.dart';
 import 'package:music_music/data/models/search_result.dart';
 import 'package:music_music/data/models/music_entity.dart';
 import 'package:music_music/data/local/database_helper.dart';
 import 'package:music_music/core/music/music_scanner_factory.dart'
     if (dart.library.html)
         'package:music_music/core/music/music_scanner_factory_web.dart';
-import 'package:music_music/core/music/music_scanner.dart';
 import 'package:flutter/foundation.dart';
-import 'package:sqflite/sqflite.dart';
 import 'dart:async';
 
 class HomeViewModel extends ChangeNotifier {

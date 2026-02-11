@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:music_music/data/models/music_entity.dart';
 import 'music_scanner.dart';
@@ -20,9 +19,9 @@ class AndroidMusicScanner implements MusicScanner {
     );
 
     return songs
-        .where((s) => s.data != null && (s.duration ?? 0) > 10000)
+        .where((s) => (s.duration ?? 0) > 10000)
         .map((s) {
-          final fullPath = s.data!;
+          final fullPath = s.data;
           final parts = fullPath.split('/');
 
           final folderName =

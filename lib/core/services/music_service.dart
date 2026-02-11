@@ -1,15 +1,9 @@
 // lib/core/services/music_service.dart
-
-import 'package:on_audio_query/on_audio_query.dart';
-
 import 'package:music_music/data/local/database_helper.dart';
 import 'package:music_music/data/models/music_entity.dart';
 
 class MusicService {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
-  final OnAudioQuery _audioQuery = OnAudioQuery();
-
-  bool _isImporting = false;
 
   /// 🔥 Importa músicas do DISPOSITIVO e salva no banco
   //Future<List<MusicEntity>> importMusics() async {

@@ -66,10 +66,6 @@ class _HomeViewState extends State<_HomeView> {
     }
   }
 
-  void _onTabChanged(int index) {
-    setState(() => _currentIndex = index);
-  }
-
   @override
   void dispose() {
     _homeVM.removeListener(_onHomeChanged);

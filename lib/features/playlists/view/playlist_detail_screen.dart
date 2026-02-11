@@ -1,4 +1,4 @@
-// lib/views/playlist/playlist_detail_screen.dart
+﻿// lib/views/playlist/playlist_detail_screen.dart
 
 import 'dart:ui';
 
@@ -29,8 +29,6 @@ class PlaylistDetailScreen extends StatefulWidget {
 }
 
 class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
-  late Future<List<MusicEntity>> _musicsFuture;
-
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
   List<MusicEntity> _allMusics = [];
@@ -62,14 +60,13 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   }
 
   void _reloadMusics() {
-    _musicsFuture = context
+    context
         .read<PlaylistViewModel>()
         .getMusicsFromPlaylistV2(widget.playlistId)
         .then((musics) {
           _allMusics = musics;
           _filteredMusics = musics;
           _syncDisplayedMusics();
-          return musics;
         });
   }
 
@@ -89,35 +86,6 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   void _syncDisplayedMusics() {
     _displayedMusics.value =
         List<MusicEntity>.unmodifiable(_isSearching ? _filteredMusics : _allMusics);
-  }
-
-  void _removeMusic(int musicId) {
-    context.read<PlaylistViewModel>().removeMusicFromPlaylist(
-      widget.playlistId,
-      musicId,
-    );
-
-    final theme = Theme.of(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Música removida da playlist.',
-          style: TextStyle(color: theme.colorScheme.onSurface),
-        ),
-        backgroundColor:
-            theme.snackBarTheme.backgroundColor ?? theme.colorScheme.surface,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-
-    setState(_reloadMusics);
-  }
-
-  String _formatDuration(int? duration) {
-    if (duration == null) return "00:00";
-    final minutes = (duration ~/ 60000);
-    final seconds = ((duration % 60000) ~/ 1000);
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -146,7 +114,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       ),
       body: CustomScrollView(
         slivers: [
-          // 🧠 HEADER GRANDE
+          // ?? HEADER GRANDE
           SliverAppBar(
             expandedHeight: 220,
             pinned: true,
@@ -173,13 +141,13 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
             ),
           ),
 
-          // 🎮 CONTROLES STICKY (GRUDAM NO TOPO)
+          // ?? CONTROLES STICKY (GRUDAM NO TOPO)
           SliverPersistentHeader(
             pinned: true,
             delegate: PlaylistStickyControls(),
           ),
 
-          // 🎵 LISTA
+          // ?? LISTA
           ValueListenableBuilder<List<MusicEntity>>(
             valueListenable: _displayedMusics,
             builder: (_, musics, __) {
@@ -187,75 +155,6 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
             },
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _defaultArtwork(ThemeData theme) {
-    return Container(
-      width: 50,
-      height: 50,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Icon(Icons.music_note, color: theme.colorScheme.onPrimary),
-    );
-  }
-
-  SliverAppBar _buildSliverAppBar(ThemeData theme) {
-    return SliverAppBar(
-      expandedHeight: 220,
-      pinned: true,
-      backgroundColor: theme.scaffoldBackgroundColor,
-      elevation: 0,
-
-      actions: [],
-      flexibleSpace: FlexibleSpaceBar(
-        collapseMode: CollapseMode.parallax,
-        titlePadding: const EdgeInsets.only(left: 56, bottom: 16),
-        title: Hero(
-          tag: 'playlist_${widget.playlistId}',
-          child: Material(
-            color: Colors.transparent,
-            child: Text(
-              widget.playlistName,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ),
-        background: Stack(
-          fit: StackFit.expand,
-          children: [
-            // 🎨 BACKGROUND
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    theme.colorScheme.primary.withOpacity(0.9),
-                    theme.scaffoldBackgroundColor,
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-            ),
-
-            // 🌫 BLUR
-            Positioned.fill(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                child: Container(color: Colors.black.withOpacity(0.10)),
-              ),
-            ),
-
-            // 🎶 CONTEÚDO
-          ],
-        ),
       ),
     );
   }
@@ -286,7 +185,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Adicione músicas para começar a curtir 🎧',
+                'Adicione músicas para começar a curtir ??',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurface.withOpacity(0.7),
                 ),
@@ -294,7 +193,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               ),
               const SizedBox(height: 24),
 
-              /// 🔥 BOTÃO DE AÇÃO
+              /// ?? BOTÃO DE AÇÃO
               ElevatedButton.icon(
                 icon: const Icon(Icons.add),
                 label: const Text('Adicionar músicas'),
@@ -331,7 +230,6 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate((context, index) {
           final music = musics[index];
-          final isPlaying = viewModel.currentMusic?.id == music.id;
 
           final shadows =
               Theme.of(context).extension<AppShadows>()?.surface ?? [];
@@ -521,6 +419,7 @@ class _NowPlayingState {
   @override
   int get hashCode => Object.hash(id, isPlaying);
 }
+
 
 
 

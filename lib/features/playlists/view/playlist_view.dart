@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
-import 'package:music_music/features/player/view/player_view.dart';
 import 'package:music_music/features/player/view/mini_player_view.dart';
 import 'package:music_music/delegates/music_search_delegate.dart';
 import 'package:music_music/data/models/music_entity.dart';
@@ -16,13 +15,6 @@ class PlaylistView extends StatefulWidget {
 }
 
 class _PlaylistViewState extends State<PlaylistView> {
-  String _formatDuration(int? duration) {
-    if (duration == null) return "00:00";
-    final minutes = (duration ~/ 60000);
-    final seconds = ((duration % 60000) ~/ 1000);
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-  }
-
   void _showCreatePlaylistDialog(
     BuildContext context,
     PlaylistViewModel viewModel,
@@ -184,18 +176,6 @@ class _PlaylistViewState extends State<PlaylistView> {
           );
         },
       ),
-    );
-  }
-
-  Widget _defaultArtwork(ThemeData theme) {
-    return Container(
-      width: 50,
-      height: 50,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Icon(Icons.music_note, color: theme.colorScheme.onPrimary),
     );
   }
 

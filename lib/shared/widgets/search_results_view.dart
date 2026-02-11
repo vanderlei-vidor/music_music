@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:music_music/core/ui/TextSpan_highlight.dart';
 import 'package:music_music/data/models/search_result.dart';
-import 'package:music_music/features/library/view/artist_detail_screen.dart';
-import 'package:music_music/features/player/view/player_view.dart';
-import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
-import 'package:provider/provider.dart';
 
 class SearchResultsView extends StatelessWidget {
   final List<SearchResult> results;

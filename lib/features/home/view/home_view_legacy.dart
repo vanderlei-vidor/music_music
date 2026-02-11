@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:music_music/data/models/music_entity.dart';
-import 'package:music_music/core/services/music_service.dart';
 import 'package:music_music/features/home/view_model/home_view_model.dart';
 
 import 'package:music_music/app/routes.dart';
