@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'package:music_music/core/theme/theme_manager.dart';
 import 'package:music_music/features/home/view_model/home_view_model.dart';
+import 'package:music_music/features/settings/view_model/profile_view_model.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 import 'package:music_music/features/player/view_model/player_panel_controller.dart';
 import 'package:music_music/app/routes.dart';
@@ -28,6 +29,7 @@ class MusicApp extends StatelessWidget {
           create: (_) => ThemeManager(initialPreset: initialPreset),
         ),
         ChangeNotifierProvider(create: (_) => HomeViewModel()),
+        ChangeNotifierProvider(create: (_) => ProfileViewModel()),
         ChangeNotifierProvider(create: (_) => PlaylistViewModel()),
         ChangeNotifierProvider(create: (_) => PlayerPanelController()),
       ],

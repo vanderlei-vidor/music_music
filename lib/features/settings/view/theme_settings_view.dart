@@ -6,19 +6,41 @@ import 'package:provider/provider.dart';
 import 'package:music_music/core/theme/theme_manager.dart';
 import 'package:music_music/core/theme/app_colors.dart';
 import 'package:music_music/core/theme/app_shadows.dart';
+import 'package:music_music/features/settings/view_model/profile_view_model.dart';
 
-class ThemeSettingsView extends StatelessWidget {
+class ThemeSettingsView extends StatefulWidget {
   const ThemeSettingsView({super.key});
+
+  @override
+  State<ThemeSettingsView> createState() => _ThemeSettingsViewState();
+}
+
+class _ThemeSettingsViewState extends State<ThemeSettingsView> {
+  late TextEditingController _nameController;
+
+  @override
+  void initState() {
+    super.initState();
+    final profileVM = context.read<ProfileViewModel>();
+    _nameController = TextEditingController(text: profileVM.userName);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final manager = context.watch<ThemeManager>();
+    final profileVM = context.watch<ProfileViewModel>();
 
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text('PersonalizaÃ§Ã£o', style: theme.textTheme.headlineSmall),
+        title: Text('Personalização', style: theme.textTheme.headlineSmall),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -34,9 +56,66 @@ class ThemeSettingsView extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 120, 16, 16),
           children: [
+            Text(
+              'Perfil',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: theme.cardColor.withValues(alpha: 0.75),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: theme.dividerColor.withValues(alpha: 0.1),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Como devemos te chamar?',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _nameController,
+                    onSubmitted: (val) => profileVM.setUserName(val),
+                    onTapOutside: (_) {
+                      profileVM.setUserName(_nameController.text);
+                      FocusScope.of(context).unfocus();
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Seu nome',
+                      prefixIcon: const Icon(Icons.person_outline),
+                      filled: true,
+                      fillColor: theme.colorScheme.surface.withValues(alpha: 0.5),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+            Text(
+              'Temas',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 12),
             _ThemeCard(
               title: 'Pure White',
-              subtitle: 'Minimalismo nÃ³rdico e clareza.',
+              subtitle: 'Minimalismo nórdico e clareza.',
               selected: manager.preset == ThemePreset.whiteMinimal,
               onTap: () {
                 HapticFeedback.mediumImpact();
@@ -47,7 +126,7 @@ class ThemeSettingsView extends StatelessWidget {
             const SizedBox(height: 20),
             _ThemeCard(
               title: 'Midnight Orange',
-              subtitle: 'Profundidade cinematogrÃ¡fica com foco vibrante.',
+              subtitle: 'Profundidade cinematográfica com foco vibrante.',
               selected: manager.preset == ThemePreset.neumorphicDark,
               onTap: () {
                 HapticFeedback.mediumImpact();
