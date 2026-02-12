@@ -1,6 +1,7 @@
 // lib/views/home/home_header.dart
 import 'package:flutter/material.dart';
 import 'package:music_music/features/home/view_model/home_view_model.dart';
+import 'package:music_music/features/settings/view_model/profile_view_model.dart';
 import 'package:provider/provider.dart';
 
 class HomeHeader extends StatefulWidget {
@@ -42,19 +43,54 @@ class _HomeHeaderState extends State<HomeHeader> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final vm = context.watch<HomeViewModel>();
+    final profileVM = context.watch<ProfileViewModel>();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Sua Música',
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${profileVM.greeting},',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                    ),
+                    Text(
+                      profileVM.userName,
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                    width: 2,
+                  ),
+                ),
+                child: CircleAvatar(
+                  radius: 24,
+                  backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+                  child: Icon(
+                    Icons.person,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           TextField(
             controller: _controller,
             onChanged: (value) {
