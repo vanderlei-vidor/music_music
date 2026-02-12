@@ -1,4 +1,4 @@
-// lib/views/player/sliding_player_panel.dart
+﻿// lib/views/player/sliding_player_panel.dart
 
 import 'package:flutter/material.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
@@ -25,7 +25,7 @@ class SlidingPlayerPanel extends StatelessWidget {
     return Stack(
       children: [
         // ======================
-        // 🎧 PLAYER FULL
+        // ðŸŽ§ PLAYER FULL
         // ======================
         Positioned(
           top: screenHeight * (1 - panel.progress),
@@ -51,7 +51,7 @@ class SlidingPlayerPanel extends StatelessWidget {
         ),
 
         // ======================
-        // 🎵 MINI PLAYER (PREMIUM)
+        // ðŸŽµ MINI PLAYER (PREMIUM)
         // ======================
         Positioned(
           bottom: 16,
@@ -86,27 +86,27 @@ class SlidingPlayerPanel extends StatelessWidget {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          color.withOpacity(0.25),
-                          Theme.of(context).cardColor.withOpacity(0.95),
+                          color.withValues(alpha: 0.25),
+                          Theme.of(context).cardColor.withValues(alpha: 0.95),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(28),
                       boxShadow: [
-                        // Glow controlado (não estoura)
+                        // Glow controlado (nÃ£o estoura)
                         BoxShadow(
-                          color: color.withOpacity(0.35),
+                          color: color.withValues(alpha: 0.35),
                           blurRadius: 30,
                           offset: const Offset(0, 16),
                         ),
-                        // Sombra profunda (flutuação)
+                        // Sombra profunda (flutuaÃ§Ã£o)
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.5),
+                          color: Colors.black.withValues(alpha: 0.5),
                           blurRadius: 40,
                           offset: const Offset(0, 24),
                         ),
                       ],
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.06),
+                        color: Colors.white.withValues(alpha: 0.06),
                         width: 1,
                       ),
                     ),
@@ -121,3 +121,4 @@ class SlidingPlayerPanel extends StatelessWidget {
     );
   }
 }
+

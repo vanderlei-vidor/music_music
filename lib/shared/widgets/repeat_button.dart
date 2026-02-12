@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -27,7 +27,7 @@ class RepeatButton extends StatelessWidget {
     final theme = Theme.of(context);
 
     if (mode == LoopMode.off) {
-      return theme.colorScheme.onSurface.withOpacity(0.4);
+      return theme.colorScheme.onSurface.withValues(alpha: 0.4);
     }
 
     return theme.colorScheme.primary;
@@ -50,7 +50,7 @@ class RepeatButton extends StatelessWidget {
               ? []
               : [
                   BoxShadow(
-                    color: _color(context).withOpacity(0.35),
+                    color: _color(context).withValues(alpha: 0.35),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -70,3 +70,4 @@ class RepeatButton extends StatelessWidget {
     );
   }
 }
+

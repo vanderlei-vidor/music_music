@@ -1,18 +1,3 @@
-import 'dart:html';
-
-import 'package:music_music/data/models/music_entity.dart';
-
-class WebMusicStore {
-  static final _storage = window.localStorage;
-
-  static Future<void> insert(MusicEntity music) async {
-    _storage[music.audioUrl] = music.toJson();
-  }
-
-  static Future<List<MusicEntity>> getAll() async {
-    return _storage.values
-        .map((e) => MusicEntity.fromJson(e))
-        .toList();
-  }
-}
+export 'web_music_store_stub.dart'
+    if (dart.library.js_interop) 'web_music_store_web.dart';
 

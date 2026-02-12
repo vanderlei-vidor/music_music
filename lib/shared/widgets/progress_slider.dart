@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class ProgressSlider extends StatefulWidget {
@@ -40,7 +40,7 @@ class _ProgressSliderState extends State<ProgressSlider> {
             overlayShape: SliderComponentShape.noOverlay,
             activeTrackColor: theme.colorScheme.primary,
             inactiveTrackColor:
-                theme.colorScheme.onSurface.withOpacity(0.25),
+                theme.colorScheme.onSurface.withValues(alpha: 0.25),
           ),
           child: Slider(
             min: 0,
@@ -66,7 +66,7 @@ class _ProgressSliderState extends State<ProgressSlider> {
           ),
         ),
 
-        // ⏱️ TEMPOS
+        // â±ï¸ TEMPOS
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Row(
@@ -78,7 +78,7 @@ class _ProgressSliderState extends State<ProgressSlider> {
                 style: theme.textTheme.bodySmall!.copyWith(
                   letterSpacing: 0.3,
                   color: theme.colorScheme.onSurface
-                      .withOpacity(_isDragging ? 0.95 : 0.7),
+                      .withValues(alpha: _isDragging ? 0.95 : 0.7),
                   fontWeight: _isDragging ? FontWeight.w600 : FontWeight.w500,
                 ),
                 child: _time(widget.position),
@@ -89,7 +89,7 @@ class _ProgressSliderState extends State<ProgressSlider> {
                 style: theme.textTheme.bodySmall!.copyWith(
                   letterSpacing: 0.3,
                   color: theme.colorScheme.onSurface
-                      .withOpacity(_isDragging ? 0.95 : 0.7),
+                      .withValues(alpha: _isDragging ? 0.95 : 0.7),
                   fontWeight: _isDragging ? FontWeight.w600 : FontWeight.w500,
                 ),
                 child: _time(widget.duration),
@@ -140,4 +140,5 @@ class _PremiumThumb extends SliderComponentShape {
     context.canvas.drawCircle(center, radius, paint);
   }
 }
+
 

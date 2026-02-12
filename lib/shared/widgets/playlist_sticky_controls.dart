@@ -1,4 +1,4 @@
-import 'dart:ui';
+﻿import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 import 'package:provider/provider.dart';
@@ -59,7 +59,7 @@ class _PlayShuffleButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withOpacity(0.35),
+            color: theme.colorScheme.primary.withValues(alpha: 0.35),
             blurRadius: 18,
             offset: const Offset(0, 6),
           ),
@@ -83,7 +83,7 @@ class _PlayShuffleButton extends StatelessWidget {
           Container(
             width: 1,
             height: 24,
-            color: theme.colorScheme.onPrimary.withOpacity(0.3),
+            color: theme.colorScheme.onPrimary.withValues(alpha: 0.3),
           ),
           IconButton(
             onPressed: vm.toggleShuffle,
@@ -96,7 +96,7 @@ class _PlayShuffleButton extends StatelessWidget {
                 boxShadow: vm.isShuffled
                     ? [
                         BoxShadow(
-                          color: theme.colorScheme.onPrimary.withOpacity(0.6),
+                          color: theme.colorScheme.onPrimary.withValues(alpha: 0.6),
                           blurRadius: 14,
                           spreadRadius: 1,
                         ),
@@ -120,7 +120,7 @@ class _PlayShuffleButton extends StatelessWidget {
                   size: 24,
                   color: vm.isShuffled
                       ? theme.colorScheme.onPrimary
-                      : theme.colorScheme.onPrimary.withOpacity(0.7),
+                      : theme.colorScheme.onPrimary.withValues(alpha: 0.7),
                 ),
               ),
             ),
@@ -130,4 +130,5 @@ class _PlayShuffleButton extends StatelessWidget {
     );
   }
 }
+
 

@@ -84,6 +84,7 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
         await _viewModel.addMusicToPlaylistV2(widget.playlistId, musicId);
       }
     }
+    if (!mounted) return;
     Navigator.pop(context);
   }
 

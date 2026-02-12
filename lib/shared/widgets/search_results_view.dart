@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:music_music/core/ui/TextSpan_highlight.dart';
+import 'package:music_music/core/ui/text_span_highlight.dart';
 import 'package:music_music/data/models/search_result.dart';
 
 class SearchResultsView extends StatelessWidget {

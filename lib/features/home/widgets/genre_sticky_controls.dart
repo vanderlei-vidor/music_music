@@ -1,4 +1,4 @@
-import 'dart:ui';
+﻿import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -14,7 +14,7 @@ class GenreStickyControls extends SliverPersistentHeaderDelegate {
     required this.color,
   });
 
-  // 🔥 ALTURA CORRETA (obrigatório)
+  // ðŸ”¥ ALTURA CORRETA (obrigatÃ³rio)
   @override
   double get minExtent => 112;
 
@@ -35,17 +35,17 @@ class GenreStickyControls extends SliverPersistentHeaderDelegate {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           decoration: BoxDecoration(
-            color: theme.scaffoldBackgroundColor.withOpacity(0.85),
+            color: theme.scaffoldBackgroundColor.withValues(alpha: 0.85),
             border: Border(
               bottom: BorderSide(
-                color: theme.dividerColor.withOpacity(0.2),
+                color: theme.dividerColor.withValues(alpha: 0.2),
               ),
             ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // ▶️ PLAY / ⏸ PAUSE
+              // â–¶ï¸ PLAY / â¸ PAUSE
               Selector<PlaylistViewModel, bool>(
                 selector: (_, vm) => vm.isPlaying,
                 builder: (context, isPlaying, _) {
@@ -69,10 +69,10 @@ class GenreStickyControls extends SliverPersistentHeaderDelegate {
                           key: ValueKey(isPlaying),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: color.withOpacity(0.25),
+                            color: color.withValues(alpha: 0.25),
                             boxShadow: [
                               BoxShadow(
-                                color: color.withOpacity(0.7),
+                                color: color.withValues(alpha: 0.7),
                                 blurRadius: 18,
                               ),
                             ],
@@ -92,7 +92,7 @@ class GenreStickyControls extends SliverPersistentHeaderDelegate {
 
               const SizedBox(width: 24),
 
-              // 🔀 SHUFFLE ANIMADO
+              // ðŸ”€ SHUFFLE ANIMADO
               Selector<PlaylistViewModel, bool>(
                 selector: (_, vm) => vm.isShuffled,
                 builder: (context, active, _) {
@@ -106,13 +106,13 @@ class GenreStickyControls extends SliverPersistentHeaderDelegate {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: active
-                            ? color.withOpacity(0.45)
-                            : color.withOpacity(0.2),
+                            ? color.withValues(alpha: 0.45)
+                            : color.withValues(alpha: 0.2),
                         boxShadow: [
                           BoxShadow(
                             color: active
-                                ? color.withOpacity(0.9)
-                                : color.withOpacity(0.5),
+                                ? color.withValues(alpha: 0.9)
+                                : color.withValues(alpha: 0.5),
                             blurRadius: active ? 22 : 14,
                           ),
                         ],
@@ -142,4 +142,5 @@ class GenreStickyControls extends SliverPersistentHeaderDelegate {
     return true;
   }
 }
+
 

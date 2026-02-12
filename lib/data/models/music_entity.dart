@@ -101,6 +101,7 @@ class MusicEntity {
     int? lastPlayedAt,
     int? playCount,
     String? genre,
+    String? folderPath,
   }) {
     return MusicEntity(
       id: id,

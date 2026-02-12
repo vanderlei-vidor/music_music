@@ -1,4 +1,4 @@
-// lib/views/player/mini_player_view.dart
+﻿// lib/views/player/mini_player_view.dart
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -26,11 +26,11 @@ class MiniPlayerView extends StatefulWidget {
 
 class _MiniPlayerViewState extends State<MiniPlayerView>
     with TickerProviderStateMixin {
-  // ðŸŽµ pulsaÃ§Ã£o
+  // Ã°Å¸Å½Âµ pulsaÃƒÂ§ÃƒÂ£o
   late AnimationController _pulseController;
   late Animation<double> _pulse;
 
-  // ðŸŽ¨ cor animada
+  // Ã°Å¸Å½Â¨ cor animada
   late AnimationController _colorController;
   late Animation<Color?> _colorAnimation;
 
@@ -64,7 +64,7 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
     final vm = context.watch<PlaylistViewModel>();
     final newColor = vm.currentDominantColor;
 
-    // ðŸŽ¨ anima mudanÃ§a de cor
+    // Ã°Å¸Å½Â¨ anima mudanÃƒÂ§a de cor
     if (newColor != _currentColor) {
       _colorAnimation = ColorTween(begin: _currentColor, end: newColor).animate(
         CurvedAnimation(parent: _colorController, curve: Curves.easeOutCubic),
@@ -74,7 +74,7 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
       _colorController.forward(from: 0);
     }
 
-    // ðŸ”Š pulsaÃ§Ã£o se tocando
+    // Ã°Å¸â€Å  pulsaÃƒÂ§ÃƒÂ£o se tocando
     if (vm.isPlaying) {
       if (!_pulseController.isAnimating) {
         _pulseController.repeat(reverse: true);
@@ -116,7 +116,7 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
               child: GestureDetector(
                 behavior: HitTestBehavior.translucent,
 
-                // â¬…ï¸âž¡ï¸ swipe mÃºsica
+                // Ã¢Â¬â€¦Ã¯Â¸ÂÃ¢Å¾Â¡Ã¯Â¸Â swipe mÃƒÂºsica
                 onHorizontalDragEnd: (details) {
                   final velocity = details.primaryVelocity ?? 0;
 
@@ -132,7 +132,7 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
                 child: InkWell(
                   borderRadius: BorderRadius.circular(20),
 
-                  // ðŸ‘‰ abre player
+                  // Ã°Å¸â€˜â€° abre player
                   onTap: () {
                     Navigator.pushNamed(context, AppRoutes.player);
                   },
@@ -149,11 +149,11 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
                             end: Alignment.bottomRight,
                             colors: music.artworkUrl != null
                                 ? [
-                                    animatedColor.withOpacity(0.95),
-                                    Colors.black.withOpacity(0.9),
+                                    animatedColor.withValues(alpha: 0.95),
+                                    Colors.black.withValues(alpha: 0.9),
                                   ]
                                 : [
-                                    theme.colorScheme.primary.withOpacity(0.85),
+                                    theme.colorScheme.primary.withValues(alpha: 0.85),
                                     theme.colorScheme.surface,
                                   ],
                           ),
@@ -161,7 +161,7 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
                           boxShadow: shadows?.neumorphic ??
                               [
                                 BoxShadow(
-                                  color: animatedColor.withOpacity(0.35),
+                                  color: animatedColor.withValues(alpha: 0.35),
                                   blurRadius: 30,
                                   offset: const Offset(0, 12),
                                 ),
@@ -172,13 +172,13 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
                           children: [
                             Row(
                               children: [
-                                // ðŸŽ¨ CAPA PREMIUM (com profundidade)
+                                // Ã°Å¸Å½Â¨ CAPA PREMIUM (com profundidade)
                                 Container(
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(12),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.6),
+                                        color: Colors.black.withValues(alpha: 0.6),
                                         blurRadius: 16,
                                         offset: const Offset(0, 10),
                                       ),
@@ -198,7 +198,7 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
 
                                 const SizedBox(width: 12),
 
-                                // ðŸŽµ texto
+                                // Ã°Å¸Å½Âµ texto
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
@@ -221,7 +221,7 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
                                         style:
                                             theme.textTheme.bodySmall?.copyWith(
                                           color: theme.colorScheme.onSurface
-                                              .withOpacity(0.7),
+                                              .withValues(alpha: 0.7),
                                         ),
                                       ),
                                     ],
@@ -237,12 +237,12 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
                                 ),
 
                                 NeumorphicWrapper(
+                                  onTap: vm.previousMusic,
                                   child: Icon(
                                     Icons.skip_previous,
                                     size: 20,
                                     color: theme.colorScheme.onSurface,
                                   ),
-                                  onTap: vm.previousMusic, // ðŸ‘ˆ explico abaixo
                                 ),
 
                                 Container(
@@ -254,7 +254,7 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
                                                 colors: [
                                                   theme.colorScheme.primary,
                                                   theme.colorScheme.primary
-                                                      .withOpacity(0.85),
+                                                      .withValues(alpha: 0.85),
                                                 ],
                                               )
                                             : PremiumGradients.accentOrange,
@@ -263,9 +263,9 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
                                         color:
                                             theme.brightness == Brightness.light
                                                 ? theme.colorScheme.primary
-                                                    .withOpacity(0.35)
+                                                    .withValues(alpha: 0.35)
                                                 : animatedColor
-                                                    .withOpacity(0.6),
+                                                    .withValues(alpha: 0.6),
                                         blurRadius: theme.brightness ==
                                                 Brightness.light
                                             ? 18
@@ -289,12 +289,12 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
                                 ),
 
                                 NeumorphicWrapper(
+                                  onTap: vm.nextMusic,
                                   child: Icon(
                                     Icons.skip_next,
                                     size: 20,
                                     color: theme.colorScheme.onSurface,
                                   ),
-                                  onTap: vm.nextMusic, // ðŸ‘ˆ explico abaixo
                                 ),
 
                                 AnimatedFavoriteIcon(
@@ -353,3 +353,4 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
     );
   }
 }
+

@@ -1,4 +1,4 @@
-// lib/views/playlist/playlists_screen.dart
+﻿// lib/views/playlist/playlists_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -46,7 +46,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
           decoration: InputDecoration(
             labelText: 'Nome da Playlist',
             labelStyle: TextStyle(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           style: TextStyle(color: theme.colorScheme.onSurface),
@@ -88,14 +88,14 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: theme.cardColor,
-        title: const Text('Confirmar Exclusão'),
+        title: const Text('Confirmar ExclusÃ£o'),
         content: Text(
           'Tem certeza que deseja apagar a playlist "$playlistName"?',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Não'),
+            child: const Text('NÃ£o'),
           ),
           TextButton(
             onPressed: () {
@@ -161,7 +161,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
 
           if (playlists.isEmpty) {
             return const Center(
-              child: Text('Você ainda não criou nenhuma playlist.'),
+              child: Text('VocÃª ainda nÃ£o criou nenhuma playlist.'),
             );
           }
 
@@ -215,7 +215,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
                           ),
                         ),
                         subtitle: Text(
-                          '$count ${count == 1 ? 'música' : 'músicas'}',
+                          '$count ${count == 1 ? 'mÃºsica' : 'mÃºsicas'}',
                         ),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete),
@@ -320,3 +320,4 @@ class _PressableTileState extends State<_PressableTile> {
     );
   }
 }
+

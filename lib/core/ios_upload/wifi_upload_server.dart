@@ -9,7 +9,7 @@ class WifiUploadServer {
   Future<String> start() async {
     final dir = await getApplicationDocumentsDirectory();
 
-    final handler = (Request request) async {
+    Future<Response> handler(Request request) async {
       if (request.method == 'GET') {
         return Response.ok(_htmlPage(),
             headers: {'content-type': 'text/html'});
@@ -25,7 +25,7 @@ class WifiUploadServer {
       }
 
       return Response.notFound('Not found');
-    };
+    }
 
     _server = await io.serve(handler, InternetAddress.anyIPv4, 8080);
 

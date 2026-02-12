@@ -366,7 +366,9 @@ class PlaylistViewModel extends ChangeNotifier {
     }
 
     _currentMusic = _musics[index];
-    print('▶️ play chamado');
+    if (kDebugMode) {
+      debugPrint('play called');
+    }
     await _player.play();
 
     _persistPlaybackQueue();
@@ -858,7 +860,9 @@ class PlaylistViewModel extends ChangeNotifier {
     final Map<String, List<MusicEntity>> result = {};
 
     for (final m in _musics) {
-      print('🎧 ${m.title} | pasta: ${m.folderPath}');
+      if (kDebugMode) {
+        debugPrint('folder item: ${m.title} | ${m.folderPath}');
+      }
       final folder = m.folderPath ?? 'Desconhecido';
 
       result.putIfAbsent(folder, () => []).add(m);

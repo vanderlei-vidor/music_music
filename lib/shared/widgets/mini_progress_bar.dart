@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 class MiniProgressBar extends StatelessWidget {
   final Duration position;
@@ -31,7 +31,7 @@ class MiniProgressBar extends StatelessWidget {
             return LinearProgressIndicator(
               value: value,
               minHeight: 3,
-              backgroundColor: color.withOpacity(0.15),
+              backgroundColor: color.withValues(alpha: 0.15),
               valueColor: AlwaysStoppedAnimation(color),
             );
           },
@@ -40,3 +40,4 @@ class MiniProgressBar extends StatelessWidget {
     );
   }
 }
+

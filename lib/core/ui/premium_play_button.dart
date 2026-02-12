@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:music_music/core/theme/app_colors.dart';
 
 class PremiumPlayButton extends StatelessWidget {
@@ -22,7 +22,7 @@ class PremiumPlayButton extends StatelessWidget {
           gradient: PremiumGradients.accentOrange,
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFFF6B2D).withOpacity(0.7),
+              color: const Color(0xFFFF6B2D).withValues(alpha: 0.7),
               blurRadius: 28,
               spreadRadius: 2,
             ),
@@ -42,3 +42,4 @@ class PremiumPlayButton extends StatelessWidget {
     );
   }
 }
+

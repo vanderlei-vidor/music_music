@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -35,7 +35,7 @@ class _PlaylistViewState extends State<PlaylistView> {
           decoration: InputDecoration(
             labelText: 'Nome da Playlist',
             labelStyle: TextStyle(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             enabledBorder: UnderlineInputBorder(
               borderSide: BorderSide(color: theme.colorScheme.primary),
@@ -75,7 +75,7 @@ class _PlaylistViewState extends State<PlaylistView> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Músicas',
+          'MÃºsicas',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: theme.colorScheme.onSurface,
@@ -109,7 +109,7 @@ class _PlaylistViewState extends State<PlaylistView> {
               showSearch(
                 context: context,
                 delegate: MusicSearchDelegate(
-                  viewModel.musics, // ✅ MusicEntity direto
+                  viewModel.musics, // âœ… MusicEntity direto
                 ),
               );
             },
@@ -153,7 +153,7 @@ class _PlaylistViewState extends State<PlaylistView> {
                       confirmDismiss: (_) async {
                         HapticFeedback.lightImpact();
                         context.read<PlaylistViewModel>().toggleFavorite(music);
-                        return false; // 🔥 não remove da lista
+                        return false; // ðŸ”¥ nÃ£o remove da lista
                       },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
@@ -233,7 +233,7 @@ Widget _musicTile(
           : null,
       boxShadow: [
         BoxShadow(
-          color: theme.shadowColor.withOpacity(0.2),
+          color: theme.shadowColor.withValues(alpha: 0.2),
           blurRadius: 10,
           offset: const Offset(0, 5),
         ),
@@ -255,6 +255,7 @@ Widget _musicTile(
 
 
 }
+
 
 
 

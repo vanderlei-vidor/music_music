@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import 'package:music_music/core/theme/app_shadows.dart';
 import 'package:music_music/core/ui/genre_colors.dart';
@@ -35,7 +35,7 @@ class GenreCard extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [color.withOpacity(0.25), theme.colorScheme.surface],
+            colors: [color.withValues(alpha: 0.25), theme.colorScheme.surface],
           ),
           boxShadow: cardShadows,
         ),
@@ -48,9 +48,9 @@ class GenreCard extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: color.withOpacity(0.2),
+                color: color.withValues(alpha: 0.2),
                 boxShadow: [
-                  BoxShadow(color: color.withOpacity(0.6), blurRadius: 18),
+                  BoxShadow(color: color.withValues(alpha: 0.6), blurRadius: 18),
                 ],
               ),
               child: Icon(Icons.music_note, size: 24, color: color),
@@ -70,9 +70,9 @@ class GenreCard extends StatelessWidget {
             ),
             // CONTAGEM
             Text(
-              '$count músicas',
+              '$count mÃºsicas',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: color.withOpacity(0.75),
+                color: color.withValues(alpha: 0.75),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -82,3 +82,4 @@ class GenreCard extends StatelessWidget {
     );
   }
 }
+

@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:music_music/data/models/music_entity.dart';
@@ -43,6 +43,7 @@ class HomeMusicsTab extends StatelessWidget {
               switch (result.type) {
                 case SearchType.music:
                   await playlistVM.playSingleMusic(result.music!);
+                  if (!context.mounted) return;
                   Navigator.pushNamed(context, AppRoutes.player);
                   break;
 
@@ -70,10 +71,10 @@ class HomeMusicsTab extends StatelessWidget {
         if (vm.visibleMusics.isEmpty) {
           return _EmptyState(
             icon: Icons.library_music,
-            text: 'Nenhuma música encontrada',
+            text: 'Nenhuma mÃºsica encontrada',
             subtitle: kIsWeb
-                ? 'Use a área de upload acima para adicionar suas músicas.'
-                : 'Escaneie seu dispositivo para importar suas músicas.',
+                ? 'Use a Ã¡rea de upload acima para adicionar suas mÃºsicas.'
+                : 'Escaneie seu dispositivo para importar suas mÃºsicas.',
             actionLabel: kIsWeb ? null : 'Escanear agora',
             onAction: kIsWeb ? null : () => vm.manualRescan(),
           );
@@ -96,11 +97,12 @@ class HomeMusicsTab extends StatelessWidget {
                   HapticFeedback.selectionClick();
                   final playlistVM = context.read<PlaylistViewModel>();
                   await playlistVM.playMusic(vm.visibleMusics, index);
+                  if (!context.mounted) return;
                   Navigator.pushNamed(context, AppRoutes.player);
                 },
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceVariant,
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: shadows,
                   ),
@@ -117,7 +119,7 @@ class HomeMusicsTab extends StatelessWidget {
                     subtitle: Text(
                       music.album == null || music.album!.isEmpty
                           ? music.artist
-                          : '${music.artist} álb ${music.album}',
+                          : '${music.artist} Ã¡lb ${music.album}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -148,7 +150,7 @@ class HomeFavoritesTab extends StatelessWidget {
         if (favorites.isEmpty) {
           return const _EmptyState(
             icon: Icons.favorite_border,
-            text: 'Nenhuma música favorita',
+            text: 'Nenhuma mÃºsica favorita',
           );
         }
 
@@ -171,11 +173,12 @@ class HomeFavoritesTab extends StatelessWidget {
                         favorites,
                         index,
                       );
+                  if (!context.mounted) return;
                   Navigator.pushNamed(context, AppRoutes.player);
                 },
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceVariant,
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: shadows,
                   ),
@@ -265,7 +268,7 @@ class HomePlaylistsTab extends StatelessWidget {
                           const SizedBox(height: 8),
                           Text(p['name'], textAlign: TextAlign.center),
                           Text(
-                            '${p['musicCount']} músicas',
+                            '${p['musicCount']} mÃºsicas',
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ],
@@ -332,7 +335,7 @@ class HomeAlbumsTab extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ðŸŽ¬ HERO AQUI
+              // Ã°Å¸Å½Â¬ HERO AQUI
               Hero(
                 tag: 'album_${group.album}__${group.artist}',
                 child: ClipRRect(
@@ -357,7 +360,7 @@ class HomeAlbumsTab extends StatelessWidget {
               ),
 
               Text(
-                '${group.artist} � ${group.musics.length} músicas',
+                '${group.artist} ï¿½ ${group.musics.length} mÃºsicas',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
@@ -400,7 +403,7 @@ class HomeArtistsTab extends StatelessWidget {
             },
             child: Container(
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceVariant,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow:
                     Theme.of(context).extension<AppShadows>()?.surface ?? [],
@@ -425,7 +428,7 @@ class HomeArtistsTab extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
-                subtitle: Text('${artistMusics.length} músicas'),
+                subtitle: Text('${artistMusics.length} mÃºsicas'),
                 trailing: const Icon(Icons.chevron_right),
               ),
             ),
@@ -548,7 +551,7 @@ class _MusicListSkeleton extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceVariant,
+              color: theme.colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(16),
               boxShadow: shadows,
             ),
@@ -604,7 +607,7 @@ class _GridSkeleton extends StatelessWidget {
           children: [
             Container(
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceVariant,
+                color: theme.colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: shadows,
               ),
@@ -642,7 +645,7 @@ class _ListSkeleton extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceVariant,
+              color: theme.colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(16),
               boxShadow: shadows,
             ),
@@ -680,4 +683,5 @@ String _formatDuration(int? durationMs) {
   final seconds = totalSeconds % 60;
   return '$minutes:${seconds.toString().padLeft(2, '0')}';
 }
+
 

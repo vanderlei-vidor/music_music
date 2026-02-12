@@ -30,7 +30,7 @@ class PlaylistDetailScreen extends StatefulWidget {
 
 class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   final TextEditingController _searchController = TextEditingController();
-  bool _isSearching = false;
+  final bool _isSearching = false;
   List<MusicEntity> _allMusics = [];
   List<MusicEntity> _filteredMusics = [];
   final ValueNotifier<List<MusicEntity>> _displayedMusics =
@@ -175,7 +175,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               Icon(
                 Icons.queue_music,
                 size: 72,
-                color: theme.colorScheme.primary.withOpacity(0.5),
+                color: theme.colorScheme.primary.withValues(alpha: 0.5),
               ),
               const SizedBox(height: 16),
               Text(
@@ -187,7 +187,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               Text(
                 'Adicione músicas para começar a curtir ??',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -340,7 +340,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                theme.colorScheme.primary.withOpacity(0.9),
+                theme.colorScheme.primary.withValues(alpha: 0.9),
                 theme.scaffoldBackgroundColor,
               ],
               begin: Alignment.topCenter,
@@ -351,7 +351,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
         Positioned.fill(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-            child: Container(color: Colors.black.withOpacity(0.10)),
+            child: Container(color: Colors.black.withValues(alpha: 0.10)),
           ),
         ),
       ],
@@ -419,6 +419,7 @@ class _NowPlayingState {
   @override
   int get hashCode => Object.hash(id, isPlaying);
 }
+
 
 
 

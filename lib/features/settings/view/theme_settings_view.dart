@@ -1,4 +1,4 @@
-import 'dart:ui';
+﻿import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -18,7 +18,7 @@ class ThemeSettingsView extends StatelessWidget {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text('Personalização', style: theme.textTheme.headlineSmall),
+        title: Text('PersonalizaÃ§Ã£o', style: theme.textTheme.headlineSmall),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -36,7 +36,7 @@ class ThemeSettingsView extends StatelessWidget {
           children: [
             _ThemeCard(
               title: 'Pure White',
-              subtitle: 'Minimalismo nórdico e clareza.',
+              subtitle: 'Minimalismo nÃ³rdico e clareza.',
               selected: manager.preset == ThemePreset.whiteMinimal,
               onTap: () {
                 HapticFeedback.mediumImpact();
@@ -47,7 +47,7 @@ class ThemeSettingsView extends StatelessWidget {
             const SizedBox(height: 20),
             _ThemeCard(
               title: 'Midnight Orange',
-              subtitle: 'Profundidade cinematográfica com foco vibrante.',
+              subtitle: 'Profundidade cinematogrÃ¡fica com foco vibrante.',
               selected: manager.preset == ThemePreset.neumorphicDark,
               onTap: () {
                 HapticFeedback.mediumImpact();
@@ -91,7 +91,7 @@ class _ThemeCard extends StatelessWidget {
             ? (shadows?.elevated ??
                 [
                   BoxShadow(
-                    color: theme.colorScheme.primary.withOpacity(0.25),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.25),
                     blurRadius: 24,
                     offset: const Offset(0, 12),
                   )
@@ -109,13 +109,13 @@ class _ThemeCard extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: selected
-                    ? theme.colorScheme.primary.withOpacity(0.12)
-                    : theme.cardColor.withOpacity(0.75),
+                    ? theme.colorScheme.primary.withValues(alpha: 0.12)
+                    : theme.cardColor.withValues(alpha: 0.75),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
                   color: selected
                       ? theme.colorScheme.primary
-                      : theme.dividerColor.withOpacity(0.15),
+                      : theme.dividerColor.withValues(alpha: 0.15),
                   width: selected ? 2 : 1,
                 ),
               ),
@@ -135,7 +135,7 @@ class _ThemeCard extends StatelessWidget {
                         Text(
                           subtitle,
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface.withOpacity(0.6),
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                       ],
@@ -199,7 +199,7 @@ class _ThemePreview extends StatelessWidget {
                     ?.surface ??
                 [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.25),
+                    color: Colors.black.withValues(alpha: 0.25),
                     blurRadius: 10,
                     offset: const Offset(0, 6),
                   ),
@@ -220,3 +220,4 @@ class _ThemePreview extends StatelessWidget {
     );
   }
 }
+

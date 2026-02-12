@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:music_music/features/home/view_model/home_view_model.dart';
@@ -21,16 +21,16 @@ class _HomeViewState extends State<HomeView> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
     final vm = context.read<HomeViewModel>();
 
-    // 1️⃣ Faz scan automático no Android (se permitido)
+    // 1ï¸âƒ£ Faz scan automÃ¡tico no Android (se permitido)
     
 
-    // 2️⃣ Depois carrega do banco
+    // 2ï¸âƒ£ Depois carrega do banco
     await vm.loadMusics();
   });
 
   }
 
-  // 🔥 BottomSheet profissional
+  // ðŸ”¥ BottomSheet profissional
   void _showAddMusicSheet(BuildContext context) {
     final theme = Theme.of(context);
 
@@ -58,7 +58,7 @@ class _HomeViewState extends State<HomeView> {
               ListTile(
                 leading: Icon(Icons.folder, color: theme.colorScheme.primary),
                 title: const Text('Importar arquivos'),
-                subtitle: const Text('Adicionar músicas do dispositivo'),
+                subtitle: const Text('Adicionar mÃºsicas do dispositivo'),
                 onTap: () async {
                   Navigator.pop(context);
               //    await MusicService().importMusics();
@@ -68,10 +68,10 @@ class _HomeViewState extends State<HomeView> {
               ListTile(
                 leading: Icon(Icons.link, color: theme.colorScheme.primary),
                 title: const Text('Adicionar por URL'),
-                subtitle: const Text('Streaming, MP3 online, rádio'),
+                subtitle: const Text('Streaming, MP3 online, rÃ¡dio'),
                 onTap: () {
                   Navigator.pop(context);
-                  // 👉 aqui você pode chamar o dialog de URL depois
+                  // ðŸ‘‰ aqui vocÃª pode chamar o dialog de URL depois
                 },
               ),
             ],
@@ -105,10 +105,10 @@ class _HomeViewState extends State<HomeView> {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    'Carregando suas músicas...',
+                    'Carregando suas mÃºsicas...',
                     style: TextStyle(
                       fontSize: 16,
-                      color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -135,19 +135,19 @@ class _HomeViewState extends State<HomeView> {
                 const SizedBox(height: 10),
                 Text(
                   viewModel.musics.isEmpty
-                      ? 'Nenhuma música encontrada.'
-                      : 'Músicas encontradas: ${viewModel.musics.length}',
+                      ? 'Nenhuma mÃºsica encontrada.'
+                      : 'MÃºsicas encontradas: ${viewModel.musics.length}',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
-                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(height: 40),
 
-                // 🔹 Ver músicas
+                // ðŸ”¹ Ver mÃºsicas
                 CustomButton(
-                  text: 'Ver Minhas Músicas',
+                  text: 'Ver Minhas MÃºsicas',
                   onPressed: () {
                     final playlistVM =
                         context.read<PlaylistViewModel>();
@@ -159,7 +159,7 @@ class _HomeViewState extends State<HomeView> {
                 ),
                 const SizedBox(height: 16),
 
-                // 🔹 Playlists
+                // ðŸ”¹ Playlists
                 CustomButton(
                   text: 'Minhas Playlists',
                   onPressed: () {
@@ -174,6 +174,7 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 }
+
 
 
 

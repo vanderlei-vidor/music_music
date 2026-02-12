@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class SpeedButton extends StatelessWidget {
@@ -29,7 +29,7 @@ class SpeedButton extends StatelessWidget {
           color: theme.colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: theme.colorScheme.primary.withOpacity(0.25),
+              color: theme.colorScheme.primary.withValues(alpha: 0.25),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -75,7 +75,7 @@ class SpeedSheet extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // 🎚️ SLIDER
+          // ðŸŽšï¸ SLIDER
           Slider(
             min: 0.5,
             max: 2.0,
@@ -87,7 +87,7 @@ class SpeedSheet extends StatelessWidget {
 
           const SizedBox(height: 16),
 
-          // ⚡ PRESETS
+          // âš¡ PRESETS
           Wrap(
             spacing: 10,
             children: speeds.map((s) {
@@ -128,3 +128,4 @@ class SpeedSheet extends StatelessWidget {
     );
   }
 }
+

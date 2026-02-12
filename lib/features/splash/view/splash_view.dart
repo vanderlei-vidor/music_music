@@ -1,4 +1,4 @@
-// features/splash/view/splash_view.dart
+﻿// features/splash/view/splash_view.dart
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -28,8 +28,8 @@ class _SplashViewState extends State<SplashView> {
   }
 
   Future<void> _start() async {
-    await _requestNotificationPermissionIfNeeded();
     final vm = context.read<HomeViewModel>();
+    await _requestNotificationPermissionIfNeeded();
 
     _canSkipTimer = Timer(const Duration(milliseconds: 1400), () {
       if (!mounted) return;
@@ -102,9 +102,9 @@ class _SplashViewState extends State<SplashView> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withOpacity(0.65),
-                    Colors.black.withOpacity(0.25),
-                    Colors.black.withOpacity(0.75),
+                    Colors.black.withValues(alpha: 0.65),
+                    Colors.black.withValues(alpha: 0.25),
+                    Colors.black.withValues(alpha: 0.75),
                   ],
                 ),
               ),
@@ -147,7 +147,7 @@ class _SplashViewState extends State<SplashView> {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        'Preparando tudo…',
+                        'Preparando tudoâ€¦',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: Colors.white70,
                         ),
@@ -176,4 +176,5 @@ class _SplashViewState extends State<SplashView> {
     super.dispose();
   }
 }
+
 

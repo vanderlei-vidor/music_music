@@ -1,6 +1,5 @@
 import 'package:window_manager/window_manager.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:sqflite/sqflite.dart';
 import 'dart:ui';
 
 Future<void> initDesktop() async {

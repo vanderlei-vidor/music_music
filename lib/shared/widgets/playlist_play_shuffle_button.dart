@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 class PlaylistPlayShuffleButton extends StatelessWidget {
   final bool isPlaying;
@@ -35,7 +35,7 @@ class PlaylistPlayShuffleButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withOpacity(0.35),
+            color: theme.colorScheme.primary.withValues(alpha: 0.35),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -44,7 +44,7 @@ class PlaylistPlayShuffleButton extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ▶️ PLAY / PAUSE — MORPH ANIMADO
+          // â–¶ï¸ PLAY / PAUSE â€” MORPH ANIMADO
           GestureDetector(
             onTap: onPlayPause,
             child: AnimatedSwitcher(
@@ -78,7 +78,7 @@ class PlaylistPlayShuffleButton extends StatelessWidget {
 
           const SizedBox(width: 4),
 
-          // 🔁 SHUFFLE — ROTATION ANIMADA
+          // ðŸ” SHUFFLE â€” ROTATION ANIMADA
           IconButton(
             icon: AnimatedRotation(
               duration: const Duration(milliseconds: 300),
@@ -166,7 +166,7 @@ class _PulsingShuffleButtonState extends State<_PulsingShuffleButton>
                   ? [
                       BoxShadow(
                         color: theme.colorScheme.primary
-                            .withOpacity(glowStrength),
+                            .withValues(alpha: glowStrength),
                         blurRadius: 20 + (_controller.value * 12),
                         spreadRadius: 2,
                       ),
@@ -191,3 +191,4 @@ class _PulsingShuffleButtonState extends State<_PulsingShuffleButton>
     );
   }
 }
+

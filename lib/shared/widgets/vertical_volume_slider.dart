@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 class VerticalVolumeSlider extends StatelessWidget {
   final double volume;
@@ -18,11 +18,11 @@ class VerticalVolumeSlider extends StatelessWidget {
       width: 56,
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withOpacity(0.9),
+        color: theme.colorScheme.surface.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.25),
+            color: Colors.black.withValues(alpha: 0.25),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -36,9 +36,10 @@ class VerticalVolumeSlider extends StatelessWidget {
           max: 1,
           onChanged: onChanged,
           activeColor: theme.colorScheme.primary,
-          inactiveColor: theme.colorScheme.onSurface.withOpacity(0.3),
+          inactiveColor: theme.colorScheme.onSurface.withValues(alpha: 0.3),
         ),
       ),
     );
   }
 }
+

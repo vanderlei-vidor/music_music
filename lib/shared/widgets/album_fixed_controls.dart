@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:music_music/data/models/music_entity.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
@@ -23,11 +23,11 @@ class AlbumFixedControls extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.6),
+            color: Colors.black.withValues(alpha: 0.6),
             borderRadius: BorderRadius.circular(28),
             boxShadow: [
               BoxShadow(
-                color: color.withOpacity(0.7),
+                color: color.withValues(alpha: 0.7),
                 blurRadius: 30,
               ),
             ],
@@ -35,7 +35,7 @@ class AlbumFixedControls extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // 🔀 SHUFFLE
+              // ðŸ”€ SHUFFLE
               _CircleButton(
                 icon: Icons.shuffle,
                 active: vm.isShuffled,
@@ -45,7 +45,7 @@ class AlbumFixedControls extends StatelessWidget {
 
               const SizedBox(width: 24),
 
-              // ▶️ PLAY / ⏸ PAUSE
+              // â–¶ï¸ PLAY / â¸ PAUSE
               _CircleButton(
                 big: true,
                 icon: vm.isPlaying ? Icons.pause : Icons.play_arrow,
@@ -62,7 +62,7 @@ class AlbumFixedControls extends StatelessWidget {
 
               const SizedBox(width: 24),
 
-              // ⏭️ NEXT
+              // â­ï¸ NEXT
               _CircleButton(
                 icon: Icons.skip_next,
                 color: color,
@@ -104,11 +104,11 @@ class _CircleButton extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: active
-              ? color.withOpacity(0.45)
-              : color.withOpacity(0.25),
+              ? color.withValues(alpha: 0.45)
+              : color.withValues(alpha: 0.25),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(active ? 0.9 : 0.6),
+              color: color.withValues(alpha: active ? 0.9 : 0.6),
               blurRadius: active ? 28 : 20,
             ),
           ],
@@ -122,5 +122,6 @@ class _CircleButton extends StatelessWidget {
     );
   }
 }
+
 
 

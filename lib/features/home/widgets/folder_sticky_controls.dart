@@ -1,4 +1,4 @@
-import 'dart:ui';
+﻿import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -33,15 +33,15 @@ class FolderStickyControls extends SliverPersistentHeaderDelegate {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             decoration: BoxDecoration(
-              color: theme.scaffoldBackgroundColor.withOpacity(0.85),
+              color: theme.scaffoldBackgroundColor.withValues(alpha: 0.85),
               border: Border(
-                bottom: BorderSide(color: theme.dividerColor.withOpacity(0.2)),
+                bottom: BorderSide(color: theme.dividerColor.withValues(alpha: 0.2)),
               ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // ▶️ PLAY / ⏸ PAUSE
+                // â–¶ï¸ PLAY / â¸ PAUSE
                 Consumer<PlaylistViewModel>(
                   builder: (context, vm, _) {
                     return GestureDetector(
@@ -65,10 +65,10 @@ class FolderStickyControls extends SliverPersistentHeaderDelegate {
                           height: 48,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: color.withOpacity(0.25),
+                            color: color.withValues(alpha: 0.25),
                             boxShadow: [
                               BoxShadow(
-                                color: color.withOpacity(0.7),
+                                color: color.withValues(alpha: 0.7),
                                 blurRadius: 18,
                               ),
                             ],
@@ -85,7 +85,7 @@ class FolderStickyControls extends SliverPersistentHeaderDelegate {
 
                 const SizedBox(width: 24),
 
-                // 🔀 SHUFFLE ANIMADO
+                // ðŸ”€ SHUFFLE ANIMADO
                 Consumer<PlaylistViewModel>(
                   builder: (context, vm, _) {
                     final active = vm.isShuffled;
@@ -102,13 +102,13 @@ class FolderStickyControls extends SliverPersistentHeaderDelegate {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: active
-                              ? color.withOpacity(0.45)
-                              : color.withOpacity(0.2),
+                              ? color.withValues(alpha: 0.45)
+                              : color.withValues(alpha: 0.2),
                           boxShadow: [
                             BoxShadow(
                               color: active
-                                  ? color.withOpacity(0.9)
-                                  : color.withOpacity(0.5),
+                                  ? color.withValues(alpha: 0.9)
+                                  : color.withValues(alpha: 0.5),
                               blurRadius: active ? 22 : 14,
                             ),
                           ],
@@ -137,4 +137,5 @@ bool shouldRebuild(covariant FolderStickyControls oldDelegate) {
          oldDelegate.musics.length != musics.length;
 }
 }
+
 

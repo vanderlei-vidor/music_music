@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -15,7 +15,7 @@ import 'package:music_music/shared/widgets/audio_wave.dart';
 import 'package:music_music/shared/widgets/play_pause_button.dart';
 import 'package:music_music/shared/widgets/progress_slider.dart';
 import 'package:music_music/shared/widgets/animated_shuffle_button.dart';
-import 'package:music_music/shared/widgets/RepeatButton.dart';
+import 'package:music_music/shared/widgets/repeat_button.dart';
 import 'package:music_music/shared/widgets/speed_button.dart';
 import 'package:music_music/shared/widgets/vertical_volume_slider.dart';
 import 'package:music_music/shared/widgets/volume_equalizer.dart';
@@ -98,7 +98,7 @@ class _PlayerViewState extends State<PlayerView> {
                 Text(
                   music.artist,
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -329,7 +329,7 @@ class _PlayerViewState extends State<PlayerView> {
       context: context,
       barrierLabel: 'Fechar',
       barrierDismissible: true,
-      barrierColor: Colors.black.withOpacity(0.35),
+      barrierColor: Colors.black.withValues(alpha: 0.35),
       transitionDuration: const Duration(milliseconds: 260),
       pageBuilder: (_, __, ___) {
         return SafeArea(
@@ -428,17 +428,17 @@ class _PlayerSideSheet extends StatelessWidget {
         margin: const EdgeInsets.only(right: 12),
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: theme.colorScheme.surface.withOpacity(0.98),
+          color: theme.colorScheme.surface.withValues(alpha: 0.98),
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.25),
+              color: Colors.black.withValues(alpha: 0.25),
               blurRadius: 24,
               offset: const Offset(-6, 8),
             ),
           ],
           border: Border.all(
-            color: theme.colorScheme.onSurface.withOpacity(0.06),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.06),
             width: 1,
           ),
         ),
@@ -534,7 +534,7 @@ class _PlayerControlsSheet extends StatelessWidget {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurface.withOpacity(0.2),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
@@ -589,7 +589,7 @@ class _PlayerControlsSheet extends StatelessWidget {
                                 boxShadow: [
                                   BoxShadow(
                                     color: theme.colorScheme.primary
-                                        .withOpacity(0.35),
+                                        .withValues(alpha: 0.35),
                                     blurRadius: 8,
                                     offset: const Offset(0, 2),
                                   ),
@@ -651,13 +651,13 @@ class _QueueSheet extends StatelessWidget {
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.onSurface.withOpacity(0.2),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20),
                     ),
                   ),
                 ),
                 Text(
-                  'Fila de reprodução',
+                  'Fila de reproduÃ§Ã£o',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -666,7 +666,7 @@ class _QueueSheet extends StatelessWidget {
                 Text(
                   'Arraste para reordenar',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -676,7 +676,7 @@ class _QueueSheet extends StatelessWidget {
                       child: Text(
                         'Fila vazia',
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
                     ),
@@ -699,13 +699,13 @@ class _QueueSheet extends StatelessWidget {
                           margin: const EdgeInsets.only(bottom: 8),
                           decoration: BoxDecoration(
                             color: isCurrent
-                                ? theme.colorScheme.primary.withOpacity(0.1)
+                                ? theme.colorScheme.primary.withValues(alpha: 0.1)
                                 : theme.colorScheme.surface,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: isCurrent
-                                  ? theme.colorScheme.primary.withOpacity(0.35)
-                                  : theme.colorScheme.outline.withOpacity(0.15),
+                                  ? theme.colorScheme.primary.withValues(alpha: 0.35)
+                                  : theme.colorScheme.outline.withValues(alpha: 0.15),
                             ),
                           ),
                           child: ListTile(
@@ -742,7 +742,7 @@ class _QueueSheet extends StatelessWidget {
                                   child: Icon(
                                     Icons.drag_handle_rounded,
                                     color: theme.colorScheme.onSurface
-                                        .withOpacity(0.65),
+                                        .withValues(alpha: 0.65),
                                   ),
                                 ),
                               ],
@@ -821,7 +821,7 @@ class _SleepTimerSheetState extends State<_SleepTimerSheet> {
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.onSurface.withOpacity(0.2),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20),
                     ),
                   ),
@@ -838,13 +838,13 @@ class _SleepTimerSheetState extends State<_SleepTimerSheet> {
                       ? (mode == SleepTimerMode.duration
                           ? 'Ativo por $activeMinutes min'
                           : mode == SleepTimerMode.endOfSong
-                              ? 'Ativo até o fim da música'
+                              ? 'Ativo atÃ© o fim da mÃºsica'
                               : mode == SleepTimerMode.endOfPlaylist
-                                  ? 'Ativo até o fim da playlist'
+                                  ? 'Ativo atÃ© o fim da playlist'
                                   : 'Ativo')
-                      : 'Escolha um tempo para parar a música',
+                      : 'Escolha um tempo para parar a mÃºsica',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
                 if (remaining != null) ...[
@@ -852,7 +852,7 @@ class _SleepTimerSheetState extends State<_SleepTimerSheet> {
                   Text(
                     'Restante: ${_formatDuration(remaining)}',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withOpacity(0.8),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -876,7 +876,7 @@ class _SleepTimerSheetState extends State<_SleepTimerSheet> {
                   runSpacing: 8,
                   children: [
                     ChoiceChip(
-                      label: const Text('Fim da música'),
+                      label: const Text('Fim da mÃºsica'),
                       selected: vm.sleepMode == SleepTimerMode.endOfSong,
                       onSelected: (_) {
                         vm.setSleepTimerEndOfSong();
@@ -898,7 +898,7 @@ class _SleepTimerSheetState extends State<_SleepTimerSheet> {
                   controller: _minutesController,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    labelText: 'Digite o número de minutos',
+                    labelText: 'Digite o nÃºmero de minutos',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -967,7 +967,7 @@ class _BackgroundArtwork extends StatelessWidget {
         if (provider != null) Image(image: provider, fit: BoxFit.cover),
         BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(color: Colors.black.withOpacity(0.4)),
+          child: Container(color: Colors.black.withValues(alpha: 0.4)),
         ),
       ],
     );
@@ -998,7 +998,7 @@ class _ArtworkCover extends StatelessWidget {
         boxShadow: [
           ...(shadows?.elevated ?? const []),
           BoxShadow(
-            color: theme.colorScheme.primary.withOpacity(0.45),
+            color: theme.colorScheme.primary.withValues(alpha: 0.45),
             blurRadius: 40,
             offset: const Offset(0, 18),
           ),
@@ -1052,3 +1052,4 @@ class _ArtworkCover extends StatelessWidget {
     );
   }
 }
+

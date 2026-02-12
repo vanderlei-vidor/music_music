@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 class SwipeToRevealActions extends StatefulWidget {
   final Widget child;
@@ -41,8 +41,8 @@ class _SwipeToRevealActionsState extends State<SwipeToRevealActions> {
     final result = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Remover música'),
-        content: const Text('Deseja remover esta música da playlist?'),
+        title: const Text('Remover mÃºsica'),
+        content: const Text('Deseja remover esta mÃºsica da playlist?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -70,7 +70,7 @@ class _SwipeToRevealActionsState extends State<SwipeToRevealActions> {
       height: widget.height,
       child: Stack(
         children: [
-          // 🎯 GAVETA FIXA
+          // ðŸŽ¯ GAVETA FIXA
           Positioned.fill(
             child: Align(
               alignment: Alignment.centerRight,
@@ -78,13 +78,13 @@ class _SwipeToRevealActionsState extends State<SwipeToRevealActions> {
                 width: 144,
                 height: widget.height,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceVariant,
+                  color: theme.colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    // ⭐ FAVORITO
+                    // â­ FAVORITO
                     IconButton(
                       icon: Icon(
                         widget.isFavorite
@@ -97,7 +97,7 @@ class _SwipeToRevealActionsState extends State<SwipeToRevealActions> {
                       onPressed: widget.onToggleFavorite,
                     ),
 
-                    // 🗑️ DELETE
+                    // ðŸ—‘ï¸ DELETE
                     IconButton(
                       icon: const Icon(Icons.delete),
                       color: Colors.redAccent,
@@ -109,7 +109,7 @@ class _SwipeToRevealActionsState extends State<SwipeToRevealActions> {
             ),
           ),
 
-          // 🎵 ITEM DESLIZÁVEL
+          // ðŸŽµ ITEM DESLIZÃVEL
           GestureDetector(
             onHorizontalDragUpdate: _onDragUpdate,
             onHorizontalDragEnd: _onDragEnd,
@@ -123,3 +123,4 @@ class _SwipeToRevealActionsState extends State<SwipeToRevealActions> {
     );
   }
 }
+

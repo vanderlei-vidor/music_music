@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:music_music/core/theme/app_shadows.dart';
 
 class MiniPlayerProgress extends StatelessWidget {
-  final double progress; // 0.0 → 1.0
+  final double progress; // 0.0 â†’ 1.0
   final Color color;
 
   const MiniPlayerProgress({
@@ -26,10 +26,11 @@ class MiniPlayerProgress extends StatelessWidget {
         child: LinearProgressIndicator(
           value: progress.clamp(0.0, 1.0),
           minHeight: 2.5,
-          backgroundColor: color.withOpacity(0.2),
+          backgroundColor: color.withValues(alpha: 0.2),
           valueColor: AlwaysStoppedAnimation(color),
         ),
       ),
     );
   }
 }
+

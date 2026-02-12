@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:music_music/data/models/music_entity.dart';
@@ -141,7 +141,7 @@ class _GenresSkeleton extends StatelessWidget {
           children: [
             Container(
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceVariant,
+                color: theme.colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: shadows,
               ),
@@ -161,5 +161,6 @@ class _GenresSkeleton extends StatelessWidget {
     );
   }
 }
+
 
 

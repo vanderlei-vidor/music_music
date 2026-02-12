@@ -10,11 +10,13 @@ class GenreColorHelper {
     if (g.contains('jazz')) return Colors.purpleAccent;
     if (g.contains('hip')) return Colors.orangeAccent;
     if (g.contains('rap')) return Colors.orange;
-    if (g.contains('electronic') || g.contains('edm'))
+    if (g.contains('electronic') || g.contains('edm')) {
       return Colors.blueAccent;
+    }
     if (g.contains('dance')) return Colors.cyan;
-    if (g.contains('classical') || g.contains('clássica'))
+    if (g.contains('classical') || g.contains('clássica')) {
       return Colors.amber;
+    }
     if (g.contains('reggae')) return Colors.green;
     if (g.contains('latin')) return Colors.teal;
     if (g.contains('blues')) return Colors.indigo;

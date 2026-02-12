@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
@@ -81,7 +81,7 @@ class _FavoritesViewState extends State<FavoritesView> {
                         subtitle: Text(
                           music.artist,
                           style: TextStyle(
-                            color: theme.colorScheme.onSurface.withOpacity(0.7),
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
                         ),
                         trailing: isPlaying
@@ -93,7 +93,7 @@ class _FavoritesViewState extends State<FavoritesView> {
                                 _formatDuration(music.duration),
                                 style: TextStyle(
                                   color:
-                                      theme.colorScheme.onSurface.withOpacity(
+                                      theme.colorScheme.onSurface.withValues(alpha: 
                                         0.7,
                                       ),
                                 ),
@@ -112,3 +112,4 @@ class _FavoritesViewState extends State<FavoritesView> {
     );
   }
 }
+

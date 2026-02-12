@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:music_music/data/models/music_entity.dart';
 
 class MusicSearchDelegate extends SearchDelegate<String> {
@@ -75,9 +75,9 @@ class MusicSearchDelegate extends SearchDelegate<String> {
     if (musics.isEmpty) {
       return Center(
         child: Text(
-          'Nenhuma música encontrada.',
+          'Nenhuma mÃºsica encontrada.',
           style: TextStyle(
-            color: theme.colorScheme.onSurface.withOpacity(0.7),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
       );
@@ -112,7 +112,7 @@ class MusicSearchDelegate extends SearchDelegate<String> {
           subtitle: Text(
             music.artist,
             style: TextStyle(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           onTap: () {
@@ -138,4 +138,5 @@ class MusicSearchDelegate extends SearchDelegate<String> {
     );
   }
 }
+
 

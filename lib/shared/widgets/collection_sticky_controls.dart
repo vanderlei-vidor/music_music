@@ -1,4 +1,4 @@
-import 'dart:ui';
+﻿import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -11,7 +11,7 @@ class CollectionStickyControls extends SliverPersistentHeaderDelegate {
 
   CollectionStickyControls({required this.musics, required this.color});
 
-  // 🔒 ALTURA FIXA — REGRA DE OURO DO SLIVER
+  // ðŸ”’ ALTURA FIXA â€” REGRA DE OURO DO SLIVER
   @override
   double get minExtent => 72;
 
@@ -27,7 +27,7 @@ class CollectionStickyControls extends SliverPersistentHeaderDelegate {
     final theme = Theme.of(context);
 
     return SizedBox(
-      height: maxExtent, // 🔒 trava o tamanho real
+      height: maxExtent, // ðŸ”’ trava o tamanho real
       child: ClipRRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
@@ -35,15 +35,15 @@ class CollectionStickyControls extends SliverPersistentHeaderDelegate {
             alignment: Alignment.center,
             padding: const EdgeInsets.symmetric(horizontal: 24),
             decoration: BoxDecoration(
-              color: theme.scaffoldBackgroundColor.withOpacity(0.88),
+              color: theme.scaffoldBackgroundColor.withValues(alpha: 0.88),
               border: Border(
-                bottom: BorderSide(color: theme.dividerColor.withOpacity(0.2)),
+                bottom: BorderSide(color: theme.dividerColor.withValues(alpha: 0.2)),
               ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // ▶️ PLAY / ⏸ PAUSE
+                // â–¶ï¸ PLAY / â¸ PAUSE
                 Selector<PlaylistViewModel, bool>(
                   selector: (_, vm) => vm.isPlaying,
                   builder: (context, isPlaying, _) {
@@ -87,7 +87,7 @@ class CollectionStickyControls extends SliverPersistentHeaderDelegate {
 
                 const SizedBox(width: 28),
 
-                // 🔀 SHUFFLE
+                // ðŸ”€ SHUFFLE
                 Selector<PlaylistViewModel, bool>(
                   selector: (_, vm) => vm.isShuffled,
                   builder: (context, active, _) {
@@ -123,7 +123,7 @@ class CollectionStickyControls extends SliverPersistentHeaderDelegate {
 }
 
 // ===============================
-// 🔘 BOTÃO PREMIUM REUTILIZÁVEL
+// ðŸ”˜ BOTÃƒO PREMIUM REUTILIZÃVEL
 // ===============================
 class _CircleButton extends StatelessWidget {
   final Widget child;
@@ -149,10 +149,10 @@ class _CircleButton extends StatelessWidget {
         height: 52,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: active ? color.withOpacity(0.45) : color.withOpacity(0.25),
+          color: active ? color.withValues(alpha: 0.45) : color.withValues(alpha: 0.25),
           boxShadow: [
             BoxShadow(
-              color: active ? color.withOpacity(0.9) : color.withOpacity(0.6),
+              color: active ? color.withValues(alpha: 0.9) : color.withValues(alpha: 0.6),
               blurRadius: active ? 24 : 18,
             ),
           ],
@@ -162,5 +162,6 @@ class _CircleButton extends StatelessWidget {
     );
   }
 }
+
 
 

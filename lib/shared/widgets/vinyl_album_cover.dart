@@ -1,4 +1,4 @@
-import 'dart:math';
+﻿import 'dart:math';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
@@ -35,10 +35,10 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
   void initState() {
     super.initState();
 
-    // 💿 DISCO (física livre)
+    // ðŸ’¿ DISCO (fÃ­sica livre)
     _diskController = AnimationController.unbounded(vsync: this);
 
-    // 🎯 AGULHA
+    // ðŸŽ¯ AGULHA
     _needleController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 480),
@@ -49,7 +49,7 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
       curve: Curves.easeOutCubic,
     );
 
-    // ▶️ PLAY / PAUSE
+    // â–¶ï¸ PLAY / PAUSE
     _playingSub = widget.player.playingStream.listen((playing) {
       if (playing) {
         _diskController.animateWith(
@@ -63,7 +63,7 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
         _diskController.animateWith(
           _VinylSimulation(
             start: _diskController.value,
-            velocity: 0.2, // inércia real
+            velocity: 0.2, // inÃ©rcia real
             friction: 0.18,
           ),
         );
@@ -71,7 +71,7 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
       }
     });
 
-    // 🎚️ VELOCIDADE
+    // ðŸŽšï¸ VELOCIDADE
     _speedSub = widget.player.speedStream.listen((s) {
       _speed = s;
     });
@@ -92,7 +92,7 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
       alignment: Alignment.center,
       clipBehavior: Clip.none,
       children: [
-        // 💿 DISCO GIRANDO
+        // ðŸ’¿ DISCO GIRANDO
         AnimatedBuilder(
           animation: _diskController,
           builder: (_, __) {
@@ -117,7 +117,7 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
                     painter: _VinylGroovesPainter(),
                   ),
 
-                  // RÓTULO CENTRAL
+                  // RÃ“TULO CENTRAL
                   Container(
                     width: widget.size * 0.45,
                     height: widget.size * 0.45,
@@ -141,7 +141,7 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
                         colors: [
-                          Colors.white.withOpacity(0.08),
+                          Colors.white.withValues(alpha: 0.08),
                           Colors.transparent,
                         ],
                         radius: 0.8,
@@ -155,7 +155,7 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
           },
         ),
 
-        // 🎯 AGULHA (NÃO GIRA)
+        // ðŸŽ¯ AGULHA (NÃƒO GIRA)
         Positioned(
           top: -widget.size * 0.12,
           right: -widget.size * 0.15,
@@ -170,7 +170,7 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
 }
 
 // ===============================
-// 🎢 SIMULAÇÃO DE FÍSICA DO VINIL
+// ðŸŽ¢ SIMULAÃ‡ÃƒO DE FÃSICA DO VINIL
 // ===============================
 class _VinylSimulation extends Simulation {
   final double start;
@@ -194,7 +194,7 @@ class _VinylSimulation extends Simulation {
 }
 
 // ===============================
-// 🎵 SULCOS DO VINIL
+// ðŸŽµ SULCOS DO VINIL
 // ===============================
 class _VinylGroovesPainter extends CustomPainter {
   @override
@@ -202,7 +202,7 @@ class _VinylGroovesPainter extends CustomPainter {
     final center = size.center(Offset.zero);
     final paint = Paint()
       ..style = PaintingStyle.stroke
-      ..color = Colors.white.withOpacity(0.05);
+      ..color = Colors.white.withValues(alpha: 0.05);
 
     for (double r = size.width * 0.25; r < size.width * 0.5; r += 2.5) {
       canvas.drawCircle(center, r, paint);
@@ -212,3 +212,4 @@ class _VinylGroovesPainter extends CustomPainter {
   @override
   bool shouldRepaint(_) => false;
 }
+

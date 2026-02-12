@@ -1,22 +1,25 @@
-import 'dart:html' as html;
+import 'package:web/web.dart' as web;
 import 'package:music_music/data/models/music_entity.dart';
 
 class WebMusicUploader {
-  // Use dynamic aqui na entrada para a HomeScreen não reclamar no Windows
   static Future<List<MusicEntity>> upload(dynamic files) async {
-    // Aqui dentro você faz o cast com segurança
-    final List<html.File> webFiles = List<html.File>.from(files as List);
-    
-    final List<MusicEntity> result = [];
-    for (final file in webFiles) {
-      final url = html.Url.createObjectUrl(file);
-      result.add(MusicEntity(
-        title: file.name,
-        audioUrl: url,
-        artist: 'Importado',
-        isFavorite: false, id: null,
-      ));
+    final iterable = files is Iterable ? files : const <dynamic>[];
+    final result = <MusicEntity>[];
+
+    for (final raw in iterable) {
+      final file = raw as web.File;
+      final url = web.URL.createObjectURL(file);
+      result.add(
+        MusicEntity(
+          id: null,
+          title: file.name,
+          audioUrl: url,
+          artist: 'Importado',
+          isFavorite: false,
+        ),
+      );
     }
+
     return result;
   }
 }

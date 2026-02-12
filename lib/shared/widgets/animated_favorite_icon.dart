@@ -1,4 +1,4 @@
-import 'dart:math';
+﻿import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -54,7 +54,7 @@ class _AnimatedFavoriteIconState extends State<AnimatedFavoriteIcon>
       CurvedAnimation(parent: _scaleController, curve: Curves.easeOutBack),
     );
 
-    // 3. Controller para a explosão de partículas
+    // 3. Controller para a explosÃ£o de partÃ­culas
     _burstController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 420),
@@ -71,11 +71,11 @@ class _AnimatedFavoriteIconState extends State<AnimatedFavoriteIcon>
     super.didUpdateWidget(oldWidget);
 
     if (!oldWidget.isFavorite && widget.isFavorite) {
-      // 🔥 FAVORITOU: Explode e aumenta
+      // ðŸ”¥ FAVORITOU: Explode e aumenta
       _scaleController.forward(from: 0);
       _burstController.forward(from: 0);
     } else if (oldWidget.isFavorite && !widget.isFavorite) {
-      // 🧊 DESFAVORITOU: Pequeno pulso de encolhimento
+      // ðŸ§Š DESFAVORITOU: Pequeno pulso de encolhimento
       _unfavoriteController.forward(from: 0).then((_) => _unfavoriteController.reverse());
     }
   }
@@ -99,14 +99,14 @@ class _AnimatedFavoriteIconState extends State<AnimatedFavoriteIcon>
 
     return GestureDetector(
       onTap: () {
-        // 📳 FEEDBACK TÁTIL (Vibração)
+        // ðŸ“³ FEEDBACK TÃTIL (VibraÃ§Ã£o)
         if (!widget.isFavorite) {
-          HapticFeedback.mediumImpact(); // Vibração firme ao favoritar
+          HapticFeedback.mediumImpact(); // VibraÃ§Ã£o firme ao favoritar
         } else {
           HapticFeedback.selectionClick(); // Toque sutil ao desfavoritar
         }
         
-        widget.onTap(); // Executa a função original
+        widget.onTap(); // Executa a funÃ§Ã£o original
       },
       child: SizedBox(
         width: widget.size + 20,
@@ -114,7 +114,7 @@ class _AnimatedFavoriteIconState extends State<AnimatedFavoriteIcon>
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // ✨ PARTÍCULAS
+            // âœ¨ PARTÃCULAS
             AnimatedBuilder(
               animation: _burst,
               builder: (_, __) => IgnorePointer(
@@ -128,7 +128,7 @@ class _AnimatedFavoriteIconState extends State<AnimatedFavoriteIcon>
               ),
             ),
 
-            // ❤️ CORAÇÃO COM DUPLA ANIMAÇÃO + GLOW (Brilho)
+            // â¤ï¸ CORAÃ‡ÃƒO COM DUPLA ANIMAÃ‡ÃƒO + GLOW (Brilho)
             ScaleTransition(
               scale: widget.isFavorite ? _scale : _shrink,
               child: Icon(
@@ -136,17 +136,17 @@ class _AnimatedFavoriteIconState extends State<AnimatedFavoriteIcon>
                 size: widget.size,
                 color: widget.isFavorite
                     ? resolvedColor
-                    : theme.colorScheme.onSurface.withOpacity(0.6),
-                // 🌟 Adicionando o efeito de Glow quando favoritado
+                    : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                // ðŸŒŸ Adicionando o efeito de Glow quando favoritado
                 shadows: widget.isFavorite 
                   ? [
                       Shadow(
-                        color: resolvedColor.withOpacity(0.8),
+                        color: resolvedColor.withValues(alpha: 0.8),
                         blurRadius: 15,
                         offset: const Offset(0, 0),
                       ),
                       Shadow(
-                        color: resolvedColor.withOpacity(0.4),
+                        color: resolvedColor.withValues(alpha: 0.4),
                         blurRadius: 30,
                         offset: const Offset(0, 0),
                       ),
@@ -161,7 +161,7 @@ class _AnimatedFavoriteIconState extends State<AnimatedFavoriteIcon>
   }
 }
 
-// O Painter das partículas continua igual (está correto)
+// O Painter das partÃ­culas continua igual (estÃ¡ correto)
 class _HeartBurstPainter extends CustomPainter {
   final double progress;
   final Color color;
@@ -177,7 +177,7 @@ class _HeartBurstPainter extends CustomPainter {
     final radius = size.width / 2 * progress * 1.6;
 
     final paint = Paint()
-      ..color = color.withOpacity(1 - progress)
+      ..color = color.withValues(alpha: 1 - progress)
       ..style = PaintingStyle.fill;
 
     for (int i = 0; i < particleCount; i++) {

@@ -1,4 +1,4 @@
-import 'dart:collection';
+﻿import 'dart:collection';
 import 'package:flutter/material.dart';
 
 class ArtworkCache {
@@ -102,8 +102,8 @@ class _ArtworkFallback extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            theme.colorScheme.primary.withOpacity(0.35),
-            theme.colorScheme.secondary.withOpacity(0.35),
+            theme.colorScheme.primary.withValues(alpha: 0.35),
+            theme.colorScheme.secondary.withValues(alpha: 0.35),
           ],
         ),
       ),
@@ -114,3 +114,4 @@ class _ArtworkFallback extends StatelessWidget {
     );
   }
 }
+

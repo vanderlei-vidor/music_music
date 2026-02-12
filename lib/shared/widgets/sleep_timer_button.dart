@@ -1,10 +1,10 @@
-// lib/widgets/sleep_timer_button.dart
+﻿// lib/widgets/sleep_timer_button.dart
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 
-/// Um botão para definir ou cancelar um temporizador de desligamento.
+/// Um botÃ£o para definir ou cancelar um temporizador de desligamento.
 class SleepTimerButton extends StatelessWidget {
   const SleepTimerButton({super.key});
 
@@ -18,8 +18,8 @@ class SleepTimerButton extends StatelessWidget {
       icon: Icon(
         Icons.timer,
         color: hasTimer 
-            ? theme.colorScheme.primary // ✅ Cor primária quando ativo
-            : theme.colorScheme.onSurface.withOpacity(0.7), // ✅ Cor secundária quando inativo
+            ? theme.colorScheme.primary // âœ… Cor primÃ¡ria quando ativo
+            : theme.colorScheme.onSurface.withValues(alpha: 0.7), // âœ… Cor secundÃ¡ria quando inativo
         size: 30,
       ),
       onPressed: () {
@@ -29,7 +29,7 @@ class SleepTimerButton extends StatelessWidget {
     );
   }
 
-  /// Mostra um diálogo com opções para o temporizador de desligamento.
+  /// Mostra um diÃ¡logo com opÃ§Ãµes para o temporizador de desligamento.
   void _showSleepTimerDialog(BuildContext context, PlaylistViewModel viewModel) {
     final theme = Theme.of(context);
 
@@ -45,7 +45,7 @@ class SleepTimerButton extends StatelessWidget {
           title: Text(
             "Temporizador de Desligamento",
             style: TextStyle(
-              color: theme.colorScheme.onSurface, // ✅ Cor do título
+              color: theme.colorScheme.onSurface, // âœ… Cor do tÃ­tulo
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -92,4 +92,5 @@ class SleepTimerButton extends StatelessWidget {
     );
   }
 }
+
 

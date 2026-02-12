@@ -1,4 +1,4 @@
-import 'dart:ui';
+﻿import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -54,7 +54,7 @@ class AlbumDetailScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // 🎨 FUNDO CINEMATOGRÁFICO (ANIMADO)
+          // ðŸŽ¨ FUNDO CINEMATOGRÃFICO (ANIMADO)
           AnimatedContainer(
             duration: const Duration(milliseconds: 700),
             curve: Curves.easeOutCubic,
@@ -62,12 +62,12 @@ class AlbumDetailScreen extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [dominantColor.withOpacity(0.95), Colors.black],
+                colors: [dominantColor.withValues(alpha: 0.95), Colors.black],
               ),
             ),
           ),
 
-          // 🌫 BLUR
+          // ðŸŒ« BLUR
           BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
             child: Container(color: Colors.transparent),
@@ -76,7 +76,7 @@ class AlbumDetailScreen extends StatelessWidget {
             children: [
               CustomScrollView(
                 slivers: [
-                  // 🎬 HEADER CINEMATOGRÁFICO
+                  // ðŸŽ¬ HEADER CINEMATOGRÃFICO
                   SliverAppBar(
                     expandedHeight: 340,
                     pinned: true,
@@ -98,7 +98,7 @@ class AlbumDetailScreen extends StatelessWidget {
                             gaplessPlayback: true,
                           ),
 
-                          Container(color: Colors.black.withOpacity(0.45)),
+                          Container(color: Colors.black.withValues(alpha: 0.45)),
 
                           Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -117,7 +117,7 @@ class AlbumDetailScreen extends StatelessWidget {
                               const SizedBox(height: 16),
 
                               Text(
-                                '${musics.length} músicas',
+                                '${musics.length} mÃºsicas',
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   color: Colors.white70,
                                 ),
@@ -131,7 +131,7 @@ class AlbumDetailScreen extends StatelessWidget {
                     ),
                   ),
 
-                  // 🎵 LISTA DE MÚSICAS
+                  // ðŸŽµ LISTA DE MÃšSICAS
                   SliverList(
                     delegate: SliverChildBuilderDelegate(
                       childCount: musics.length,
@@ -211,7 +211,7 @@ class AlbumDetailScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              // 🎮 CONTROLES FIXOS (NÃO SCROLLAM)
+              // ðŸŽ® CONTROLES FIXOS (NÃƒO SCROLLAM)
               Positioned(
                 left: 0,
                 right: 0,
@@ -224,11 +224,11 @@ class AlbumDetailScreen extends StatelessWidget {
                         vertical: 14,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.6),
+                        color: Colors.black.withValues(alpha: 0.6),
                         borderRadius: BorderRadius.circular(32),
                         boxShadow: [
                           BoxShadow(
-                            color: dominantColor.withOpacity(0.8),
+                            color: dominantColor.withValues(alpha: 0.8),
                             blurRadius: 30,
                           ),
                         ],
@@ -250,14 +250,14 @@ class AlbumDetailScreen extends StatelessWidget {
                                   musics.any((m) => m.id == current.id);
 
                               if (playlistVM.isPlaying) {
-                                // ⏸ pausa normal
+                                // â¸ pausa normal
                                 playlistVM.pause();
                               } else {
                                 if (isSameAlbum) {
-                                  // ▶️ retoma do ponto onde parou
+                                  // â–¶ï¸ retoma do ponto onde parou
                                   playlistVM.play();
                                 } else {
-                                  // ▶️ começa o álbum do zero
+                                  // â–¶ï¸ comeÃ§a o Ã¡lbum do zero
                                   playlistVM.playMusic(musics, 0);
                                 }
                               }
@@ -276,13 +276,13 @@ class AlbumDetailScreen extends StatelessWidget {
 
                               await playlistVM.toggleShuffle();
 
-                              // 🔥 se está tocando esse álbum, NÃO reinicia
+                              // ðŸ”¥ se estÃ¡ tocando esse Ã¡lbum, NÃƒO reinicia
                               if (isSameAlbum && playlistVM.isPlaying) {
-                                // não faz nada — shuffle já foi aplicado
+                                // nÃ£o faz nada â€” shuffle jÃ¡ foi aplicado
                                 return;
                               }
 
-                              // se não está tocando nada, começa o álbum
+                              // se nÃ£o estÃ¡ tocando nada, comeÃ§a o Ã¡lbum
                               if (!playlistVM.isPlaying) {
                                 playlistVM.playMusic(musics, 0);
                               }
@@ -320,7 +320,7 @@ class _NowPlayingState {
 }
 
 // ===============================
-// 🔘 BOTÃO PREMIUM
+// ðŸ”˜ BOTÃƒO PREMIUM
 // ===============================
 class _ActionButton extends StatelessWidget {
   final IconData icon;
@@ -347,9 +347,9 @@ class _ActionButton extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: color.withOpacity(0.35),
+          color: color.withValues(alpha: 0.35),
           boxShadow: [
-            BoxShadow(color: color.withOpacity(0.85), blurRadius: 28),
+            BoxShadow(color: color.withValues(alpha: 0.85), blurRadius: 28),
           ],
         ),
         child: Icon(icon, color: Colors.white, size: big ? 34 : 26),
@@ -357,6 +357,7 @@ class _ActionButton extends StatelessWidget {
     );
   }
 }
+
 
 
 

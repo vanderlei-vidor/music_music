@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import 'package:music_music/core/theme/app_shadows.dart';
 import 'package:music_music/data/models/music_entity.dart';
@@ -47,7 +47,7 @@ class FolderCard extends StatelessWidget {
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        Colors.black.withOpacity(0.7),
+                        Colors.black.withValues(alpha: 0.7),
                       ],
                     ),
                   ),
@@ -70,7 +70,7 @@ class FolderCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '${musics.length} músicas',
+                        '${musics.length} mÃºsicas',
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 12,
@@ -87,3 +87,4 @@ class FolderCard extends StatelessWidget {
     );
   }
 }
+

@@ -1,4 +1,4 @@
-import 'dart:math';
+﻿import 'dart:math';
 import 'package:flutter/material.dart';
 
 class AudioWave extends StatefulWidget {
@@ -84,7 +84,7 @@ class _WavePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color.withOpacity(0.35)
+      ..color = color.withValues(alpha: 0.35)
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 
@@ -112,3 +112,4 @@ class _WavePainter extends CustomPainter {
     return oldDelegate.progress != progress;
   }
 }
+

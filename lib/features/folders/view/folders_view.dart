@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:music_music/app/routes.dart';
 import 'package:music_music/features/home/widgets/folder_card.dart';
 import 'package:provider/provider.dart';
@@ -127,7 +127,7 @@ class _FoldersSkeleton extends StatelessWidget {
           children: [
             Container(
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceVariant,
+                color: theme.colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: shadows,
               ),
@@ -147,6 +147,7 @@ class _FoldersSkeleton extends StatelessWidget {
     );
   }
 }
+
 
 
 

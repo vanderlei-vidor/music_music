@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class ShuffleButton extends StatelessWidget {
@@ -29,7 +29,7 @@ class ShuffleButton extends StatelessWidget {
           boxShadow: isActive
               ? [
                   BoxShadow(
-                    color: theme.colorScheme.primary.withOpacity(0.45),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.45),
                     blurRadius: 14,
                     spreadRadius: 1,
                   )
@@ -51,14 +51,15 @@ class ShuffleButton extends StatelessWidget {
           },
           child: Icon(
             Icons.shuffle,
-            key: ValueKey(isActive), // 🔥 ESSENCIAL
+            key: ValueKey(isActive), // ðŸ”¥ ESSENCIAL
             size: 26,
             color: isActive
                 ? theme.colorScheme.primary
-                : theme.colorScheme.onSurface.withOpacity(0.5),
+                : theme.colorScheme.onSurface.withValues(alpha: 0.5),
           ),
         ),
       ),
     );
   }
 }
+

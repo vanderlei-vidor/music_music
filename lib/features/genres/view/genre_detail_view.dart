@@ -1,4 +1,4 @@
-import 'dart:ui';
+﻿import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -85,13 +85,13 @@ class _GenreDetailViewState extends State<GenreDetailView> {
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [color.withOpacity(0.95), Colors.black],
+                          colors: [color.withValues(alpha: 0.95), Colors.black],
                         ),
                       ),
                     ),
                     BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                      child: Container(color: Colors.black.withOpacity(0.25)),
+                      child: Container(color: Colors.black.withValues(alpha: 0.25)),
                     ),
                     Center(
                       child: Column(
@@ -100,11 +100,11 @@ class _GenreDetailViewState extends State<GenreDetailView> {
                           Icon(
                             Icons.music_note,
                             size: 64,
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            '${widget.musics.length} músicas',
+                            '${widget.musics.length} mÃºsicas',
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyMedium
@@ -206,9 +206,8 @@ class _GenreDetailViewState extends State<GenreDetailView> {
                           final vm = context.read<PlaylistViewModel>();
                           await vm.playMusic(musics, index);
 
-                          if (mounted) {
-                            Navigator.pushNamed(context, AppRoutes.player);
-                          }
+                          if (!context.mounted) return;
+                          Navigator.pushNamed(context, AppRoutes.player);
                         },
                       ),
                     );
@@ -302,3 +301,4 @@ class _DetailListSkeleton extends StatelessWidget {
     );
   }
 }
+

@@ -165,8 +165,8 @@ class AppRoutes {
 PageRoute<dynamic> _fadeRoute(RouteSettings settings, Widget page) {
   return _HapticRoute(
     settings: settings,
-    pageBuilder: (_, animation, __) => page,
-    transitionsBuilder: (_, animation, __, child) {
+    pageBuilder: (context, animation, secondaryAnimation) => page,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
       final curve = CurvedAnimation(
         parent: animation,
         curve: Curves.easeOutCubic,
@@ -179,8 +179,8 @@ PageRoute<dynamic> _fadeRoute(RouteSettings settings, Widget page) {
 PageRoute<dynamic> _slideRoute(RouteSettings settings, Widget page) {
   return _HapticRoute(
     settings: settings,
-    pageBuilder: (_, animation, __) => page,
-    transitionsBuilder: (_, animation, __, child) {
+    pageBuilder: (context, animation, secondaryAnimation) => page,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
       final curve = CurvedAnimation(
         parent: animation,
         curve: Curves.easeOutCubic,
@@ -199,14 +199,10 @@ PageRoute<dynamic> _slideRoute(RouteSettings settings, Widget page) {
 
 class _HapticRoute<T> extends PageRouteBuilder<T> {
   _HapticRoute({
-    required RouteSettings settings,
-    required RoutePageBuilder pageBuilder,
-    required RouteTransitionsBuilder transitionsBuilder,
-  }) : super(
-          settings: settings,
-          pageBuilder: pageBuilder,
-          transitionsBuilder: transitionsBuilder,
-        );
+    required super.settings,
+    required super.pageBuilder,
+    required super.transitionsBuilder,
+  });
 
   @override
   TickerFuture didPush() {

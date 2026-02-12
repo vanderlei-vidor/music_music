@@ -1,11 +1,6 @@
-
-
-import 'dart:collection';
 import 'package:flutter/material.dart';
 
-
-
-final _highlightCache = LinkedHashMap<String, TextSpan>();
+final _highlightCache = <String, TextSpan>{};
 const _highlightCacheLimit = 500;
 
 TextSpan highlight(String text, String query, TextStyle style) {

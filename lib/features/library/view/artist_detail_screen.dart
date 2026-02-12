@@ -1,4 +1,4 @@
-import 'dart:ui';
+﻿import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -26,7 +26,7 @@ class ArtistDetailView extends StatelessWidget {
     final allMusics =
         context.select<PlaylistViewModel, List<MusicEntity>>((vm) => vm.musics);
 
-    // 🎶 músicas do artista
+    // ðŸŽ¶ mÃºsicas do artista
     final musics = allMusics
         .where(
           (m) => m.artist.toLowerCase() == artistName.toLowerCase(),
@@ -41,7 +41,7 @@ class ArtistDetailView extends StatelessWidget {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          // 🎬 HEADER CINEMATOGRÁFICO
+          // ðŸŽ¬ HEADER CINEMATOGRÃFICO
           SliverAppBar(
             expandedHeight: 300,
             pinned: true,
@@ -61,36 +61,36 @@ class ArtistDetailView extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    // 🎨 FUNDO
+                    // ðŸŽ¨ FUNDO
                     Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            color.withOpacity(0.95),
+                            color.withValues(alpha: 0.95),
                             Colors.black,
                           ],
                         ),
                       ),
                     ),
 
-                    // 🌫 BLUR
+                    // ðŸŒ« BLUR
                     BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                       child: Container(
-                        color: Colors.black.withOpacity(0.25),
+                        color: Colors.black.withValues(alpha: 0.25),
                       ),
                     ),
 
-                    // 🎤 CONTEÚDO CENTRAL
+                    // ðŸŽ¤ CONTEÃšDO CENTRAL
                     Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           CircleAvatar(
                             radius: 48,
-                            backgroundColor: color.withOpacity(0.3),
+                            backgroundColor: color.withValues(alpha: 0.3),
                             child: Icon(
                               Icons.person,
                               size: 48,
@@ -114,7 +114,7 @@ class ArtistDetailView extends StatelessWidget {
                           const SizedBox(height: 6),
 
                           Text(
-                            '${musics.length} músicas',
+                            '${musics.length} mÃºsicas',
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyMedium
@@ -129,7 +129,7 @@ class ArtistDetailView extends StatelessWidget {
             ),
           ),
 
-          // 🔥 STICKY CONTROLS
+          // ðŸ”¥ STICKY CONTROLS
           SliverPersistentHeader(
             pinned: true,
             delegate: CollectionStickyControls(
@@ -138,7 +138,7 @@ class ArtistDetailView extends StatelessWidget {
             ),
           ),
 
-          // 🎵 LISTA DE MÚSICAS
+          // ðŸŽµ LISTA DE MÃšSICAS
           SliverList(
             delegate: SliverChildBuilderDelegate(
               childCount: musics.length,
@@ -245,6 +245,7 @@ class _NowPlayingState {
   @override
   int get hashCode => Object.hash(id, isPlaying);
 }
+
 
 
 

@@ -98,6 +98,7 @@ class _HomeViewState extends State<_HomeView> {
                         if (musics.isEmpty) return;
 
                         await playlistVM.playAllFromPlaylist(musics);
+                        if (!context.mounted) return;
                         Navigator.pushNamed(context, AppRoutes.player);
                       },
                       onShuffleAll: () async {
@@ -112,6 +113,7 @@ class _HomeViewState extends State<_HomeView> {
                         }
 
                         await playlistVM.playAllFromPlaylist(musics);
+                        if (!context.mounted) return;
                         Navigator.pushNamed(context, AppRoutes.player);
                       },
                     );
@@ -132,6 +134,7 @@ class _HomeViewState extends State<_HomeView> {
                           onFiles: (files) async {
                             final uploaded =
                                 await WebMusicUploader.upload(files);
+                            if (!context.mounted) return;
 
                             final vm = context.read<HomeViewModel>();
 

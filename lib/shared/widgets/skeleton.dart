@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 class Skeleton extends StatefulWidget {
   final double width;
@@ -37,7 +37,7 @@ class _SkeletonState extends State<Skeleton>
 
   @override
   Widget build(BuildContext context) {
-    final base = Theme.of(context).colorScheme.surfaceVariant;
+    final base = Theme.of(context).colorScheme.surfaceContainerHighest;
     final highlight = Theme.of(context).colorScheme.surface;
 
     return AnimatedBuilder(
@@ -81,7 +81,7 @@ class _ShimmerPainter extends CustomPainter {
       ..shader = LinearGradient(
         colors: [
           base,
-          highlight.withOpacity(0.9),
+          highlight.withValues(alpha: 0.9),
           base,
         ],
         stops: const [0.0, 0.5, 1.0],
@@ -100,3 +100,5 @@ class _ShimmerPainter extends CustomPainter {
         oldDelegate.highlight != highlight;
   }
 }
+
+

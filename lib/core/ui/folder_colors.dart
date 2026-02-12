@@ -5,8 +5,9 @@ class FolderColorHelper {
   static Color getColor(String folder) {
     final f = folder.toLowerCase();
 
-    if (f.contains('classic') || f.contains('cláss'))
+    if (f.contains('classic') || f.contains('cláss')) {
       return Colors.amber;
+    }
     if (f.contains('rock')) return Colors.redAccent;
     if (f.contains('pop')) return Colors.pinkAccent;
     if (f.contains('jazz')) return Colors.deepPurple;
