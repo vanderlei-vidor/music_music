@@ -75,7 +75,7 @@ class MusicSearchDelegate extends SearchDelegate<String> {
     if (musics.isEmpty) {
       return Center(
         child: Text(
-          'Nenhuma mÃºsica encontrada.',
+          'Nenhuma música encontrada.',
           style: TextStyle(
             color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
           ),

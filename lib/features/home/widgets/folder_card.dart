@@ -1,7 +1,8 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import 'package:music_music/core/theme/app_shadows.dart';
 import 'package:music_music/data/models/music_entity.dart';
+import 'package:music_music/shared/widgets/artwork_image.dart';
 
 class FolderCard extends StatelessWidget {
   final String folderName;
@@ -22,6 +23,7 @@ class FolderCard extends StatelessWidget {
     final cardShadows = theme.brightness == Brightness.dark
         ? (shadows?.neumorphic ?? [])
         : (shadows?.elevated ?? []);
+    final cover = musics.isEmpty ? null : musics.first;
 
     return GestureDetector(
       onTap: onTap,
@@ -37,9 +39,11 @@ class FolderCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                // CAPA
-
-                // OVERLAY
+                ArtworkSquare(
+                  artworkUrl: cover?.artworkUrl,
+                  audioId: cover == null ? null : (cover.sourceId ?? cover.id),
+                  borderRadius: 22,
+                ),
                 Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -52,8 +56,6 @@ class FolderCard extends StatelessWidget {
                     ),
                   ),
                 ),
-
-                // TEXTO
                 Padding(
                   padding: const EdgeInsets.all(14),
                   child: Column(
@@ -70,7 +72,7 @@ class FolderCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '${musics.length} mÃºsicas',
+                        '${musics.length} músicas',
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 12,
@@ -87,4 +89,3 @@ class FolderCard extends StatelessWidget {
     );
   }
 }
-

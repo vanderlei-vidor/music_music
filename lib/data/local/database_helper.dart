@@ -17,7 +17,7 @@ class DatabaseHelper {
 
     _database = await openDatabase(
       path,
-      version: 23,
+      version: 25,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -29,6 +29,7 @@ class DatabaseHelper {
     await db.execute('''
     CREATE TABLE musics_v2(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sourceId INTEGER,
       title TEXT NOT NULL,
       artist TEXT NOT NULL,
       audioUrl TEXT NOT NULL UNIQUE,
@@ -74,6 +75,19 @@ class DatabaseHelper {
       audioUrl TEXT NOT NULL
     )
     ''');
+
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_musics_favorite ON musics_v2(isFavorite)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_musics_lastPlayedAt ON musics_v2(lastPlayedAt)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_musics_playCount ON musics_v2(playCount)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_playlist_musics_playlistId ON playlist_musics_v2(playlistId)',
+    );
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -118,6 +132,35 @@ class DatabaseHelper {
       ''')
           .catchError((_) {});
     }
+
+    if (oldVersion < 24) {
+      await db
+          .execute(
+            'CREATE INDEX IF NOT EXISTS idx_musics_favorite ON musics_v2(isFavorite)',
+          )
+          .catchError((_) {});
+      await db
+          .execute(
+            'CREATE INDEX IF NOT EXISTS idx_musics_lastPlayedAt ON musics_v2(lastPlayedAt)',
+          )
+          .catchError((_) {});
+      await db
+          .execute(
+            'CREATE INDEX IF NOT EXISTS idx_musics_playCount ON musics_v2(playCount)',
+          )
+          .catchError((_) {});
+      await db
+          .execute(
+            'CREATE INDEX IF NOT EXISTS idx_playlist_musics_playlistId ON playlist_musics_v2(playlistId)',
+          )
+          .catchError((_) {});
+    }
+
+    if (oldVersion < 25) {
+      await db
+          .execute('ALTER TABLE musics_v2 ADD COLUMN sourceId INTEGER')
+          .catchError((_) {});
+    }
   }
 
   // =======================
@@ -134,6 +177,7 @@ class DatabaseHelper {
 
     return db.insert('musics_v2', {
       'title': music.title,
+      'sourceId': music.sourceId,
       'artist': music.artist,
       'audioUrl': music.audioUrl,
       'artworkUrl': music.artworkUrl,
@@ -297,36 +341,55 @@ class DatabaseHelper {
   }
 
   Future<void> insertMusicIfNotExists(MusicEntity music) async {
-  final db = await database;
-
-  final existing = await db.query(
-    'musics_v2',
-    where: 'audioUrl = ?',
-    whereArgs: [music.audioUrl],
-    limit: 1,
-  );
-
-  if (existing.isNotEmpty) {
-    final currentFolder = existing.first['folderPath'];
-
-    // 🔥 atualiza APENAS se estiver null ou vazio
-    if (currentFolder == null || (currentFolder as String).isEmpty) {
-      await db.update(
-        'musics_v2',
-        {'folderPath': music.folderPath},
-        where: 'audioUrl = ?',
-        whereArgs: [music.audioUrl],
-      );
-    }
-
-    return;
+    final db = await database;
+    await _upsertMusicIfNeeded(db, music);
   }
 
-  // ➕ INSERE SE NÃO EXISTIR
-  await db.insert(
-    'musics_v2',
-    {
+  Future<void> insertMusicsIfNotExistsBatch(List<MusicEntity> musics) async {
+    if (musics.isEmpty) return;
+    final db = await database;
+    await db.transaction((txn) async {
+      for (final music in musics) {
+        await _upsertMusicIfNeeded(txn, music);
+      }
+    });
+  }
+
+  Future<void> _upsertMusicIfNeeded(
+    DatabaseExecutor executor,
+    MusicEntity music,
+  ) async {
+    final existing = await executor.query(
+      'musics_v2',
+      where: 'audioUrl = ?',
+      whereArgs: [music.audioUrl],
+      limit: 1,
+    );
+
+    if (existing.isNotEmpty) {
+      final updates = <String, Object?>{};
+      final currentFolder = existing.first['folderPath'];
+      if (currentFolder == null || (currentFolder as String).isEmpty) {
+        updates['folderPath'] = music.folderPath;
+      }
+      final currentSourceId = existing.first['sourceId'] as int?;
+      if (currentSourceId == null && music.sourceId != null) {
+        updates['sourceId'] = music.sourceId;
+      }
+      if (updates.isNotEmpty) {
+        await executor.update(
+          'musics_v2',
+          updates,
+          where: 'audioUrl = ?',
+          whereArgs: [music.audioUrl],
+        );
+      }
+      return;
+    }
+
+    await executor.insert('musics_v2', {
       'title': music.title,
+      'sourceId': music.sourceId,
       'artist': music.artist,
       'album': music.album,
       'genre': music.genre,
@@ -337,10 +400,8 @@ class DatabaseHelper {
       'isFavorite': music.isFavorite ? 1 : 0,
       'lastPlayedAt': null,
       'playCount': 0,
-    },
-    conflictAlgorithm: ConflictAlgorithm.ignore,
-  );
-}
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+  }
 
   // =======================
   // PLAYBACK QUEUE STATE
@@ -398,6 +459,4 @@ class DatabaseHelper {
       await txn.delete('playback_queue_state', where: 'id = ?', whereArgs: [1]);
     });
   }
-
 }
-

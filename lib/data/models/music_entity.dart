@@ -5,6 +5,7 @@ import 'dart:convert';
 
 class MusicEntity {
   final int? id;
+  final int? sourceId;
   final String title;
   final String artist;
   final String audioUrl;
@@ -21,6 +22,7 @@ class MusicEntity {
 
   MusicEntity({
     required this.id,
+    this.sourceId,
     required this.title,
     required this.artist,
     required this.audioUrl,
@@ -35,19 +37,20 @@ class MusicEntity {
   });
 
   factory MusicEntity.fromSongModel(SongModel song) {
-  String? folderPath;
+    String? folderPath;
 
-  try {
-    final uri = Uri.parse(song.uri ?? '');
-    final file = File(uri.toFilePath());
+    try {
+      final uri = Uri.parse(song.uri ?? '');
+      final file = File(uri.toFilePath());
 
-    folderPath = file.parent.path;
-  } catch (e) {
-    folderPath = null;
-  }
+      folderPath = file.parent.path;
+    } catch (e) {
+      folderPath = null;
+    }
 
     return MusicEntity(
       id: song.id,
+      sourceId: song.id,
       title: song.title,
       artist: song.artist ?? 'Artista desconhecido',
       album: song.album,
@@ -65,6 +68,7 @@ class MusicEntity {
   factory MusicEntity.fromMap(Map<String, dynamic> map) {
     return MusicEntity(
       id: map['id'],
+      sourceId: map['sourceId'],
       title: map['title'],
       artist: map['artist'],
       audioUrl: map['audioUrl'],
@@ -82,6 +86,7 @@ class MusicEntity {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'sourceId': sourceId,
       'title': title,
       'artist': artist,
       'audioUrl': audioUrl,
@@ -100,11 +105,13 @@ class MusicEntity {
     bool? isFavorite,
     int? lastPlayedAt,
     int? playCount,
+    int? sourceId,
     String? genre,
     String? folderPath,
   }) {
     return MusicEntity(
       id: id,
+      sourceId: sourceId ?? this.sourceId,
       title: title,
       artist: artist,
       audioUrl: audioUrl,
@@ -126,6 +133,7 @@ class MusicEntity {
   String toJson() {
     return jsonEncode({
       'id': id,
+      'sourceId': sourceId,
       'title': title,
       'artist': artist,
       'audioUrl': audioUrl,
@@ -145,6 +153,7 @@ class MusicEntity {
 
     return MusicEntity(
       id: map['id'],
+      sourceId: map['sourceId'],
       title: map['title'],
       artist: map['artist'],
       audioUrl: map['audioUrl'],

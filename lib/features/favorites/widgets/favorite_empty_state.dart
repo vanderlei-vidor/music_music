@@ -20,7 +20,7 @@ class FavoriteEmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'Nenhuma mÃºsica favorita ainda',
+              'Nenhuma música favorita ainda',
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -28,7 +28,7 @@ class FavoriteEmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Toque no â¤ï¸ para salvar suas mÃºsicas preferidas e acessÃ¡-las rapidamente aqui.',
+              'Toque no coração para salvar suas músicas preferidas e acessá-las rapidamente aqui.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               ),

@@ -6,7 +6,9 @@ import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'package:music_music/app/app_info.dart';
 import 'package:music_music/app/routes.dart';
+import 'package:music_music/core/preferences/welcome_prefs.dart';
 import 'package:music_music/features/home/view_model/home_view_model.dart';
 
 class SplashView extends StatefulWidget {
@@ -44,7 +46,7 @@ class _SplashViewState extends State<SplashView> {
     if (!mounted) return;
     await Future.delayed(const Duration(milliseconds: 400));
 
-    _goHome();
+    _goNext();
   }
 
   Future<void> _requestNotificationPermissionIfNeeded() async {
@@ -76,10 +78,15 @@ class _SplashViewState extends State<SplashView> {
     return completer.future;
   }
 
-  void _goHome() {
+  Future<void> _goNext() async {
     if (_navigated || !mounted) return;
     _navigated = true;
-    Navigator.pushReplacementNamed(context, AppRoutes.home);
+    final showWelcome = await WelcomePrefs.shouldShowWelcomeToday();
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(
+      context,
+      showWelcome ? AppRoutes.welcome : AppRoutes.home,
+    );
   }
 
   @override
@@ -124,7 +131,7 @@ class _SplashViewState extends State<SplashView> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Music Music',
+                    AppInfo.appName,
                     style: theme.textTheme.headlineLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
@@ -155,7 +162,7 @@ class _SplashViewState extends State<SplashView> {
                       const Spacer(),
                       if (_canSkip)
                         TextButton(
-                          onPressed: _goHome,
+                          onPressed: _goNext,
                           child: const Text('Pular'),
                         ),
                     ],

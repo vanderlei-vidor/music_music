@@ -75,7 +75,7 @@ class _PlaylistViewState extends State<PlaylistView> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'MÃºsicas',
+          'Músicas',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: theme.colorScheme.onSurface,

@@ -1,10 +1,12 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:music_music/app/routes.dart';
 import 'package:music_music/features/home/widgets/folder_card.dart';
 import 'package:provider/provider.dart';
 
-import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
+import 'package:music_music/data/models/music_entity.dart';
+import 'package:music_music/features/home/view_model/home_view_model.dart';
 import 'package:music_music/core/theme/app_shadows.dart';
+import 'package:music_music/core/ui/responsive.dart';
 import 'package:music_music/shared/widgets/skeleton.dart';
 
 class FoldersView extends StatefulWidget {
@@ -38,8 +40,44 @@ class _FoldersViewState extends State<FoldersView>
 
   @override
   Widget build(BuildContext context) {
-    final folders = context.watch<PlaylistViewModel>().folders;
+    final musics = context.watch<HomeViewModel>().musics;
+    final folders = <String, List<MusicEntity>>{};
+
+    for (final music in musics) {
+      final folder = (music.folderPath == null || music.folderPath!.isEmpty)
+          ? 'Desconhecido'
+          : music.folderPath!;
+      folders.putIfAbsent(folder, () => []).add(music);
+    }
+
     final folderPaths = folders.keys.toList()..sort();
+    final columns = Responsive.value(
+      context,
+      compact: 2,
+      medium: 3,
+      expanded: 4,
+    );
+    final crossSpacing = Responsive.value(
+      context,
+      compact: 12.0,
+      medium: 14.0,
+      expanded: 16.0,
+    );
+    final mainSpacing = Responsive.value(
+      context,
+      compact: 14.0,
+      medium: 16.0,
+      expanded: 18.0,
+    );
+    final mainExtent =
+        Responsive.value(
+          context,
+          compact: 172.0,
+          medium: 184.0,
+          expanded: 196.0,
+        ) +
+        ((MediaQuery.textScalerOf(context).scale(1.0) - 1.0).clamp(0.0, 0.6) *
+            34);
 
     if (folderPaths.isEmpty) {
       return const _FoldersSkeleton();
@@ -48,17 +86,17 @@ class _FoldersViewState extends State<FoldersView>
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       physics: const BouncingScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-        childAspectRatio: 1,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
+        mainAxisSpacing: mainSpacing,
+        crossAxisSpacing: crossSpacing,
+        mainAxisExtent: mainExtent,
       ),
       itemCount: folderPaths.length,
       itemBuilder: (context, index) {
         final path = folderPaths[index];
         final musics = folders[path]!;
-        final folderName = path.split('/').last;
+        final folderName = path.split(RegExp(r'[\\/]')).last;
 
         return AnimatedBuilder(
           animation: _controller,
@@ -110,15 +148,39 @@ class _FoldersSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final shadows = theme.extension<AppShadows>()?.elevated ?? [];
+    final columns = Responsive.value(
+      context,
+      compact: 2,
+      medium: 3,
+      expanded: 4,
+    );
+    final crossSpacing = Responsive.value(
+      context,
+      compact: 12.0,
+      medium: 14.0,
+      expanded: 16.0,
+    );
+    final mainSpacing = Responsive.value(
+      context,
+      compact: 14.0,
+      medium: 16.0,
+      expanded: 18.0,
+    );
+    final mainExtent = Responsive.value(
+      context,
+      compact: 172.0,
+      medium: 184.0,
+      expanded: 196.0,
+    );
 
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       physics: const BouncingScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-        childAspectRatio: 1,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
+        mainAxisSpacing: mainSpacing,
+        crossAxisSpacing: crossSpacing,
+        mainAxisExtent: mainExtent,
       ),
       itemCount: 6,
       itemBuilder: (_, __) {
@@ -147,7 +209,3 @@ class _FoldersSkeleton extends StatelessWidget {
     );
   }
 }
-
-
-
-

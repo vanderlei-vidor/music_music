@@ -1,17 +1,22 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import 'package:music_music/core/theme/app_shadows.dart';
 import 'package:music_music/core/ui/genre_colors.dart';
+import 'package:music_music/shared/widgets/artwork_image.dart';
 
 class GenreCard extends StatelessWidget {
   final String genre;
   final int count;
+  final String? artworkUrl;
+  final int? audioId;
   final VoidCallback onTap;
 
   const GenreCard({
     super.key,
     required this.genre,
     required this.count,
+    this.artworkUrl,
+    this.audioId,
     required this.onTap,
   });
 
@@ -43,20 +48,19 @@ class GenreCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ICONE COM GLOW
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: color.withValues(alpha: 0.2),
-                boxShadow: [
-                  BoxShadow(color: color.withValues(alpha: 0.6), blurRadius: 18),
-                ],
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: 52,
+                height: 52,
+                child: ArtworkSquare(
+                  artworkUrl: artworkUrl,
+                  audioId: audioId,
+                  borderRadius: 12,
+                ),
               ),
-              child: Icon(Icons.music_note, size: 24, color: color),
             ),
             const SizedBox(height: 12),
-            // NOME DO GENERO
             Expanded(
               child: Text(
                 genre,
@@ -68,9 +72,8 @@ class GenreCard extends StatelessWidget {
                 ),
               ),
             ),
-            // CONTAGEM
             Text(
-              '$count mÃºsicas',
+              '$count músicas',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: color.withValues(alpha: 0.75),
                 fontWeight: FontWeight.w500,
@@ -82,4 +85,3 @@ class GenreCard extends StatelessWidget {
     );
   }
 }
-

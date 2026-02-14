@@ -88,14 +88,14 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: theme.cardColor,
-        title: const Text('Confirmar ExclusÃ£o'),
+        title: const Text('Confirmar Exclusão'),
         content: Text(
           'Tem certeza que deseja apagar a playlist "$playlistName"?',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('NÃ£o'),
+            child: const Text('Não'),
           ),
           TextButton(
             onPressed: () {
@@ -161,7 +161,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
 
           if (playlists.isEmpty) {
             return const Center(
-              child: Text('VocÃª ainda nÃ£o criou nenhuma playlist.'),
+              child: Text('Você ainda não criou nenhuma playlist.'),
             );
           }
 
@@ -215,7 +215,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
                           ),
                         ),
                         subtitle: Text(
-                          '$count ${count == 1 ? 'mÃºsica' : 'mÃºsicas'}',
+                          '$count ${count == 1 ? 'música' : 'músicas'}',
                         ),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete),

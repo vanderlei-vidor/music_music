@@ -35,9 +35,15 @@ class PlaylistViewModel extends ChangeNotifier {
   // contador
   List<MusicEntity> _mostPlayed = [];
   List<MusicEntity> get mostPlayed => _mostPlayed;
+  List<Map<String, dynamic>> _playlistsWithMusicCount = [];
+  List<Map<String, dynamic>> get playlistsWithMusicCount =>
+      List.unmodifiable(_playlistsWithMusicCount);
+  bool _isLoadingPlaylistsWithCount = false;
+  bool get isLoadingPlaylistsWithCount => _isLoadingPlaylistsWithCount;
 
   // 🎵 STATE
-  List<MusicEntity> _musics = [];
+  List<MusicEntity> _libraryMusics = [];
+  List<MusicEntity> _queueMusics = [];
   MusicEntity? _currentMusic;
 
   bool _isShuffled = false;
@@ -62,7 +68,10 @@ class PlaylistViewModel extends ChangeNotifier {
   // GETTERS
   // =====================
   AudioPlayer get player => _player;
-  List<MusicEntity> get musics => _musics;
+  List<MusicEntity> get libraryMusics => _libraryMusics;
+  List<MusicEntity> get queueMusics => _queueMusics;
+  @Deprecated('Use queueMusics para fila de reprodução ou libraryMusics para biblioteca.')
+  List<MusicEntity> get musics => _queueMusics;
   MusicEntity? get currentMusic => _currentMusic;
   bool get isShuffled => _isShuffled;
   LoopMode get repeatMode => _repeatMode;
@@ -141,6 +150,7 @@ class PlaylistViewModel extends ChangeNotifier {
     loadRecentMusics();
     loadFavoriteMusics();
     loadMostPlayed();
+    loadPlaylistsWithMusicCount();
   }
 
   // =====================
@@ -156,14 +166,16 @@ class PlaylistViewModel extends ChangeNotifier {
   // =====================
   Future<void> loadAllMusics() async {
     final allMusics = await _dbHelper.getAllMusicsV2();
-    _musics = allMusics;
+    _libraryMusics = allMusics;
 
-    if (_musics.isNotEmpty) {
+    if (_libraryMusics.isNotEmpty) {
       final restored = await _restorePlaybackQueue(allMusics);
       if (!restored) {
+        _queueMusics = List<MusicEntity>.from(_libraryMusics);
         await _setAudioSource(initialIndex: 0);
       }
     } else {
+      _queueMusics = [];
       await _dbHelper.clearPlaybackQueue();
     }
 
@@ -171,12 +183,15 @@ class PlaylistViewModel extends ChangeNotifier {
     _persistPlaybackQueue();
   }
 
-  void setMusics(List<MusicEntity> musics) {
-    _musics = musics;
+  void setQueueMusics(List<MusicEntity> musics) {
+    _queueMusics = musics;
     _setAudioSource();
     _persistPlaybackQueue();
     notifyListeners();
   }
+
+  @Deprecated('Use setQueueMusics')
+  void setMusics(List<MusicEntity> musics) => setQueueMusics(musics);
 
   // =====================
   // DATABASE — PLAYLISTS
@@ -184,11 +199,13 @@ class PlaylistViewModel extends ChangeNotifier {
 
   Future<void> createPlaylist(String name) async {
     await _dbHelper.createPlaylist(name);
+    await loadPlaylistsWithMusicCount(force: true);
     notifyListeners();
   }
 
   Future<void> deletePlaylist(int playlistId) async {
     await _dbHelper.deletePlaylist(playlistId);
+    await loadPlaylistsWithMusicCount(force: true);
     notifyListeners();
   }
 
@@ -197,21 +214,37 @@ class PlaylistViewModel extends ChangeNotifier {
   }
 
   Future<List<Map<String, dynamic>>> getPlaylistsWithMusicCount() async {
-    final playlists = await _dbHelper.getPlaylists();
-    final List<Map<String, dynamic>> result = [];
+    await loadPlaylistsWithMusicCount();
+    return playlistsWithMusicCount;
+  }
 
-    for (final playlist in playlists) {
-      final playlistId = playlist['id'] as int;
-      final count = await _dbHelper.getMusicCountForPlaylist(playlistId);
+  Future<void> loadPlaylistsWithMusicCount({bool force = false}) async {
+    if (_isLoadingPlaylistsWithCount) return;
+    if (!force && _playlistsWithMusicCount.isNotEmpty) return;
 
-      result.add({
-        'id': playlistId,
-        'name': playlist['name'],
-        'musicCount': count,
-      });
+    _isLoadingPlaylistsWithCount = true;
+    notifyListeners();
+
+    try {
+      final playlists = await _dbHelper.getPlaylists();
+      final List<Map<String, dynamic>> result = [];
+
+      for (final playlist in playlists) {
+        final playlistId = playlist['id'] as int;
+        final count = await _dbHelper.getMusicCountForPlaylist(playlistId);
+
+        result.add({
+          'id': playlistId,
+          'name': playlist['name'],
+          'musicCount': count,
+        });
+      }
+
+      _playlistsWithMusicCount = result;
+    } finally {
+      _isLoadingPlaylistsWithCount = false;
+      notifyListeners();
     }
-
-    return result;
   }
 
   // =====================
@@ -224,11 +257,13 @@ class PlaylistViewModel extends ChangeNotifier {
 
   Future<void> addMusicToPlaylistV2(int playlistId, int musicId) async {
     await _dbHelper.addMusicToPlaylistV2(playlistId, musicId);
+    await loadPlaylistsWithMusicCount(force: true);
     notifyListeners();
   }
 
   Future<void> removeMusicFromPlaylist(int playlistId, int musicId) async {
     await _dbHelper.removeMusicFromPlaylistV2(playlistId, musicId);
+    await loadPlaylistsWithMusicCount(force: true);
     notifyListeners();
   }
 
@@ -236,14 +271,14 @@ class PlaylistViewModel extends ChangeNotifier {
   // AUDIO SOURCE
   // =====================
   Future<void> _setAudioSource({int? initialIndex}) async {
-    if (_musics.isEmpty) return;
+    if (_queueMusics.isEmpty) return;
 
     final wasPlaying = _player.playing;
     final currentIndex = initialIndex ?? _player.currentIndex ?? 0;
 
     final children = <AudioSource>[];
 
-    for (final music in _musics) {
+    for (final music in _queueMusics) {
       final uri = Uri.parse(music.audioUrl);
 
       children.add(
@@ -288,9 +323,9 @@ class PlaylistViewModel extends ChangeNotifier {
       if (sequenceState == null) return;
 
       final index = sequenceState.currentIndex;
-      if (index < 0 || index >= _musics.length) return;
+      if (index < 0 || index >= _queueMusics.length) return;
 
-      final newMusic = _musics[index];
+      final newMusic = _queueMusics[index];
 
       if (_currentMusic?.id != newMusic.id) {
         _currentMusic = newMusic;
@@ -349,12 +384,12 @@ class PlaylistViewModel extends ChangeNotifier {
     if (queue.isEmpty) return;
 
     final isDifferentQueue = !listEquals(
-      _musics.map((e) => e.id).toList(),
+      _queueMusics.map((e) => e.id).toList(),
       queue.map((e) => e.id).toList(),
     );
 
     if (isDifferentQueue) {
-      _musics = List.from(queue);
+      _queueMusics = List.from(queue);
       await _setAudioSource(initialIndex: index);
     } else {
       await _player.seek(Duration.zero, index: index);
@@ -365,7 +400,7 @@ class PlaylistViewModel extends ChangeNotifier {
       await _player.shuffle();
     }
 
-    _currentMusic = _musics[index];
+    _currentMusic = _queueMusics[index];
     if (kDebugMode) {
       debugPrint('play called');
     }
@@ -432,21 +467,21 @@ class PlaylistViewModel extends ChangeNotifier {
   }
 
   Future<void> reorderQueue(int oldIndex, int newIndex) async {
-    if (_musics.isEmpty) return;
-    if (oldIndex < 0 || oldIndex >= _musics.length) return;
-    if (newIndex < 0 || newIndex > _musics.length) return;
+    if (_queueMusics.isEmpty) return;
+    if (oldIndex < 0 || oldIndex >= _queueMusics.length) return;
+    if (newIndex < 0 || newIndex > _queueMusics.length) return;
 
     final currentId = _currentMusic?.id;
     final targetIndex = oldIndex < newIndex ? newIndex - 1 : newIndex;
-    final moved = _musics.removeAt(oldIndex);
-    _musics.insert(targetIndex, moved);
+    final moved = _queueMusics.removeAt(oldIndex);
+    _queueMusics.insert(targetIndex, moved);
 
     var nextCurrentIndex = 0;
     if (currentId != null) {
-      final idx = _musics.indexWhere((m) => m.id == currentId);
+      final idx = _queueMusics.indexWhere((m) => m.id == currentId);
       nextCurrentIndex = idx == -1 ? 0 : idx;
     } else {
-      nextCurrentIndex = targetIndex.clamp(0, _musics.length - 1);
+      nextCurrentIndex = targetIndex.clamp(0, _queueMusics.length - 1);
     }
 
     await _setAudioSource(initialIndex: nextCurrentIndex);
@@ -492,13 +527,13 @@ class PlaylistViewModel extends ChangeNotifier {
 
     await _dbHelper.toggleFavorite(music.audioUrl, newValue);
 
-    final index = _musics.indexWhere((m) => m.id == music.id);
+    final index = _queueMusics.indexWhere((m) => m.id == music.id);
     if (index != -1) {
-      _musics[index] = music.copyWith(isFavorite: newValue);
+      _queueMusics[index] = music.copyWith(isFavorite: newValue);
     }
 
     if (_currentMusic?.id == music.id) {
-      _currentMusic = _musics[index];
+      _currentMusic = _queueMusics[index];
     }
 
     await loadFavoriteMusics();
@@ -666,10 +701,10 @@ class PlaylistViewModel extends ChangeNotifier {
     if (restoredQueue.isEmpty) return false;
 
     _restoringQueue = true;
-    _musics = restoredQueue;
+    _queueMusics = restoredQueue;
 
     final rawIndex = saved['currentIndex'] as int? ?? 0;
-    final currentIndex = rawIndex.clamp(0, _musics.length - 1);
+    final currentIndex = rawIndex.clamp(0, _queueMusics.length - 1);
     await _setAudioSource(initialIndex: currentIndex);
 
     final positionMs = saved['positionMs'] as int? ?? 0;
@@ -686,7 +721,7 @@ class PlaylistViewModel extends ChangeNotifier {
 
   Future<void> _persistPlaybackQueue({bool force = false}) async {
     if (_restoringQueue) return;
-    if (_musics.isEmpty) {
+    if (_queueMusics.isEmpty) {
       await _dbHelper.clearPlaybackQueue();
       return;
     }
@@ -705,13 +740,13 @@ class PlaylistViewModel extends ChangeNotifier {
 
     if (shouldThrottle) return;
 
-    final currentIndex = (_player.currentIndex ?? 0).clamp(0, _musics.length - 1);
+    final currentIndex = (_player.currentIndex ?? 0).clamp(0, _queueMusics.length - 1);
     final positionMs = _player.position.inMilliseconds;
 
     _isPersistingQueue = true;
     try {
       await _dbHelper.savePlaybackQueue(
-        audioUrls: _musics.map((m) => m.audioUrl).toList(),
+        audioUrls: _queueMusics.map((m) => m.audioUrl).toList(),
         currentIndex: currentIndex,
         positionMs: positionMs,
       );
@@ -725,14 +760,14 @@ class PlaylistViewModel extends ChangeNotifier {
   Future<void> _persistPlaybackQueueOnDispose() async {
     if (_restoringQueue) return;
 
-    if (_musics.isEmpty) {
+    if (_queueMusics.isEmpty) {
       await _dbHelper.clearPlaybackQueue();
       return;
     }
 
-    final currentIndex = (_player.currentIndex ?? 0).clamp(0, _musics.length - 1);
+    final currentIndex = (_player.currentIndex ?? 0).clamp(0, _queueMusics.length - 1);
     final positionMs = _player.position.inMilliseconds;
-    final urls = _musics.map((m) => m.audioUrl).toList();
+    final urls = _queueMusics.map((m) => m.audioUrl).toList();
 
     await _dbHelper.savePlaybackQueue(
       audioUrls: urls,
@@ -787,18 +822,18 @@ class PlaylistViewModel extends ChangeNotifier {
   }
 
   void _syncEndOfPlaylistTimer({Duration? position}) {
-    if (_musics.isEmpty) return;
+    if (_queueMusics.isEmpty) return;
     final index = _player.currentIndex ?? 0;
-    if (index < 0 || index >= _musics.length) return;
+    if (index < 0 || index >= _queueMusics.length) return;
 
     final pos = position ?? _player.position;
-    final currentMs = _musics[index].duration ?? 0;
+    final currentMs = _queueMusics[index].duration ?? 0;
     if (currentMs <= 0) return;
 
     var remainingMs = (currentMs - pos.inMilliseconds).clamp(0, currentMs);
 
-    for (var i = index + 1; i < _musics.length; i++) {
-      remainingMs += _musics[i].duration ?? 0;
+    for (var i = index + 1; i < _queueMusics.length; i++) {
+      remainingMs += _queueMusics[i].duration ?? 0;
     }
 
     _startSleepCountdown(Duration(milliseconds: remainingMs), force: false);
@@ -859,7 +894,7 @@ class PlaylistViewModel extends ChangeNotifier {
   Map<String, List<MusicEntity>> get folders {
     final Map<String, List<MusicEntity>> result = {};
 
-    for (final m in _musics) {
+    for (final m in _queueMusics) {
       if (kDebugMode) {
         debugPrint('folder item: ${m.title} | ${m.folderPath}');
       }
@@ -879,7 +914,7 @@ class PlaylistViewModel extends ChangeNotifier {
     final Map<String, List<MusicEntity>> temp = {};
 
     // 1️⃣ Normaliza os gêneros
-    for (final m in _musics) {
+    for (final m in _queueMusics) {
       final genre = GenreNormalizer.normalize(m.genre);
       temp.putIfAbsent(genre, () => []).add(m);
     }
@@ -924,5 +959,6 @@ class PlaylistViewModel extends ChangeNotifier {
     return result;
   }
 }
+
 
 

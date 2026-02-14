@@ -24,7 +24,7 @@
         android:maxSdkVersion="32" />
 
     <application
-        android:label="music_music"
+        android:label="Music Music"
         android:icon="@mipmap/ic_launcher">
 
         <activity

@@ -18,11 +18,13 @@ import 'package:music_music/features/playlists/view/playlist_detail_screen.dart'
 import 'package:music_music/features/playlists/view/playlists_screen.dart';
 import 'package:music_music/features/splash/view/splash_view.dart';
 import 'package:music_music/features/settings/view/theme_settings_view.dart';
+import 'package:music_music/features/welcome/view/welcome_view.dart';
 import 'package:music_music/data/models/music_entity.dart';
 
 class AppRoutes {
   static const splash = '/';
   static const home = '/home';
+  static const welcome = '/welcome';
   static const player = '/player';
   static const playlists = '/playlists';
   static const playlistView = '/library';
@@ -45,6 +47,7 @@ class AppRoutes {
   static final Map<String, WidgetBuilder> baseRoutes = {
     splash: (_) => const SplashView(),
     home: (_) => const HomeScreen(),
+    welcome: (_) => const WelcomeView(),
     player: (_) => const PlayerView(),
     playlists: (_) => const PlaylistsScreen(),
     playlistView: (_) => const PlaylistView(),
@@ -62,6 +65,8 @@ class AppRoutes {
         return const SplashView();
       case home:
         return const HomeScreen();
+      case welcome:
+        return const WelcomeView();
       case player:
         return const PlayerView();
       case playlists:

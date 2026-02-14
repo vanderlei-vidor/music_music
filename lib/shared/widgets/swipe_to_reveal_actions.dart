@@ -41,8 +41,8 @@ class _SwipeToRevealActionsState extends State<SwipeToRevealActions> {
     final result = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Remover mÃºsica'),
-        content: const Text('Deseja remover esta mÃºsica da playlist?'),
+        title: const Text('Remover música'),
+        content: const Text('Deseja remover esta música da playlist?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),

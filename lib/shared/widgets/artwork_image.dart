@@ -1,5 +1,8 @@
-﻿import 'dart:collection';
+import 'dart:collection';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:on_audio_query/on_audio_query.dart';
 
 class ArtworkCache {
   static final LinkedHashMap<String, ImageProvider> _cache = LinkedHashMap();
@@ -40,8 +43,9 @@ class ArtworkCache {
 
 class ArtworkThumb extends StatelessWidget {
   final String? artworkUrl;
+  final int? audioId;
 
-  const ArtworkThumb({super.key, required this.artworkUrl});
+  const ArtworkThumb({super.key, required this.artworkUrl, this.audioId});
 
   @override
   Widget build(BuildContext context) {
@@ -56,21 +60,35 @@ class ArtworkThumb extends StatelessWidget {
                 image: provider,
                 fit: BoxFit.cover,
                 gaplessPlayback: true,
-                errorBuilder: (_, __, ___) => const _ArtworkFallback(),
+                errorBuilder: (_, __, ___) => _idFallbackOrDefault(),
               )
-            : const _ArtworkFallback(),
+            : _idFallbackOrDefault(),
       ),
     );
+  }
+
+  Widget _idFallbackOrDefault() {
+    if (!kIsWeb && audioId != null) {
+      return QueryArtworkWidget(
+        id: audioId!,
+        type: ArtworkType.AUDIO,
+        artworkFit: BoxFit.cover,
+        nullArtworkWidget: const _ArtworkFallback(),
+      );
+    }
+    return const _ArtworkFallback();
   }
 }
 
 class ArtworkSquare extends StatelessWidget {
   final String? artworkUrl;
+  final int? audioId;
   final double borderRadius;
 
   const ArtworkSquare({
     super.key,
     required this.artworkUrl,
+    this.audioId,
     this.borderRadius = 16,
   });
 
@@ -84,10 +102,22 @@ class ArtworkSquare extends StatelessWidget {
               image: provider,
               fit: BoxFit.cover,
               gaplessPlayback: true,
-              errorBuilder: (_, __, ___) => const _ArtworkFallback(),
+              errorBuilder: (_, __, ___) => _idFallbackOrDefault(),
             )
-          : const _ArtworkFallback(),
+          : _idFallbackOrDefault(),
     );
+  }
+
+  Widget _idFallbackOrDefault() {
+    if (!kIsWeb && audioId != null) {
+      return QueryArtworkWidget(
+        id: audioId!,
+        type: ArtworkType.AUDIO,
+        artworkFit: BoxFit.cover,
+        nullArtworkWidget: const _ArtworkFallback(),
+      );
+    }
+    return const _ArtworkFallback();
   }
 }
 
@@ -107,11 +137,7 @@ class _ArtworkFallback extends StatelessWidget {
           ],
         ),
       ),
-      child: const Icon(
-        Icons.music_note,
-        color: Colors.white70,
-      ),
+      child: const Icon(Icons.music_note, color: Colors.white70),
     );
   }
 }
-

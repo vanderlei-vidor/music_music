@@ -1,17 +1,24 @@
-﻿import 'dart:math';
 import 'dart:async';
+import 'dart:math';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:on_audio_query/on_audio_query.dart';
+
+import 'package:music_music/shared/widgets/artwork_image.dart';
 import 'vinyl_needle.dart';
 
 class VinylAlbumCover extends StatefulWidget {
   final String? artwork;
+  final int? audioId;
   final AudioPlayer player;
   final double size;
 
   const VinylAlbumCover({
     super.key,
     required this.artwork,
+    this.audioId,
     required this.player,
     this.size = 190,
   });
@@ -35,10 +42,8 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
   void initState() {
     super.initState();
 
-    // ðŸ’¿ DISCO (fÃ­sica livre)
     _diskController = AnimationController.unbounded(vsync: this);
 
-    // ðŸŽ¯ AGULHA
     _needleController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 480),
@@ -49,7 +54,6 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
       curve: Curves.easeOutCubic,
     );
 
-    // â–¶ï¸ PLAY / PAUSE
     _playingSub = widget.player.playingStream.listen((playing) {
       if (playing) {
         _diskController.animateWith(
@@ -63,7 +67,7 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
         _diskController.animateWith(
           _VinylSimulation(
             start: _diskController.value,
-            velocity: 0.2, // inÃ©rcia real
+            velocity: 0.2,
             friction: 0.18,
           ),
         );
@@ -71,7 +75,6 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
       }
     });
 
-    // ðŸŽšï¸ VELOCIDADE
     _speedSub = widget.player.speedStream.listen((s) {
       _speed = s;
     });
@@ -92,7 +95,6 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
       alignment: Alignment.center,
       clipBehavior: Clip.none,
       children: [
-        // ðŸ’¿ DISCO GIRANDO
         AnimatedBuilder(
           animation: _diskController,
           builder: (_, __) {
@@ -101,7 +103,6 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // BASE DO VINIL
                   Container(
                     width: widget.size,
                     height: widget.size,
@@ -110,30 +111,19 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
                       color: Colors.black,
                     ),
                   ),
-
-                  // SULCOS
                   CustomPaint(
                     size: Size(widget.size, widget.size),
                     painter: _VinylGroovesPainter(),
                   ),
-
-                  // RÃ“TULO CENTRAL
                   Container(
                     width: widget.size * 0.45,
                     height: widget.size * 0.45,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      image: widget.artwork != null
-                          ? DecorationImage(
-                              image: NetworkImage(widget.artwork!),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
                       color: Colors.grey.shade800,
                     ),
+                    child: ClipOval(child: _buildCenterArtwork()),
                   ),
-
-                  // HIGHLIGHT
                   Container(
                     width: widget.size,
                     height: widget.size,
@@ -154,24 +144,47 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
             );
           },
         ),
-
-        // ðŸŽ¯ AGULHA (NÃƒO GIRA)
         Positioned(
           top: -widget.size * 0.12,
           right: -widget.size * 0.15,
-          child: VinylNeedle(
-            animation: _needleAnimation,
-            size: widget.size,
-          ),
+          child: VinylNeedle(animation: _needleAnimation, size: widget.size),
         ),
       ],
     );
   }
+
+  Widget _buildCenterArtwork() {
+    final provider = ArtworkCache.provider(widget.artwork);
+    if (provider != null) {
+      return Image(
+        image: provider,
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
+        errorBuilder: (_, __, ___) => _defaultCenterFallback(),
+      );
+    }
+
+    if (!kIsWeb && widget.audioId != null) {
+      return QueryArtworkWidget(
+        id: widget.audioId!,
+        type: ArtworkType.AUDIO,
+        artworkFit: BoxFit.cover,
+        nullArtworkWidget: _defaultCenterFallback(),
+      );
+    }
+
+    return _defaultCenterFallback();
+  }
+
+  Widget _defaultCenterFallback() {
+    return Container(
+      color: Colors.grey.shade800,
+      alignment: Alignment.center,
+      child: const Icon(Icons.music_note, color: Colors.white70),
+    );
+  }
 }
 
-// ===============================
-// ðŸŽ¢ SIMULAÃ‡ÃƒO DE FÃSICA DO VINIL
-// ===============================
 class _VinylSimulation extends Simulation {
   final double start;
   final double velocity;
@@ -193,9 +206,6 @@ class _VinylSimulation extends Simulation {
   bool isDone(double time) => dx(time).abs() < 0.001;
 }
 
-// ===============================
-// ðŸŽµ SULCOS DO VINIL
-// ===============================
 class _VinylGroovesPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -212,4 +222,3 @@ class _VinylGroovesPainter extends CustomPainter {
   @override
   bool shouldRepaint(_) => false;
 }
-

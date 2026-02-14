@@ -1,12 +1,13 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:music_music/data/models/music_entity.dart';
-import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
+import 'package:music_music/features/home/view_model/home_view_model.dart';
 import 'package:music_music/app/routes.dart';
 import 'package:music_music/features/genres/widgets/genre_card.dart';
 import 'package:music_music/shared/widgets/skeleton.dart';
 import 'package:music_music/core/theme/app_shadows.dart';
+import 'package:music_music/core/ui/responsive.dart';
 
 class GenresView extends StatefulWidget {
   const GenresView({super.key});
@@ -39,18 +40,46 @@ class _GenresViewState extends State<GenresView>
 
   @override
   Widget build(BuildContext context) {
-    final musics = context.watch<PlaylistViewModel>().musics;
+    final musics = context.watch<HomeViewModel>().musics;
 
     final Map<String, List<MusicEntity>> genres = {};
 
     for (final m in musics) {
-      final genre =
-          (m.genre == null || m.genre!.isEmpty) ? 'Desconhecido' : m.genre!;
+      final genre = (m.genre == null || m.genre!.isEmpty)
+          ? 'Desconhecido'
+          : m.genre!;
 
       genres.putIfAbsent(genre, () => []).add(m);
     }
 
     final genreNames = genres.keys.toList()..sort();
+    final columns = Responsive.value(
+      context,
+      compact: 2,
+      medium: 3,
+      expanded: 4,
+    );
+    final crossSpacing = Responsive.value(
+      context,
+      compact: 12.0,
+      medium: 14.0,
+      expanded: 16.0,
+    );
+    final mainSpacing = Responsive.value(
+      context,
+      compact: 14.0,
+      medium: 16.0,
+      expanded: 18.0,
+    );
+    final mainExtent =
+        Responsive.value(
+          context,
+          compact: 186.0,
+          medium: 198.0,
+          expanded: 208.0,
+        ) +
+        ((MediaQuery.textScalerOf(context).scale(1.0) - 1.0).clamp(0.0, 0.6) *
+            34);
 
     if (genreNames.isEmpty) {
       return const _GenresSkeleton();
@@ -58,16 +87,17 @@ class _GenresViewState extends State<GenresView>
 
     return GridView.builder(
       padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-        childAspectRatio: 0.9,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
+        mainAxisSpacing: mainSpacing,
+        crossAxisSpacing: crossSpacing,
+        mainAxisExtent: mainExtent,
       ),
       itemCount: genreNames.length,
       itemBuilder: (context, index) {
         final genre = genreNames[index];
         final genreMusics = genres[genre]!;
+        final cover = genreMusics.isEmpty ? null : genreMusics.first;
 
         return AnimatedBuilder(
           animation: _controller,
@@ -78,6 +108,8 @@ class _GenresViewState extends State<GenresView>
               child: GenreCard(
                 genre: genre,
                 count: genreMusics.length,
+                artworkUrl: cover?.artworkUrl,
+                audioId: cover == null ? null : (cover.sourceId ?? cover.id),
                 onTap: () {
                   Navigator.pushNamed(
                     context,
@@ -125,14 +157,38 @@ class _GenresSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final shadows = theme.extension<AppShadows>()?.elevated ?? [];
+    final columns = Responsive.value(
+      context,
+      compact: 2,
+      medium: 3,
+      expanded: 4,
+    );
+    final crossSpacing = Responsive.value(
+      context,
+      compact: 12.0,
+      medium: 14.0,
+      expanded: 16.0,
+    );
+    final mainSpacing = Responsive.value(
+      context,
+      compact: 14.0,
+      medium: 16.0,
+      expanded: 18.0,
+    );
+    final mainExtent = Responsive.value(
+      context,
+      compact: 186.0,
+      medium: 198.0,
+      expanded: 208.0,
+    );
 
     return GridView.builder(
       padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-        childAspectRatio: 0.9,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
+        mainAxisSpacing: mainSpacing,
+        crossAxisSpacing: crossSpacing,
+        mainAxisExtent: mainExtent,
       ),
       itemCount: 6,
       itemBuilder: (_, __) {
@@ -161,6 +217,3 @@ class _GenresSkeleton extends StatelessWidget {
     );
   }
 }
-
-
-

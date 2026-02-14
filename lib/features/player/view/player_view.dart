@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:provider/provider.dart';
 
+import 'package:music_music/app/app_info.dart';
 import 'package:music_music/data/models/music_entity.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 
@@ -52,8 +53,15 @@ class _PlayerViewState extends State<PlayerView> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final vm = context.watch<PlaylistViewModel>();
-    final music = vm.currentMusic;
+    final vm = context.read<PlaylistViewModel>();
+    final ui = context.select<PlaylistViewModel, _PlayerScreenState>(
+      (state) => _PlayerScreenState(
+        music: state.currentMusic,
+        isPlaying: state.isPlaying,
+        volume: state.player.volume,
+      ),
+    );
+    final music = ui.music;
 
     if (music == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -80,7 +88,7 @@ class _PlayerViewState extends State<PlayerView> {
                   child: _ArtworkCover(music: music),
                 ),
 
-                const SizedBox(height: 28),
+                const SizedBox(height: _PlayerLayout.spaceL),
 
                 /// TITULO
                 Text(
@@ -93,7 +101,7 @@ class _PlayerViewState extends State<PlayerView> {
                   overflow: TextOverflow.ellipsis,
                 ),
 
-                const SizedBox(height: 6),
+                const SizedBox(height: _PlayerLayout.spaceXs),
 
                 Text(
                   music.artist,
@@ -104,15 +112,15 @@ class _PlayerViewState extends State<PlayerView> {
                   overflow: TextOverflow.ellipsis,
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: _PlayerLayout.spaceXl),
 
                 /// WAVE + SLIDER
                 AudioWave(
-                  isPlaying: vm.isPlaying,
+                  isPlaying: ui.isPlaying,
                   color: theme.colorScheme.primary,
                 ),
 
-                const SizedBox(height: 10),
+                const SizedBox(height: _PlayerLayout.spaceSm),
 
                 StreamBuilder<Duration>(
                   stream: vm.positionStream,
@@ -131,7 +139,7 @@ class _PlayerViewState extends State<PlayerView> {
                   },
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: _PlayerLayout.spaceXl),
 
                 /// CONTROLES (AAA)
                 Row(
@@ -142,9 +150,12 @@ class _PlayerViewState extends State<PlayerView> {
                         HapticFeedback.selectionClick();
                         vm.previousMusic();
                       },
-                      child: const Icon(Icons.skip_previous, size: 36),
+                      child: const Icon(
+                        Icons.skip_previous,
+                        size: _PlayerLayout.transportIconSize,
+                      ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: _PlayerLayout.spaceXs),
                     _PressableScale(
                       onTap: () {
                         HapticFeedback.lightImpact();
@@ -153,20 +164,23 @@ class _PlayerViewState extends State<PlayerView> {
                       scale: 0.97,
                       child: IgnorePointer(
                         child: PlayPauseButton(
-                          isPlaying: vm.isPlaying,
-                          size: 80,
+                          isPlaying: ui.isPlaying,
+                          size: _PlayerLayout.playButtonSize,
                           color: theme.colorScheme.primary,
                           onTap: () {},
                         ),
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: _PlayerLayout.spaceXs),
                     _PressableScale(
                       onTap: () {
                         HapticFeedback.selectionClick();
                         vm.nextMusic();
                       },
-                      child: const Icon(Icons.skip_next, size: 36),
+                      child: const Icon(
+                        Icons.skip_next,
+                        size: _PlayerLayout.transportIconSize,
+                      ),
                     ),
                   ],
                 ),
@@ -177,14 +191,14 @@ class _PlayerViewState extends State<PlayerView> {
           ),
 
           /// VOLUME
-          VolumeEqualizer(volume: vm.player.volume),
+          VolumeEqualizer(volume: ui.volume),
 
           if (_showVolumeSlider)
             Positioned(
-              right: 20,
-              bottom: 120,
+              right: _PlayerLayout.spaceLg,
+              bottom: _PlayerLayout.volumeSliderBottomOffset,
               child: VerticalVolumeSlider(
-                volume: vm.player.volume,
+                volume: ui.volume,
                 onChanged: vm.setVolume,
               ),
             ),
@@ -215,10 +229,7 @@ class _PlayerViewState extends State<PlayerView> {
         ),
         IconButton(
           icon: const Icon(Icons.playlist_play),
-          onPressed: () => Navigator.pushNamed(
-            context,
-            AppRoutes.playlists,
-          ),
+          onPressed: () => Navigator.pushNamed(context, AppRoutes.playlists),
         ),
         IconButton(
           icon: const Icon(Icons.tune_rounded),
@@ -249,7 +260,7 @@ class _PlayerViewState extends State<PlayerView> {
                 const Icon(Icons.music_note, size: 42, color: Colors.white),
                 const SizedBox(height: 12),
                 Text(
-                  'Music Music',
+                  AppInfo.appName,
                   style: theme.textTheme.titleLarge?.copyWith(
                     color: theme.colorScheme.onPrimary,
                     fontWeight: FontWeight.bold,
@@ -411,6 +422,29 @@ class _PlayerViewState extends State<PlayerView> {
   }
 }
 
+class _PlayerScreenState {
+  final MusicEntity? music;
+  final bool isPlaying;
+  final double volume;
+
+  const _PlayerScreenState({
+    required this.music,
+    required this.isPlaying,
+    required this.volume,
+  });
+
+  @override
+  bool operator ==(Object other) {
+    return other is _PlayerScreenState &&
+        other.music == music &&
+        other.isPlaying == isPlaying &&
+        other.volume == volume;
+  }
+
+  @override
+  int get hashCode => Object.hash(music, isPlaying, volume);
+}
+
 class _PlayerSideSheet extends StatelessWidget {
   final Widget child;
 
@@ -419,21 +453,23 @@ class _PlayerSideSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final width = MediaQuery.of(context).size.width * 0.78;
+    final width = (MediaQuery.of(context).size.width / _PlayerLayout.phi)
+        .clamp(280.0, 520.0)
+        .toDouble();
 
     return Material(
       color: Colors.transparent,
       child: Container(
         width: width,
-        margin: const EdgeInsets.only(right: 12),
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        margin: const EdgeInsets.only(right: _PlayerLayout.spaceSm),
+        padding: const EdgeInsets.symmetric(vertical: _PlayerLayout.spaceMd),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface.withValues(alpha: 0.98),
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(_PlayerLayout.radiusLg),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.25),
-              blurRadius: 24,
+              blurRadius: _PlayerLayout.shadowBlurLg,
               offset: const Offset(-6, 8),
             ),
           ],
@@ -456,7 +492,7 @@ class _PressableScale extends StatefulWidget {
   const _PressableScale({
     required this.child,
     required this.onTap,
-    this.scale = 0.98,
+    this.scale = _PlayerLayout.pressScale,
   });
 
   @override
@@ -483,10 +519,7 @@ class _PressableScaleState extends State<_PressableScale> {
         scale: _pressed ? widget.scale : 1.0,
         duration: const Duration(milliseconds: 120),
         curve: Curves.easeOutCubic,
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: widget.child,
-        ),
+        child: Padding(padding: const EdgeInsets.all(8), child: widget.child),
       ),
     );
   }
@@ -523,19 +556,26 @@ class _PlayerControlsSheet extends StatelessWidget {
 
     return Consumer<PlaylistViewModel>(
       builder: (context, vm, _) {
-        final badgeText = vm.hasSleepTimer ? _formatBadge(vm.sleepRemaining) : '';
+        final badgeText = vm.hasSleepTimer
+            ? _formatBadge(vm.sleepRemaining)
+            : '';
         return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          padding: const EdgeInsets.fromLTRB(
+            _PlayerLayout.spaceLg,
+            _PlayerLayout.spaceSm,
+            _PlayerLayout.spaceLg,
+            _PlayerLayout.spaceLg,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
+                width: _PlayerLayout.handleWidth,
+                height: _PlayerLayout.handleHeight,
+                margin: const EdgeInsets.only(bottom: _PlayerLayout.spaceMd),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(_PlayerLayout.radiusPill),
                 ),
               ),
               Row(
@@ -545,17 +585,11 @@ class _PlayerControlsSheet extends StatelessWidget {
                     isActive: vm.isShuffled,
                     onTap: vm.toggleShuffle,
                   ),
-                  RepeatButton(
-                    mode: vm.repeatMode,
-                    onTap: vm.toggleRepeatMode,
-                  ),
-                  SpeedButton(
-                    speed: vm.currentSpeed,
-                    onTap: onOpenSpeed,
-                  ),
+                  RepeatButton(mode: vm.repeatMode, onTap: vm.toggleRepeatMode),
+                  SpeedButton(speed: vm.currentSpeed, onTap: onOpenSpeed),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: _PlayerLayout.spaceMd),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
@@ -588,8 +622,9 @@ class _PlayerControlsSheet extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(10),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: theme.colorScheme.primary
-                                        .withValues(alpha: 0.35),
+                                    color: theme.colorScheme.primary.withValues(
+                                      alpha: 0.35,
+                                    ),
                                     blurRadius: 8,
                                     offset: const Offset(0, 2),
                                   ),
@@ -657,7 +692,7 @@ class _QueueSheet extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'Fila de reproduÃ§Ã£o',
+                  'Fila de reprodução',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -676,7 +711,9 @@ class _QueueSheet extends StatelessWidget {
                       child: Text(
                         'Fila vazia',
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.7,
+                          ),
                         ),
                       ),
                     ),
@@ -699,13 +736,19 @@ class _QueueSheet extends StatelessWidget {
                           margin: const EdgeInsets.only(bottom: 8),
                           decoration: BoxDecoration(
                             color: isCurrent
-                                ? theme.colorScheme.primary.withValues(alpha: 0.1)
+                                ? theme.colorScheme.primary.withValues(
+                                    alpha: 0.1,
+                                  )
                                 : theme.colorScheme.surface,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: isCurrent
-                                  ? theme.colorScheme.primary.withValues(alpha: 0.35)
-                                  : theme.colorScheme.outline.withValues(alpha: 0.15),
+                                  ? theme.colorScheme.primary.withValues(
+                                      alpha: 0.35,
+                                    )
+                                  : theme.colorScheme.outline.withValues(
+                                      alpha: 0.15,
+                                    ),
                             ),
                           ),
                           child: ListTile(
@@ -714,7 +757,10 @@ class _QueueSheet extends StatelessWidget {
                               await queueVm.playMusic(queueVm.musics, index);
                               if (context.mounted) Navigator.of(context).pop();
                             },
-                            leading: ArtworkThumb(artworkUrl: music.artworkUrl),
+                            leading: ArtworkThumb(
+                              artworkUrl: music.artworkUrl,
+                              audioId: music.sourceId ?? music.id,
+                            ),
                             title: Text(
                               music.title,
                               maxLines: 1,
@@ -799,10 +845,10 @@ class _SleepTimerSheetState extends State<_SleepTimerSheet> {
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-          20,
-          12,
-          20,
-          20 + MediaQuery.of(context).viewInsets.bottom,
+          _PlayerLayout.spaceLg,
+          _PlayerLayout.spaceSm,
+          _PlayerLayout.spaceLg,
+          _PlayerLayout.spaceLg + MediaQuery.of(context).viewInsets.bottom,
         ),
         child: Consumer<PlaylistViewModel>(
           builder: (_, vm, __) {
@@ -836,13 +882,13 @@ class _SleepTimerSheetState extends State<_SleepTimerSheet> {
                 Text(
                   isActive
                       ? (mode == SleepTimerMode.duration
-                          ? 'Ativo por $activeMinutes min'
-                          : mode == SleepTimerMode.endOfSong
-                              ? 'Ativo atÃ© o fim da mÃºsica'
-                              : mode == SleepTimerMode.endOfPlaylist
-                                  ? 'Ativo atÃ© o fim da playlist'
-                                  : 'Ativo')
-                      : 'Escolha um tempo para parar a mÃºsica',
+                            ? 'Ativo por $activeMinutes min'
+                            : mode == SleepTimerMode.endOfSong
+                            ? 'Ativo até o fim da música'
+                            : mode == SleepTimerMode.endOfPlaylist
+                            ? 'Ativo até o fim da playlist'
+                            : 'Ativo')
+                      : 'Escolha um tempo para parar a música',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
@@ -876,7 +922,7 @@ class _SleepTimerSheetState extends State<_SleepTimerSheet> {
                   runSpacing: 8,
                   children: [
                     ChoiceChip(
-                      label: const Text('Fim da mÃºsica'),
+                      label: const Text('Fim da música'),
                       selected: vm.sleepMode == SleepTimerMode.endOfSong,
                       onSelected: (_) {
                         vm.setSleepTimerEndOfSong();
@@ -898,9 +944,11 @@ class _SleepTimerSheetState extends State<_SleepTimerSheet> {
                   controller: _minutesController,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    labelText: 'Digite o nÃºmero de minutos',
+                    labelText: 'Digite o número de minutos',
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(
+                        _PlayerLayout.radiusMd,
+                      ),
                     ),
                   ),
                   onSubmitted: (value) {
@@ -914,8 +962,9 @@ class _SleepTimerSheetState extends State<_SleepTimerSheet> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
-                          final minutes =
-                              int.tryParse(_minutesController.text.trim());
+                          final minutes = int.tryParse(
+                            _minutesController.text.trim(),
+                          );
                           if (minutes != null) _setMinutes(minutes);
                         },
                         child: const Text('Ativar'),
@@ -978,15 +1027,49 @@ class _BackgroundArtwork extends StatelessWidget {
 /// CAPA
 /// =======================================================
 
-class _ArtworkCover extends StatelessWidget {
+class _ArtworkCover extends StatefulWidget {
   final MusicEntity music;
 
   const _ArtworkCover({required this.music});
 
   @override
+  State<_ArtworkCover> createState() => _ArtworkCoverState();
+}
+
+class _ArtworkCoverState extends State<_ArtworkCover> {
+  final OnAudioQuery _audioQuery = OnAudioQuery();
+  Future<Uint8List?>? _artworkFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadArtwork();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ArtworkCover oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldArtworkId = oldWidget.music.sourceId ?? oldWidget.music.id;
+    final newArtworkId = widget.music.sourceId ?? widget.music.id;
+    if (oldArtworkId != newArtworkId) {
+      _loadArtwork();
+    }
+  }
+
+  void _loadArtwork() {
+    final id = widget.music.sourceId ?? widget.music.id;
+    if (id == null) {
+      _artworkFuture = Future<Uint8List?>.value(null);
+      return;
+    }
+    _artworkFuture = _audioQuery.queryArtwork(id, ArtworkType.AUDIO);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size.width * 0.78;
-    final audioQuery = OnAudioQuery();
+    final size = (MediaQuery.of(context).size.width * _PlayerLayout.coverRatio)
+        .clamp(_PlayerLayout.coverMinSize, _PlayerLayout.coverMaxSize)
+        .toDouble();
     final theme = Theme.of(context);
     final shadows = theme.extension<AppShadows>();
 
@@ -994,23 +1077,20 @@ class _ArtworkCover extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(_PlayerLayout.radiusXl),
         boxShadow: [
           ...(shadows?.elevated ?? const []),
           BoxShadow(
             color: theme.colorScheme.primary.withValues(alpha: 0.45),
-            blurRadius: 40,
+            blurRadius: _PlayerLayout.shadowBlurXl,
             offset: const Offset(0, 18),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(_PlayerLayout.radiusXl),
         child: FutureBuilder<Uint8List?>(
-          future: audioQuery.queryArtwork(
-            music.id!,
-            ArtworkType.AUDIO,
-          ),
+          future: _artworkFuture,
           builder: (context, snapshot) {
             Widget child;
 
@@ -1029,7 +1109,7 @@ class _ArtworkCover extends StatelessWidget {
             } else {
               child = Image.memory(
                 snapshot.data!,
-                key: ValueKey(music.id),
+                key: ValueKey(widget.music.sourceId ?? widget.music.id),
                 fit: BoxFit.cover,
               );
             }
@@ -1039,10 +1119,7 @@ class _ArtworkCover extends StatelessWidget {
               switchInCurve: Curves.easeOutCubic,
               switchOutCurve: Curves.easeInCubic,
               transitionBuilder: (child, animation) {
-                return FadeTransition(
-                  opacity: animation,
-                  child: child,
-                );
+                return FadeTransition(opacity: animation, child: child);
               },
               child: child,
             );
@@ -1053,3 +1130,39 @@ class _ArtworkCover extends StatelessWidget {
   }
 }
 
+class _PlayerLayout {
+  static const double phi = 1.618;
+
+  // Modular spacing scale
+  static const double spaceXs = 6;
+  static const double spaceSm = 10;
+  static const double spaceMd = 16;
+  static const double spaceLg = 20;
+  static const double spaceL = 28;
+  static const double spaceXl = 32;
+
+  // Controls and gestures
+  static const double pressScale = 0.98;
+  static const double transportIconSize = 36;
+  static const double playButtonSize = 80;
+  static const double volumeSliderBottomOffset = 120;
+
+  // Shape
+  static const double radiusMd = 16;
+  static const double radiusLg = 24;
+  static const double radiusXl = 32;
+  static const double radiusPill = 20;
+
+  // Depth
+  static const double shadowBlurLg = 24;
+  static const double shadowBlurXl = 40;
+
+  // Handles
+  static const double handleWidth = 40;
+  static const double handleHeight = 4;
+
+  // Cover sizing (golden-inspired with device clamp)
+  static const double coverRatio = 0.72;
+  static const double coverMinSize = 220;
+  static const double coverMaxSize = 460;
+}

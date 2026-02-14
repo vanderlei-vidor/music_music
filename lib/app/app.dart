@@ -6,6 +6,7 @@ import 'package:music_music/features/home/view_model/home_view_model.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 import 'package:music_music/features/player/view_model/player_panel_controller.dart';
 import 'package:music_music/app/routes.dart';
+import 'package:music_music/app/app_info.dart';
 
 final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey =
     GlobalKey<ScaffoldMessengerState>();
@@ -34,7 +35,7 @@ class MusicApp extends StatelessWidget {
       child: Consumer<ThemeManager>(
         builder: (context, themeManager, _) {
           return MaterialApp(
-            title: 'Music Music',
+            title: AppInfo.appName,
             debugShowCheckedModeBanner: false,
             scaffoldMessengerKey: rootScaffoldMessengerKey,
             themeMode: themeManager.themeMode,

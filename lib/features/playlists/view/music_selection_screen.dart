@@ -31,8 +31,9 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
   List<MusicEntity> _filteredMusics = [];
 
   final Set<int> _existingMusicIds = <int>{};
-  final ValueNotifier<Set<int>> _selectedMusicIds =
-      ValueNotifier<Set<int>>(<int>{});
+  final ValueNotifier<Set<int>> _selectedMusicIds = ValueNotifier<Set<int>>(
+    <int>{},
+  );
 
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
@@ -184,7 +185,10 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
                               _selectedMusicIds.value = next;
                             },
                       child: ListTile(
-                        leading: ArtworkThumb(artworkUrl: music.artworkUrl),
+                        leading: ArtworkThumb(
+                          artworkUrl: music.artworkUrl,
+                          audioId: music.sourceId ?? music.id,
+                        ),
                         title: Text(music.title),
                         subtitle: Text(music.artist),
                         trailing: Checkbox(
@@ -216,10 +220,7 @@ class _PressableTile extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
 
-  const _PressableTile({
-    required this.child,
-    required this.onTap,
-  });
+  const _PressableTile({required this.child, required this.onTap});
 
   @override
   State<_PressableTile> createState() => _PressableTileState();
@@ -255,5 +256,3 @@ class _PressableTileState extends State<_PressableTile> {
     );
   }
 }
-
-

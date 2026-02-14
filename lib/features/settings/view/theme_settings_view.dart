@@ -18,7 +18,7 @@ class ThemeSettingsView extends StatelessWidget {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text('PersonalizaÃ§Ã£o', style: theme.textTheme.headlineSmall),
+        title: Text('Personalização', style: theme.textTheme.headlineSmall),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -47,7 +47,7 @@ class ThemeSettingsView extends StatelessWidget {
             const SizedBox(height: 20),
             _ThemeCard(
               title: 'Midnight Orange',
-              subtitle: 'Profundidade cinematogrÃ¡fica com foco vibrante.',
+              subtitle: 'Profundidade cinematográfica com foco vibrante.',
               selected: manager.preset == ThemePreset.neumorphicDark,
               onTap: () {
                 HapticFeedback.mediumImpact();

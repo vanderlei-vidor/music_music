@@ -58,7 +58,7 @@ class _HomeViewState extends State<HomeView> {
               ListTile(
                 leading: Icon(Icons.folder, color: theme.colorScheme.primary),
                 title: const Text('Importar arquivos'),
-                subtitle: const Text('Adicionar mÃºsicas do dispositivo'),
+                subtitle: const Text('Adicionar músicas do dispositivo'),
                 onTap: () async {
                   Navigator.pop(context);
               //    await MusicService().importMusics();
@@ -68,7 +68,7 @@ class _HomeViewState extends State<HomeView> {
               ListTile(
                 leading: Icon(Icons.link, color: theme.colorScheme.primary),
                 title: const Text('Adicionar por URL'),
-                subtitle: const Text('Streaming, MP3 online, rÃ¡dio'),
+                subtitle: const Text('Streaming, MP3 online, rádio'),
                 onTap: () {
                   Navigator.pop(context);
                   // ðŸ‘‰ aqui vocÃª pode chamar o dialog de URL depois
@@ -105,7 +105,7 @@ class _HomeViewState extends State<HomeView> {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    'Carregando suas mÃºsicas...',
+                    'Carregando suas músicas...',
                     style: TextStyle(
                       fontSize: 16,
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
@@ -135,8 +135,8 @@ class _HomeViewState extends State<HomeView> {
                 const SizedBox(height: 10),
                 Text(
                   viewModel.musics.isEmpty
-                      ? 'Nenhuma mÃºsica encontrada.'
-                      : 'MÃºsicas encontradas: ${viewModel.musics.length}',
+                      ? 'Nenhuma música encontrada.'
+                      : 'Músicas encontradas: ${viewModel.musics.length}',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
@@ -147,7 +147,7 @@ class _HomeViewState extends State<HomeView> {
 
                 // ðŸ”¹ Ver mÃºsicas
                 CustomButton(
-                  text: 'Ver Minhas MÃºsicas',
+                  text: 'Ver Minhas Músicas',
                   onPressed: () {
                     final playlistVM =
                         context.read<PlaylistViewModel>();

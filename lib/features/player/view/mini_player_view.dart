@@ -1,4 +1,4 @@
-﻿// lib/views/player/mini_player_view.dart
+// lib/views/player/mini_player_view.dart
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -107,6 +107,7 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
         }
 
         ArtworkCache.preload(context, music.artworkUrl);
+        final artworkId = music.sourceId ?? music.id;
 
         return ScaleTransition(
           scale: _pulse,
@@ -153,12 +154,15 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
                                     Colors.black.withValues(alpha: 0.9),
                                   ]
                                 : [
-                                    theme.colorScheme.primary.withValues(alpha: 0.85),
+                                    theme.colorScheme.primary.withValues(
+                                      alpha: 0.85,
+                                    ),
                                     theme.colorScheme.surface,
                                   ],
                           ),
                           borderRadius: BorderRadius.circular(20),
-                          boxShadow: shadows?.neumorphic ??
+                          boxShadow:
+                              shadows?.neumorphic ??
                               [
                                 BoxShadow(
                                   color: animatedColor.withValues(alpha: 0.35),
@@ -178,7 +182,9 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
                                     borderRadius: BorderRadius.circular(12),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.6),
+                                        color: Colors.black.withValues(
+                                          alpha: 0.6,
+                                        ),
                                         blurRadius: 16,
                                         offset: const Offset(0, 10),
                                       ),
@@ -186,13 +192,17 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
                                   ),
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(12),
-                                    child: QueryArtworkWidget(
-                                      id: music.id!,
-                                      type: ArtworkType.AUDIO,
-                                      artworkFit: BoxFit.cover,
-                                      size: 200,
-                                      nullArtworkWidget: _defaultArtwork(theme),
-                                    ),
+                                    child: artworkId == null
+                                        ? _defaultArtwork(theme)
+                                        : QueryArtworkWidget(
+                                            id: artworkId,
+                                            type: ArtworkType.AUDIO,
+                                            artworkFit: BoxFit.cover,
+                                            size: 200,
+                                            nullArtworkWidget: _defaultArtwork(
+                                              theme,
+                                            ),
+                                          ),
                                   ),
                                 ),
 
@@ -211,18 +221,18 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
                                         overflow: TextOverflow.ellipsis,
                                         style: theme.textTheme.bodyMedium
                                             ?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                       ),
                                       Text(
                                         music.artist,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style:
-                                            theme.textTheme.bodySmall?.copyWith(
-                                          color: theme.colorScheme.onSurface
-                                              .withValues(alpha: 0.7),
-                                        ),
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color: theme.colorScheme.onSurface
+                                                  .withValues(alpha: 0.7),
+                                            ),
                                       ),
                                     ],
                                   ),
@@ -250,28 +260,29 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
                                     shape: BoxShape.circle,
                                     gradient:
                                         theme.brightness == Brightness.light
-                                            ? LinearGradient(
-                                                colors: [
-                                                  theme.colorScheme.primary,
-                                                  theme.colorScheme.primary
-                                                      .withValues(alpha: 0.85),
-                                                ],
-                                              )
-                                            : PremiumGradients.accentOrange,
+                                        ? LinearGradient(
+                                            colors: [
+                                              theme.colorScheme.primary,
+                                              theme.colorScheme.primary
+                                                  .withValues(alpha: 0.85),
+                                            ],
+                                          )
+                                        : PremiumGradients.accentOrange,
                                     boxShadow: [
                                       BoxShadow(
                                         color:
                                             theme.brightness == Brightness.light
-                                                ? theme.colorScheme.primary
-                                                    .withValues(alpha: 0.35)
-                                                : animatedColor
-                                                    .withValues(alpha: 0.6),
-                                        blurRadius: theme.brightness ==
-                                                Brightness.light
+                                            ? theme.colorScheme.primary
+                                                  .withValues(alpha: 0.35)
+                                            : animatedColor.withValues(
+                                                alpha: 0.6,
+                                              ),
+                                        blurRadius:
+                                            theme.brightness == Brightness.light
                                             ? 18
                                             : 26,
-                                        offset: theme.brightness ==
-                                                Brightness.light
+                                        offset:
+                                            theme.brightness == Brightness.light
                                             ? const Offset(0, 8)
                                             : const Offset(0, 10),
                                       ),
@@ -316,10 +327,13 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
                                   milliseconds: music.duration ?? 0,
                                 );
                                 final total = duration.inMilliseconds;
-                                final current = position.inMilliseconds
-                                    .clamp(0, total);
-                                final progress =
-                                    total == 0 ? 0.0 : current / total;
+                                final current = position.inMilliseconds.clamp(
+                                  0,
+                                  total,
+                                );
+                                final progress = total == 0
+                                    ? 0.0
+                                    : current / total;
 
                                 return MiniPlayerProgress(
                                   progress: progress,
@@ -353,4 +367,3 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
     );
   }
 }
-

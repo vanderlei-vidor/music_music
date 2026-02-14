@@ -1,8 +1,9 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:music_music/data/models/music_entity.dart';
+import 'package:music_music/features/home/view_model/home_view_model.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 import 'package:music_music/shared/widgets/vinyl_album_cover.dart';
 import 'package:music_music/shared/widgets/mini_equalizer.dart';
@@ -29,14 +30,25 @@ class AlbumDetailScreen extends StatelessWidget {
     return null;
   }
 
+  int? _getAlbumArtworkId(List<MusicEntity> musics) {
+    for (final m in musics) {
+      final id = m.sourceId ?? m.id;
+      if (id != null) return id;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final playlistVM = context.watch<PlaylistViewModel>();
+    final allMusics = context.select<HomeViewModel, List<MusicEntity>>(
+      (vm) => vm.musics,
+    );
 
     final dominantColor = playlistVM.currentDominantColor;
 
-    var musics = playlistVM.musics
+    var musics = allMusics
         .where((m) => (m.album ?? 'Desconhecido') == albumName)
         .toList();
     if (artistName != null && artistName!.isNotEmpty) {
@@ -49,6 +61,7 @@ class AlbumDetailScreen extends StatelessWidget {
     }
 
     final artwork = _getAlbumArtwork(musics);
+    final artworkId = _getAlbumArtworkId(musics);
     ArtworkCache.preload(context, artwork);
 
     return Scaffold(
@@ -91,14 +104,15 @@ class AlbumDetailScreen extends StatelessWidget {
                       background: Stack(
                         fit: StackFit.expand,
                         children: [
-                        if (artwork != null)
-                          Image(
-                            image: ArtworkCache.provider(artwork)!,
-                            fit: BoxFit.cover,
-                            gaplessPlayback: true,
+                          ArtworkSquare(
+                            artworkUrl: artwork,
+                            audioId: artworkId,
+                            borderRadius: 0,
                           ),
 
-                          Container(color: Colors.black.withValues(alpha: 0.45)),
+                          Container(
+                            color: Colors.black.withValues(alpha: 0.45),
+                          ),
 
                           Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -109,6 +123,7 @@ class AlbumDetailScreen extends StatelessWidget {
                                 tag: 'album_${albumName}__${artistName ?? ''}',
                                 child: VinylAlbumCover(
                                   artwork: artwork,
+                                  audioId: artworkId,
                                   player: playlistVM.player,
                                   size: 190,
                                 ),
@@ -117,7 +132,7 @@ class AlbumDetailScreen extends StatelessWidget {
                               const SizedBox(height: 16),
 
                               Text(
-                                '${musics.length} mÃºsicas',
+                                '${musics.length} músicas',
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   color: Colors.white70,
                                 ),
@@ -140,8 +155,10 @@ class AlbumDetailScreen extends StatelessWidget {
                         ArtworkCache.preload(context, music.artworkUrl);
 
                         final shadows =
-                            Theme.of(context).extension<AppShadows>()?.surface ??
-                                [];
+                            Theme.of(
+                              context,
+                            ).extension<AppShadows>()?.surface ??
+                            [];
 
                         return Container(
                           margin: const EdgeInsets.symmetric(
@@ -154,53 +171,58 @@ class AlbumDetailScreen extends StatelessWidget {
                             boxShadow: shadows,
                           ),
                           child: ListTile(
-                            leading: Selector<PlaylistViewModel, _NowPlayingState>(
-                              selector: (_, vm) => _NowPlayingState(
-                                id: vm.currentMusic?.id,
-                                isPlaying: vm.isPlaying,
-                              ),
-                              builder: (_, state, __) {
-                                final isCurrent = state.id == music.id;
-                                if (!isCurrent) {
-                                  return Text('${index + 1}');
-                                }
-                                return MiniEqualizer(
-                                  isPlaying: state.isPlaying,
-                                  color: dominantColor,
-                                );
-                              },
-                            ),
+                            leading:
+                                Selector<PlaylistViewModel, _NowPlayingState>(
+                                  selector: (_, vm) => _NowPlayingState(
+                                    id: vm.currentMusic?.id,
+                                    isPlaying: vm.isPlaying,
+                                  ),
+                                  builder: (_, state, __) {
+                                    final isCurrent = state.id == music.id;
+                                    if (!isCurrent) {
+                                      return Text('${index + 1}');
+                                    }
+                                    return MiniEqualizer(
+                                      isPlaying: state.isPlaying,
+                                      color: dominantColor,
+                                    );
+                                  },
+                                ),
                             title: Text(music.title),
-                            subtitle: Selector<PlaylistViewModel, _NowPlayingState>(
-                              selector: (_, vm) => _NowPlayingState(
-                                id: vm.currentMusic?.id,
-                                isPlaying: vm.isPlaying,
-                              ),
-                              builder: (_, state, __) {
-                                final isCurrent = state.id == music.id;
-                                if (!isCurrent) {
-                                  return Text(music.artist);
-                                }
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(music.artist),
-                                    StreamBuilder<Duration>(
-                                      stream: playlistVM.positionStream,
-                                      builder: (_, snapshot) {
-                                        return MiniProgressBar(
-                                          position:
-                                              snapshot.data ?? Duration.zero,
-                                          duration: playlistVM.player.duration ??
-                                              Duration.zero,
-                                          color: dominantColor,
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                );
-                              },
-                            ),
+                            subtitle:
+                                Selector<PlaylistViewModel, _NowPlayingState>(
+                                  selector: (_, vm) => _NowPlayingState(
+                                    id: vm.currentMusic?.id,
+                                    isPlaying: vm.isPlaying,
+                                  ),
+                                  builder: (_, state, __) {
+                                    final isCurrent = state.id == music.id;
+                                    if (!isCurrent) {
+                                      return Text(music.artist);
+                                    }
+                                    return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(music.artist),
+                                        StreamBuilder<Duration>(
+                                          stream: playlistVM.positionStream,
+                                          builder: (_, snapshot) {
+                                            return MiniProgressBar(
+                                              position:
+                                                  snapshot.data ??
+                                                  Duration.zero,
+                                              duration:
+                                                  playlistVM.player.duration ??
+                                                  Duration.zero,
+                                              color: dominantColor,
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
                             onTap: () {
                               playlistVM.playMusic(musics, index);
                             },
@@ -357,7 +379,3 @@ class _ActionButton extends StatelessWidget {
     );
   }
 }
-
-
-
-

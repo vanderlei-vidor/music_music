@@ -1,4 +1,4 @@
-﻿// lib/views/playlist/playlist_detail_screen.dart
+// lib/views/playlist/playlist_detail_screen.dart
 
 import 'dart:ui';
 
@@ -30,7 +30,6 @@ class PlaylistDetailScreen extends StatefulWidget {
 
 class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   final TextEditingController _searchController = TextEditingController();
-  final bool _isSearching = false;
   List<MusicEntity> _allMusics = [];
   List<MusicEntity> _filteredMusics = [];
   final ValueNotifier<List<MusicEntity>> _displayedMusics =
@@ -84,8 +83,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   }
 
   void _syncDisplayedMusics() {
-    _displayedMusics.value =
-        List<MusicEntity>.unmodifiable(_isSearching ? _filteredMusics : _allMusics);
+    _displayedMusics.value = List<MusicEntity>.unmodifiable(_filteredMusics);
   }
 
   @override
@@ -96,7 +94,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
         icon: const Icon(Icons.add),
-        label: const Text('Add music'),
+        label: const Text('Adicionar música'),
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
         onPressed: () async {
@@ -206,24 +204,24 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-              onPressed: () async {
-                HapticFeedback.selectionClick();
-                await Navigator.pushNamed(
-                  context,
-                  AppRoutes.musicSelection,
+                onPressed: () async {
+                  HapticFeedback.selectionClick();
+                  await Navigator.pushNamed(
+                    context,
+                    AppRoutes.musicSelection,
                     arguments: MusicSelectionArgs(
                       playlistId: widget.playlistId,
                       playlistName: widget.playlistName,
                     ),
-                );
-                _reloadMusics();
-              },
-            ),
-          ],
+                  );
+                  _reloadMusics();
+                },
+              ),
+            ],
+          ),
         ),
-      ),
-    );
-  }
+      );
+    }
 
     return SliverPadding(
       padding: const EdgeInsets.only(bottom: 96),
@@ -305,7 +303,10 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                     boxShadow: shadows,
                   ),
                   child: ListTile(
-                    leading: ArtworkThumb(artworkUrl: music.artworkUrl),
+                    leading: ArtworkThumb(
+                      artworkUrl: music.artworkUrl,
+                      audioId: music.sourceId ?? music.id,
+                    ),
                     title: Text(music.title),
                     subtitle: Text(music.artist),
                     trailing: Selector<PlaylistViewModel, _NowPlayingState>(
@@ -363,10 +364,7 @@ class _PressableTile extends StatefulWidget {
   final Widget child;
   final VoidCallback onTap;
 
-  const _PressableTile({
-    required this.child,
-    required this.onTap,
-  });
+  const _PressableTile({required this.child, required this.onTap});
 
   @override
   State<_PressableTile> createState() => _PressableTileState();
@@ -419,9 +417,3 @@ class _NowPlayingState {
   @override
   int get hashCode => Object.hash(id, isPlaying);
 }
-
-
-
-
-
-

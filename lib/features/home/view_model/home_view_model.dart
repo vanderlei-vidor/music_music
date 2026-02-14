@@ -112,9 +112,7 @@ class HomeViewModel extends ChangeNotifier {
 
       final processed = await compute(processScanIsolate, rawList);
 
-      for (final music in processed) {
-        await _dbHelper.insertMusicIfNotExists(music);
-      }
+      await _dbHelper.insertMusicsIfNotExistsBatch(processed);
 
       await loadMusics();
 
@@ -139,9 +137,7 @@ class HomeViewModel extends ChangeNotifier {
 
       final processed = await compute(processScanIsolate, rawList);
 
-      for (final music in processed) {
-        await _dbHelper.insertMusicIfNotExists(music);
-      }
+      await _dbHelper.insertMusicsIfNotExistsBatch(processed);
 
       await loadMusics();
 

@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -11,6 +11,7 @@ import 'package:music_music/shared/widgets/collection_sticky_controls.dart';
 import 'package:music_music/shared/widgets/mini_progress_bar.dart';
 import 'package:music_music/shared/widgets/mini_equalizer.dart';
 import 'package:music_music/shared/widgets/skeleton.dart';
+import 'package:music_music/shared/widgets/artwork_image.dart';
 
 class FolderDetailView extends StatefulWidget {
   final String folderName;
@@ -39,7 +40,8 @@ class _FolderDetailViewState extends State<FolderDetailView> {
 
   @override
   Widget build(BuildContext context) {
-    final safeGenre = widget.musics.isNotEmpty &&
+    final safeGenre =
+        widget.musics.isNotEmpty &&
             widget.musics.first.genre != null &&
             widget.musics.first.genre!.isNotEmpty
         ? widget.musics.first.genre!
@@ -48,9 +50,7 @@ class _FolderDetailViewState extends State<FolderDetailView> {
     final color = GenreColorHelper.getColor(safeGenre);
 
     // escuta APENAS troca da musica atual
-    context.select<PlaylistViewModel, int?>(
-      (vm) => vm.currentMusic?.id,
-    );
+    context.select<PlaylistViewModel, int?>((vm) => vm.currentMusic?.id);
 
     // scroll automatico seguro
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -93,7 +93,9 @@ class _FolderDetailViewState extends State<FolderDetailView> {
                     ),
                     BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                      child: Container(color: Colors.black.withValues(alpha: 0.25)),
+                      child: Container(
+                        color: Colors.black.withValues(alpha: 0.25),
+                      ),
                     ),
                     Center(
                       child: Column(
@@ -106,10 +108,8 @@ class _FolderDetailViewState extends State<FolderDetailView> {
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            '${widget.musics.length} mÃºsicas',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
+                            '${widget.musics.length} músicas',
+                            style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(color: Colors.white70),
                           ),
                         ],
@@ -138,84 +138,85 @@ class _FolderDetailViewState extends State<FolderDetailView> {
                 return const SliverToBoxAdapter(child: _DetailListSkeleton());
               }
               return SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final music = musics[index];
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final music = musics[index];
 
-                    _itemKeys.putIfAbsent(music.id!, () => GlobalKey());
+                  _itemKeys.putIfAbsent(music.id!, () => GlobalKey());
 
-                    return Container(
-                      key: _itemKeys[music.id],
-                      child: ListTile(
-                        leading: Selector<PlaylistViewModel, _NowPlayingState>(
-                          selector: (_, vm) => _NowPlayingState(
-                            id: vm.currentMusic?.id,
-                            isPlaying: vm.isPlaying,
-                          ),
-                          builder: (_, state, __) {
-                            final isCurrent = state.id == music.id;
-                            if (!isCurrent) {
-                              return const Icon(Icons.music_note);
-                            }
-                            return MiniEqualizer(
-                              isPlaying: state.isPlaying,
-                              color: color,
-                              size: 22,
-                            );
-                          },
+                  return Container(
+                    key: _itemKeys[music.id],
+                    child: ListTile(
+                      leading: Selector<PlaylistViewModel, _NowPlayingState>(
+                        selector: (_, vm) => _NowPlayingState(
+                          id: vm.currentMusic?.id,
+                          isPlaying: vm.isPlaying,
                         ),
-                        title: Text(music.title),
-                        subtitle: Selector<PlaylistViewModel, _NowPlayingState>(
-                          selector: (_, vm) => _NowPlayingState(
-                            id: vm.currentMusic?.id,
-                            isPlaying: vm.isPlaying,
-                          ),
-                          builder: (_, state, __) {
-                            final isCurrent = state.id == music.id;
-                            if (!isCurrent) {
-                              return Text(music.artist);
-                            }
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(music.artist),
-                                const SizedBox(height: 4),
-                                StreamBuilder<Duration>(
-                                  stream: context
-                                      .read<PlaylistViewModel>()
-                                      .positionStream,
-                                  builder: (_, snapshot) {
-                                    final position =
-                                        snapshot.data ?? Duration.zero;
-                                    final duration = context
-                                            .read<PlaylistViewModel>()
-                                            .player
-                                            .duration ??
-                                        Duration.zero;
-
-                                    return MiniProgressBar(
-                                      position: position,
-                                      duration: duration,
-                                      color: color,
-                                    );
-                                  },
-                                ),
-                              ],
+                        builder: (_, state, __) {
+                          final isCurrent = state.id == music.id;
+                          if (!isCurrent) {
+                            return ArtworkThumb(
+                              artworkUrl: music.artworkUrl,
+                              audioId: music.sourceId ?? music.id,
                             );
-                          },
-                        ),
-                        onTap: () async {
-                          final vm = context.read<PlaylistViewModel>();
-                          await vm.playMusic(musics, index);
-
-                          if (!context.mounted) return;
-                          Navigator.pushNamed(context, AppRoutes.player);
+                          }
+                          return MiniEqualizer(
+                            isPlaying: state.isPlaying,
+                            color: color,
+                            size: 22,
+                          );
                         },
                       ),
-                    );
-                  },
-                  childCount: musics.length,
-                ),
+                      title: Text(music.title),
+                      subtitle: Selector<PlaylistViewModel, _NowPlayingState>(
+                        selector: (_, vm) => _NowPlayingState(
+                          id: vm.currentMusic?.id,
+                          isPlaying: vm.isPlaying,
+                        ),
+                        builder: (_, state, __) {
+                          final isCurrent = state.id == music.id;
+                          if (!isCurrent) {
+                            return Text(music.artist);
+                          }
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(music.artist),
+                              const SizedBox(height: 4),
+                              StreamBuilder<Duration>(
+                                stream: context
+                                    .read<PlaylistViewModel>()
+                                    .positionStream,
+                                builder: (_, snapshot) {
+                                  final position =
+                                      snapshot.data ?? Duration.zero;
+                                  final duration =
+                                      context
+                                          .read<PlaylistViewModel>()
+                                          .player
+                                          .duration ??
+                                      Duration.zero;
+
+                                  return MiniProgressBar(
+                                    position: position,
+                                    duration: duration,
+                                    color: color,
+                                  );
+                                },
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                      onTap: () async {
+                        final vm = context.read<PlaylistViewModel>();
+                        await vm.playMusic(musics, index);
+
+                        if (!context.mounted) return;
+                        Navigator.pushNamed(context, AppRoutes.player);
+                      },
+                    ),
+                  );
+                }, childCount: musics.length),
               );
             },
           ),
@@ -303,4 +304,3 @@ class _DetailListSkeleton extends StatelessWidget {
     );
   }
 }
-

@@ -18,28 +18,27 @@ class AndroidMusicScanner implements MusicScanner {
       ignoreCase: true,
     );
 
-    return songs
-        .where((s) => (s.duration ?? 0) > 10000)
-        .map((s) {
-          final fullPath = s.data;
-          final parts = fullPath.split('/');
+    return songs.where((s) => (s.duration ?? 0) > 10000).map((s) {
+      final fullPath = s.data;
+      final parts = fullPath.split('/');
 
-          final folderName =
-              parts.length > 1 ? parts[parts.length - 2] : 'Desconhecido';
+      final folderName = parts.length > 1
+          ? parts[parts.length - 2]
+          : 'Desconhecido';
 
-          return MusicEntity(
-            id: s.id,
-            title: s.title,
-            artist: s.artist ?? 'Desconhecido',
-            album: s.album,
-            genre: s.genre,
-            audioUrl: fullPath,
-            artworkUrl: null,
-            duration: s.duration,
-            isFavorite: false,
-            folderPath: folderName,
-          );
-        })
-        .toList();
+      return MusicEntity(
+        id: s.id,
+        sourceId: s.id,
+        title: s.title,
+        artist: s.artist ?? 'Desconhecido',
+        album: s.album,
+        genre: s.genre,
+        audioUrl: fullPath,
+        artworkUrl: null,
+        duration: s.duration,
+        isFavorite: false,
+        folderPath: folderName,
+      );
+    }).toList();
   }
 }
