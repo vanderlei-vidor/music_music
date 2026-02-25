@@ -21,6 +21,8 @@ class SlidingPlayerPanel extends StatelessWidget {
     final color = playlistVM.currentDominantColor;
 
     final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final horizontalInset = screenWidth < 420 ? 24.0 : 32.0;
 
     return Stack(
       children: [
@@ -55,8 +57,8 @@ class SlidingPlayerPanel extends StatelessWidget {
         // ======================
         Positioned(
           bottom: 16,
-          left: 16,
-          right: 16,
+          left: horizontalInset,
+          right: horizontalInset,
           child: GestureDetector(
             onVerticalDragUpdate: (details) {
               final delta = details.primaryDelta! / screenHeight;

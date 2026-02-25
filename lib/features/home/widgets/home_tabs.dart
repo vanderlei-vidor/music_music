@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:on_audio_query/on_audio_query.dart';
@@ -81,6 +81,8 @@ class HomeMusicsTab extends StatelessWidget {
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 140),
           children: [
+            _OpenAllMusicsCard(total: vm.musics.length),
+            const SizedBox(height: 16),
             _HomeRailSection(
               title: 'Feito para voce',
               queue: vm.visibleMusics,
@@ -110,6 +112,58 @@ class HomeMusicsTab extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _OpenAllMusicsCard extends StatelessWidget {
+  final int total;
+
+  const _OpenAllMusicsCard({required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () => Navigator.pushNamed(context, AppRoutes.allMusics),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: theme.colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.62,
+          ),
+          border: Border.all(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.queue_music_rounded, color: theme.colorScheme.primary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Todas as musicas do dispositivo',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Text(
+              '$total',
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1179,8 +1233,18 @@ class _HomeAlbumsTabState extends State<HomeAlbumsTab>
   }
 }
 
-class HomeArtistsTab extends StatelessWidget {
+enum _ArtistSort { az, mostSongs }
+
+class HomeArtistsTab extends StatefulWidget {
   const HomeArtistsTab({super.key});
+
+  @override
+  State<HomeArtistsTab> createState() => _HomeArtistsTabState();
+}
+
+class _HomeArtistsTabState extends State<HomeArtistsTab> {
+  String _query = '';
+  _ArtistSort _sort = _ArtistSort.az;
 
   @override
   Widget build(BuildContext context) {
@@ -1188,63 +1252,149 @@ class HomeArtistsTab extends StatelessWidget {
         .select<HomeViewModel, Map<String, List<MusicEntity>>>(
           (vm) => vm.artistsGrouped,
         );
+    final entries = artists.entries.toList();
+    final q = _query.trim().toLowerCase();
+    final filtered = entries
+        .where((e) => q.isEmpty || e.key.toLowerCase().contains(q))
+        .toList();
+
+    filtered.sort((a, b) {
+      switch (_sort) {
+        case _ArtistSort.az:
+          return a.key.toLowerCase().compareTo(b.key.toLowerCase());
+        case _ArtistSort.mostSongs:
+          return b.value.length.compareTo(a.value.length);
+      }
+    });
 
     if (artists.isEmpty) {
       return const _ListSkeleton();
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: artists.length,
-      itemBuilder: (context, index) {
-        final artist = artists.keys.elementAt(index);
-        final artistMusics = artists[artist]!;
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: _PressableTile(
-            onTap: () {
-              HapticFeedback.selectionClick();
-              Navigator.pushNamed(
-                context,
-                AppRoutes.artistDetail,
-                arguments: ArtistDetailArgs(artistName: artist),
-              );
-            },
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow:
-                    Theme.of(context).extension<AppShadows>()?.surface ?? [],
-              ),
-              child: ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                leading: Hero(
-                  tag: 'artist_$artist',
-                  child: CircleAvatar(
-                    radius: 24,
-                    child: Text(
-                      artist.isNotEmpty ? artist[0].toUpperCase() : '?',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                title: Text(
-                  artist,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                subtitle: Text('${artistMusics.length} mÃƒÆ’Ã‚Âºsicas'),
-                trailing: const Icon(Icons.chevron_right),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: TextField(
+            onChanged: (value) => setState(() => _query = value),
+            decoration: InputDecoration(
+              hintText: 'Buscar artista (${filtered.length})',
+              prefixIcon: const Icon(Icons.search_rounded),
+              isDense: true,
+              filled: true,
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
               ),
             ),
           ),
-        );
-      },
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Row(
+            children: [
+              ChoiceChip(
+                avatar: _CountBadge(count: filtered.length),
+                label: const Text('A-Z'),
+                selected: _sort == _ArtistSort.az,
+                onSelected: (_) => setState(() => _sort = _ArtistSort.az),
+              ),
+              const SizedBox(width: 8),
+              ChoiceChip(
+                avatar: _CountBadge(count: filtered.length),
+                label: const Text('Mais músicas'),
+                selected: _sort == _ArtistSort.mostSongs,
+                onSelected: (_) => setState(() => _sort = _ArtistSort.mostSongs),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: filtered.isEmpty
+              ? const _EmptyState(
+                  icon: Icons.person_search_rounded,
+                  text: 'Nenhum artista encontrado',
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    final entry = filtered[index];
+                    final artist = entry.key;
+                    final artistMusics = entry.value;
+                    final sample = artistMusics.firstWhere(
+                      (m) =>
+                          (m.artworkUrl ?? '').isNotEmpty ||
+                          (m.sourceId ?? m.id) != null,
+                      orElse: () => artistMusics.first,
+                    );
+                    final artworkUrl = sample.artworkUrl;
+                    final artworkId = sample.sourceId ?? sample.id;
+                    ArtworkCache.preload(context, artworkUrl);
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _PressableTile(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          Navigator.pushNamed(
+                            context,
+                            AppRoutes.artistDetail,
+                            arguments: ArtistDetailArgs(artistName: artist),
+                          );
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow:
+                                Theme.of(context).extension<AppShadows>()?.surface ?? [],
+                          ),
+                          child: ListTile(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            leading: Hero(
+                              tag: 'artist_$artist',
+                              child: CircleAvatar(
+                                radius: 24,
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.primaryContainer,
+                                child: ClipOval(
+                                  child: artworkUrl != null && artworkUrl.isNotEmpty || artworkId != null
+                                      ? SizedBox(
+                                          width: 48,
+                                          height: 48,
+                                          child: ArtworkSquare(
+                                            artworkUrl: artworkUrl,
+                                            audioId: artworkId,
+                                            borderRadius: 999,
+                                          ),
+                                        )
+                                      : Text(
+                                          artist.isNotEmpty ? artist[0].toUpperCase() : '?',
+                                          style: const TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                ),
+                              ),
+                            ),
+                            title: Text(
+                              artist,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            subtitle: Text('${artistMusics.length} músicas'),
+                            trailing: const Icon(Icons.chevron_right),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 }
@@ -1285,6 +1435,29 @@ class _PressableTileState extends State<_PressableTile> {
           curve: Curves.easeOutCubic,
           child: widget.child,
         ),
+      ),
+    );
+  }
+}
+
+class _CountBadge extends StatelessWidget {
+  final int count;
+
+  const _CountBadge({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '$count',
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
       ),
     );
   }

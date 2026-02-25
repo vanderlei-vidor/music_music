@@ -80,21 +80,21 @@ class _HomeHeaderState extends State<HomeHeader>
     final sizeClass = Responsive.of(context);
     final pagePadding = Responsive.value(
       context,
-      compact: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-      medium: const EdgeInsets.fromLTRB(24, 18, 24, 14),
-      expanded: const EdgeInsets.fromLTRB(28, 20, 28, 16),
+      compact: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+      medium: const EdgeInsets.fromLTRB(20, 10, 20, 8),
+      expanded: const EdgeInsets.fromLTRB(22, 12, 22, 10),
     );
     final cardPadding = Responsive.value(
       context,
-      compact: 14.0,
-      medium: 16.0,
-      expanded: 18.0,
+      compact: 11.0,
+      medium: 12.0,
+      expanded: 13.0,
     );
     final artworkSize = Responsive.value(
       context,
-      compact: 92.0,
-      medium: 108.0,
-      expanded: 120.0,
+      compact: 74.0,
+      medium: 84.0,
+      expanded: 94.0,
     );
     final avatarSize = Responsive.value(
       context,
@@ -156,7 +156,7 @@ class _HomeHeaderState extends State<HomeHeader>
               ),
             ],
           ),
-          SizedBox(height: sizeClass == SizeClass.compact ? 14 : 16),
+          SizedBox(height: sizeClass == SizeClass.compact ? 8 : 10),
           Container(
             padding: EdgeInsets.all(cardPadding),
             decoration: BoxDecoration(
@@ -214,7 +214,7 @@ class _HomeHeaderState extends State<HomeHeader>
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 3),
                       AnimatedSwitcher(
                         duration: const Duration(milliseconds: 300),
                         switchInCurve: Curves.easeOutCubic,
@@ -261,7 +261,7 @@ class _HomeHeaderState extends State<HomeHeader>
                         child: Text(
                           subtitle,
                           key: ValueKey('featured-subtitle-$subtitle'),
-                          maxLines: 2,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurface.withValues(
@@ -271,11 +271,11 @@ class _HomeHeaderState extends State<HomeHeader>
                         ),
                       ),
                       SizedBox(
-                        height: sizeClass == SizeClass.compact ? 12 : 14,
+                        height: sizeClass == SizeClass.compact ? 6 : 8,
                       ),
                       Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
+                        spacing: 6,
+                        runSpacing: 6,
                         children: [
                           FilledButton(
                             onPressed: widget.canPlay
@@ -285,12 +285,13 @@ class _HomeHeaderState extends State<HomeHeader>
                               shape: const StadiumBorder(),
                               padding: EdgeInsets.symmetric(
                                 horizontal: sizeClass == SizeClass.compact
-                                    ? 18
-                                    : 20,
-                                vertical: sizeClass == SizeClass.compact
                                     ? 12
-                                    : 13,
+                                    : 16,
+                                vertical: sizeClass == SizeClass.compact
+                                    ? 8
+                                    : 10,
                               ),
+                              visualDensity: VisualDensity.compact,
                             ),
                             child: const Text('Tocar tudo'),
                           ),
@@ -305,12 +306,13 @@ class _HomeHeaderState extends State<HomeHeader>
                               shape: const StadiumBorder(),
                               padding: EdgeInsets.symmetric(
                                 horizontal: sizeClass == SizeClass.compact
-                                    ? 18
-                                    : 20,
-                                vertical: sizeClass == SizeClass.compact
                                     ? 12
-                                    : 13,
+                                    : 16,
+                                vertical: sizeClass == SizeClass.compact
+                                    ? 8
+                                    : 10,
                               ),
+                              visualDensity: VisualDensity.compact,
                             ),
                             child: const Text('Aleatorio'),
                           ),

@@ -11,6 +11,7 @@ import 'package:music_music/features/history/view/recent_view.dart';
 import 'package:music_music/features/home/view/home_screen.dart';
 import 'package:music_music/features/library/view/album_detail_screen.dart';
 import 'package:music_music/features/library/view/artist_detail_screen.dart';
+import 'package:music_music/features/library/view/all_musics_screen.dart';
 import 'package:music_music/features/player/view/player_view.dart';
 import 'package:music_music/features/playlists/view/playlist_view.dart';
 import 'package:music_music/features/playlists/view/music_selection_screen.dart';
@@ -38,6 +39,7 @@ class AppRoutes {
   static const mostPlayed = '/most-played';
   static const albumDetail = '/album';
   static const artistDetail = '/artist';
+  static const allMusics = '/all-musics';
   static const playlistDetail = '/playlist';
   static const musicSelection = '/playlist/add';
 
@@ -57,6 +59,7 @@ class AppRoutes {
     genres: (_) => const GenresView(),
     recent: (_) => const RecentMusicsView(),
     mostPlayed: (_) => const MostPlayedView(),
+    allMusics: (_) => const AllMusicsScreen(),
   };
 
   static Widget? buildBasePage(String name) {
@@ -85,6 +88,8 @@ class AppRoutes {
         return const RecentMusicsView();
       case mostPlayed:
         return const MostPlayedView();
+      case allMusics:
+        return const AllMusicsScreen();
     }
     return null;
   }

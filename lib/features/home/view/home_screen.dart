@@ -375,21 +375,34 @@ class _HomeViewState extends State<_HomeView>
     return Scaffold(
       drawer: _HomeDrawer(onOpenTab: _openHomeTab),
       backgroundColor: theme.scaffoldBackgroundColor,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _bottomNavIndex,
-        onDestinationSelected: _onBottomNavTap,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Inicio',
+      bottomNavigationBar: Padding(
+        padding: EdgeInsets.fromLTRB(
+          isCompact ? 16 : 28,
+          0,
+          isCompact ? 16 : 28,
+          isCompact ? 6 : 8,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: NavigationBar(
+            height: isCompact ? 60 : 64,
+            labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+            selectedIndex: _bottomNavIndex,
+            onDestinationSelected: _onBottomNavTap,
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home_rounded),
+                label: 'Inicio',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.search_rounded),
+                selectedIcon: Icon(Icons.search_rounded),
+                label: 'Buscar',
+              ),
+            ],
           ),
-          NavigationDestination(
-            icon: Icon(Icons.search_rounded),
-            selectedIcon: Icon(Icons.search_rounded),
-            label: 'Buscar',
-          ),
-        ],
+        ),
       ),
       body: SafeArea(
         child: Stack(
@@ -498,28 +511,34 @@ class _HomeViewState extends State<_HomeView>
                         isScrollable: true,
                         tabAlignment: TabAlignment.start,
                         padding: EdgeInsets.symmetric(
-                          horizontal: isCompact ? 8 : 16,
+                          horizontal: isCompact ? 6 : 12,
                         ),
+                        labelPadding: EdgeInsets.symmetric(
+                          horizontal: isCompact ? 10 : 12,
+                        ),
+                        dividerHeight: 0,
                         indicator: BoxDecoration(
                           color: theme.colorScheme.primary,
                           borderRadius: BorderRadius.circular(24),
                         ),
                         indicatorPadding: const EdgeInsets.symmetric(
-                          vertical: 6,
+                          vertical: 8,
                         ),
                         labelColor: theme.colorScheme.onPrimary,
                         unselectedLabelColor: theme.colorScheme.onSurface,
                         labelStyle: theme.textTheme.labelLarge?.copyWith(
                           fontWeight: FontWeight.w700,
+                          fontSize: isCompact ? 12 : null,
                         ),
-                        unselectedLabelStyle: theme.textTheme.labelLarge,
+                        unselectedLabelStyle: theme.textTheme.labelLarge
+                            ?.copyWith(fontSize: isCompact ? 12 : null),
                         tabs: const [
-                          Tab(text: 'Musicas'),
-                          Tab(text: 'Albuns'),
-                          Tab(text: 'Artistas'),
-                          Tab(text: 'Pastas'),
-                          Tab(text: 'Generos'),
-                          Tab(text: 'Playlists'),
+                          Tab(height: 34, text: 'Musicas'),
+                          Tab(height: 34, text: 'Albuns'),
+                          Tab(height: 34, text: 'Artistas'),
+                          Tab(height: 34, text: 'Pastas'),
+                          Tab(height: 34, text: 'Generos'),
+                          Tab(height: 34, text: 'Playlists'),
                         ],
                         onTap: (index) => setState(() => _currentIndex = index),
                       ),

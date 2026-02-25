@@ -113,7 +113,7 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
           scale: _pulse,
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               child: GestureDetector(
                 behavior: HitTestBehavior.translucent,
 
@@ -143,7 +143,7 @@ class _MiniPlayerViewState extends State<MiniPlayerView>
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
                       child: Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(9),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.topLeft,

@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 
@@ -14,6 +14,8 @@ class VinylAlbumCover extends StatefulWidget {
   final int? audioId;
   final AudioPlayer player;
   final double size;
+  final bool showNeedle;
+  final double motionProgress;
 
   const VinylAlbumCover({
     super.key,
@@ -21,6 +23,8 @@ class VinylAlbumCover extends StatefulWidget {
     this.audioId,
     required this.player,
     this.size = 190,
+    this.showNeedle = true,
+    this.motionProgress = 1.0,
   });
 
   @override
@@ -31,12 +35,19 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
     with TickerProviderStateMixin {
   late AnimationController _diskController;
   late AnimationController _needleController;
+  late AnimationController _velocityController;
   late Animation<double> _needleAnimation;
+  late final Ticker _spinTicker;
 
   late StreamSubscription<bool> _playingSub;
   late StreamSubscription<double> _speedSub;
 
   double _speed = 1.0;
+  double _angle = 0.0;
+  double _angularVelocity = 0.0;
+  bool _isPlaying = false;
+  Duration? _lastTick;
+  VoidCallback? _velocityListener;
 
   @override
   void initState() {
@@ -48,45 +59,113 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
       vsync: this,
       duration: const Duration(milliseconds: 480),
     );
+    _velocityController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 420),
+    );
 
     _needleAnimation = CurvedAnimation(
       parent: _needleController,
       curve: Curves.easeOutCubic,
     );
 
+    _spinTicker = createTicker(_onTick)..start();
+
     _playingSub = widget.player.playingStream.listen((playing) {
+      _isPlaying = playing;
       if (playing) {
-        _diskController.animateWith(
-          _VinylSimulation(
-            start: _diskController.value,
-            velocity: 0.9 * _speed,
-          ),
-        );
+        _retargetVelocity(animate: true);
         _needleController.forward();
       } else {
-        _diskController.animateWith(
-          _VinylSimulation(
-            start: _diskController.value,
-            velocity: 0.2,
-            friction: 0.18,
-          ),
-        );
+        _retargetVelocity(animate: true);
         _needleController.reverse();
       }
     });
 
     _speedSub = widget.player.speedStream.listen((s) {
       _speed = s;
+      _retargetVelocity(animate: true);
     });
+
+    _isPlaying = widget.player.playing;
+    _retargetVelocity(animate: false);
+  }
+
+  @override
+  void didUpdateWidget(covariant VinylAlbumCover oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.motionProgress != widget.motionProgress) {
+      _retargetVelocity(animate: true);
+    }
   }
 
   @override
   void dispose() {
     _playingSub.cancel();
     _speedSub.cancel();
+    _spinTicker.dispose();
+    final listener = _velocityListener;
+    if (listener != null) {
+      _velocityController.removeListener(listener);
+      _velocityListener = null;
+    }
+    _velocityController.dispose();
     _diskController.dispose();
     _needleController.dispose();
     super.dispose();
+  }
+
+  void _onTick(Duration elapsed) {
+    final last = _lastTick;
+    _lastTick = elapsed;
+    if (last == null) return;
+    final dt = (elapsed - last).inMicroseconds / 1000000.0;
+    if (dt <= 0) return;
+    _angle += _angularVelocity * dt;
+    _diskController.value = _angle;
+  }
+
+  void _retargetVelocity({required bool animate}) {
+    final motion = widget.motionProgress.clamp(0.0, 1.0);
+    final target = _isPlaying
+        ? (0.9 * _speed * (0.25 + (0.75 * motion)))
+        : (0.16 * motion);
+
+    if (!animate) {
+      _velocityController.stop();
+      final oldListener = _velocityListener;
+      if (oldListener != null) {
+        _velocityController.removeListener(oldListener);
+        _velocityListener = null;
+      }
+      _angularVelocity = target;
+      return;
+    }
+
+    _velocityController.stop();
+    final oldListener = _velocityListener;
+    if (oldListener != null) {
+      _velocityController.removeListener(oldListener);
+    }
+    final from = _angularVelocity;
+    final tween = Tween<double>(begin: from, end: target).chain(
+      CurveTween(
+        curve: _isPlaying ? Curves.easeOutCubic : Curves.easeInCubic,
+      ),
+    );
+    void listener() {
+      _angularVelocity = tween.evaluate(_velocityController);
+    }
+    _velocityListener = listener;
+    _velocityController
+      ..value = 0.0
+      ..addListener(listener)
+      ..forward().whenCompleteOrCancel(() {
+        if (_velocityListener == listener) {
+          _velocityController.removeListener(listener);
+          _velocityListener = null;
+        }
+      });
   }
 
   @override
@@ -97,57 +176,60 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
       children: [
         AnimatedBuilder(
           animation: _diskController,
-          builder: (_, __) {
-            return Transform.rotate(
-              angle: _diskController.value,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    width: widget.size,
-                    height: widget.size,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.black,
-                    ),
-                  ),
-                  CustomPaint(
-                    size: Size(widget.size, widget.size),
-                    painter: _VinylGroovesPainter(),
-                  ),
-                  Container(
-                    width: widget.size * 0.45,
-                    height: widget.size * 0.45,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.grey.shade800,
-                    ),
-                    child: ClipOval(child: _buildCenterArtwork()),
-                  ),
-                  Container(
-                    width: widget.size,
-                    height: widget.size,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          Colors.white.withValues(alpha: 0.08),
-                          Colors.transparent,
-                        ],
-                        radius: 0.8,
-                        center: const Alignment(-0.4, -0.6),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
+          child: _buildDisk(),
+          builder: (_, child) {
+            return Transform.rotate(angle: _diskController.value, child: child);
           },
         ),
-        Positioned(
-          top: -widget.size * 0.12,
-          right: -widget.size * 0.15,
-          child: VinylNeedle(animation: _needleAnimation, size: widget.size),
+        if (widget.showNeedle)
+          Positioned(
+            top: -widget.size * 0.12,
+            right: -widget.size * 0.15,
+            child: VinylNeedle(animation: _needleAnimation, size: widget.size),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildDisk() {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Container(
+          width: widget.size,
+          height: widget.size,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.black,
+          ),
+        ),
+        CustomPaint(
+          size: Size(widget.size, widget.size),
+          painter: _VinylGroovesPainter(),
+        ),
+        Container(
+          width: widget.size * 0.45,
+          height: widget.size * 0.45,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.grey.shade800,
+          ),
+          child: ClipOval(child: RepaintBoundary(child: _buildCenterArtwork())),
+        ),
+        Container(
+          width: widget.size,
+          height: widget.size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
+              colors: [
+                Colors.white.withValues(alpha: 0.08),
+                Colors.transparent,
+              ],
+              radius: 0.8,
+              center: const Alignment(-0.4, -0.6),
+            ),
+          ),
         ),
       ],
     );
@@ -183,27 +265,6 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
       child: const Icon(Icons.music_note, color: Colors.white70),
     );
   }
-}
-
-class _VinylSimulation extends Simulation {
-  final double start;
-  final double velocity;
-  final double friction;
-
-  _VinylSimulation({
-    required this.start,
-    required this.velocity,
-    this.friction = 0.02,
-  });
-
-  @override
-  double x(double time) => start + velocity * time;
-
-  @override
-  double dx(double time) => velocity * exp(-friction * time);
-
-  @override
-  bool isDone(double time) => dx(time).abs() < 0.001;
 }
 
 class _VinylGroovesPainter extends CustomPainter {
