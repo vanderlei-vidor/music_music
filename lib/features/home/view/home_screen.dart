@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:music_music/app/app_info.dart';
 import 'package:music_music/app/routes.dart';
 import 'package:music_music/core/preferences/featured_prefs.dart';
+import 'package:music_music/core/preferences/podcast_preferences.dart';
 import 'package:music_music/core/web_upload/web_drag_drop_area.dart';
 import 'package:music_music/core/web_upload/web_music_uploader.dart';
 import 'package:music_music/core/preferences/welcome_prefs.dart';
@@ -35,7 +36,7 @@ class _HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<_HomeView>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   int _currentIndex = 0;
   int _bottomNavIndex = 0;
   String _userName = 'Usuario';
@@ -46,7 +47,7 @@ class _HomeViewState extends State<_HomeView>
   String _featuredPersistedSignature = '';
 
   late HomeViewModel _homeVM;
-  late final TabController _tabController;
+  late TabController _tabController;
 
   @override
   void initState() {
@@ -54,15 +55,31 @@ class _HomeViewState extends State<_HomeView>
 
     _homeVM = context.read<HomeViewModel>();
     _homeVM.addListener(_onHomeChanged);
-    _tabController = TabController(length: 6, vsync: this);
+    _initTabController(6);
+    _loadUserName();
+    _loadFeaturedSnapshot();
+  }
+
+  void _initTabController(int length, {int initialIndex = 0}) {
+    _tabController = TabController(
+      length: length,
+      vsync: this,
+      initialIndex: initialIndex.clamp(0, length - 1),
+    );
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging &&
           _currentIndex != _tabController.index) {
         setState(() => _currentIndex = _tabController.index);
       }
     });
-    _loadUserName();
-    _loadFeaturedSnapshot();
+  }
+
+  void _syncTabControllerLength(int length) {
+    if (_tabController.length == length) return;
+    final targetIndex = _currentIndex.clamp(0, length - 1);
+    _tabController.dispose();
+    _initTabController(length, initialIndex: targetIndex);
+    _currentIndex = targetIndex;
   }
 
   Future<void> _loadUserName() async {
@@ -369,6 +386,9 @@ class _HomeViewState extends State<_HomeView>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final podcastsEnabled = context.watch<PodcastPreferences>().enabled;
+    final tabCount = podcastsEnabled ? 7 : 6;
+    _syncTabControllerLength(tabCount);
     final width = MediaQuery.of(context).size.width;
     final isCompact = width < 420;
 
@@ -539,7 +559,10 @@ class _HomeViewState extends State<_HomeView>
                           Tab(height: 34, text: 'Pastas'),
                           Tab(height: 34, text: 'Generos'),
                           Tab(height: 34, text: 'Playlists'),
-                        ],
+                        ] +
+                            (podcastsEnabled
+                                ? const [Tab(height: 34, text: 'Podcasts')]
+                                : const []),
                         onTap: (index) => setState(() => _currentIndex = index),
                       ),
                       Expanded(
@@ -552,7 +575,10 @@ class _HomeViewState extends State<_HomeView>
                             FoldersView(),
                             GenresView(),
                             HomePlaylistsTab(),
-                          ],
+                          ] +
+                              (podcastsEnabled
+                                  ? const [HomePodcastsTab()]
+                                  : const []),
                         ),
                       ),
                     ],
@@ -647,6 +673,12 @@ class _HomeDrawer extends StatelessWidget {
               label: 'Playlists',
               onTap: () => onOpenTab(5),
             ),
+            if (context.watch<PodcastPreferences>().enabled)
+              _DrawerItem(
+                icon: Icons.podcasts_rounded,
+                label: 'Podcasts',
+                onTap: () => onOpenTab(6),
+              ),
             const Spacer(),
             const Divider(),
             _DrawerItem(

@@ -1,17 +1,17 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:music_music/data/models/music_entity.dart';
-import 'package:music_music/core/ui/genre_colors.dart';
-import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 import 'package:music_music/app/routes.dart';
-
-import 'package:music_music/shared/widgets/collection_sticky_controls.dart';
-import 'package:music_music/shared/widgets/mini_progress_bar.dart';
-import 'package:music_music/shared/widgets/mini_equalizer.dart';
-import 'package:music_music/shared/widgets/skeleton.dart';
+import 'package:music_music/core/ui/genre_colors.dart';
+import 'package:music_music/data/models/music_entity.dart';
+import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 import 'package:music_music/shared/widgets/artwork_image.dart';
+import 'package:music_music/shared/widgets/collection_sticky_controls.dart';
+import 'package:music_music/shared/widgets/mini_equalizer.dart';
+import 'package:music_music/shared/widgets/mini_progress_bar.dart';
+import 'package:music_music/shared/widgets/skeleton.dart';
 
 class GenreDetailView extends StatefulWidget {
   final String genre;
@@ -27,6 +27,7 @@ class _GenreDetailViewState extends State<GenreDetailView> {
   final Map<int, GlobalKey> _itemKeys = {};
   final ValueNotifier<List<MusicEntity>> _musicsNotifier =
       ValueNotifier<List<MusicEntity>>(<MusicEntity>[]);
+  bool _showHeader = true;
 
   @override
   void dispose() {
@@ -37,33 +38,38 @@ class _GenreDetailViewState extends State<GenreDetailView> {
   @override
   Widget build(BuildContext context) {
     final safeGenre = widget.musics.firstOrNull?.genre;
-
     final color = GenreColorHelper.getColor(
       safeGenre?.isNotEmpty == true ? safeGenre! : widget.genre,
     );
 
-    // Escuta APENAS troca da musica atual
     context.select<PlaylistViewModel, int?>((vm) => vm.currentMusic?.id);
-
-    // Scroll automatico seguro
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _scrollToCurrentMusic(context);
+      if (mounted) _scrollToCurrentMusic(context);
     });
-
     _musicsNotifier.value = widget.musics;
 
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          // HEADER
           SliverAppBar(
-            expandedHeight: 260,
+            expandedHeight: _showHeader ? 260 : 112,
+            collapsedHeight: _showHeader ? 260 : 112,
             pinned: true,
-            stretch: true,
+            stretch: false,
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             surfaceTintColor: Colors.transparent,
             elevation: 0,
+            actions: [
+              IconButton(
+                tooltip: _showHeader ? 'Ocultar cabecalho' : 'Mostrar cabecalho',
+                onPressed: () => setState(() => _showHeader = !_showHeader),
+                icon: AnimatedRotation(
+                  turns: _showHeader ? 0.0 : 0.5,
+                  duration: const Duration(milliseconds: 220),
+                  child: const Icon(Icons.keyboard_arrow_up_rounded),
+                ),
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
                 widget.genre,
@@ -72,49 +78,66 @@ class _GenreDetailViewState extends State<GenreDetailView> {
               ),
               background: Hero(
                 tag: 'genre_${widget.genre}',
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [color.withValues(alpha: 0.95), Colors.black],
+                child: AnimatedCrossFade(
+                  duration: const Duration(milliseconds: 260),
+                  firstCurve: Curves.easeOutCubic,
+                  secondCurve: Curves.easeOutCubic,
+                  crossFadeState: _showHeader
+                      ? CrossFadeState.showFirst
+                      : CrossFadeState.showSecond,
+                  firstChild: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [color.withValues(alpha: 0.95), Colors.black],
+                          ),
                         ),
                       ),
-                    ),
-                    BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                      child: Container(
-                        color: Colors.black.withValues(alpha: 0.25),
+                      BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.25),
+                        ),
+                      ),
+                      Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.music_note,
+                              size: 64,
+                              color: Colors.white.withValues(alpha: 0.9),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              '${widget.musics.length} musicas',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(color: Colors.white70),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  secondChild: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [color.withValues(alpha: 0.95), Colors.black],
                       ),
                     ),
-                    Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.music_note,
-                            size: 64,
-                            color: Colors.white.withValues(alpha: 0.9),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            '${widget.musics.length} músicas',
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: Colors.white70),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
-
-          // CONTROLES FIXOS
           SliverPersistentHeader(
             pinned: true,
             delegate: CollectionStickyControls(
@@ -122,8 +145,6 @@ class _GenreDetailViewState extends State<GenreDetailView> {
               color: color,
             ),
           ),
-
-          // LISTA DE MUSICAS
           ValueListenableBuilder<List<MusicEntity>>(
             valueListenable: _musicsNotifier,
             builder: (_, musics, __) {
@@ -133,80 +154,76 @@ class _GenreDetailViewState extends State<GenreDetailView> {
               return SliverList(
                 delegate: SliverChildBuilderDelegate((context, index) {
                   final music = musics[index];
-
                   _itemKeys.putIfAbsent(music.id!, () => GlobalKey());
 
                   return Container(
                     key: _itemKeys[music.id],
-                    child: ListTile(
-                      leading: Selector<PlaylistViewModel, _NowPlayingState>(
-                        selector: (_, vm) => _NowPlayingState(
-                          id: vm.currentMusic?.id,
-                          isPlaying: vm.isPlaying,
-                        ),
-                        builder: (_, state, __) {
-                          final isCurrent = state.id == music.id;
-                          if (!isCurrent) {
-                            return ArtworkThumb(
-                              artworkUrl: music.artworkUrl,
-                              audioId: music.sourceId ?? music.id,
-                            );
-                          }
-                          return MiniEqualizer(
-                            isPlaying: state.isPlaying,
-                            color: color,
-                            size: 22,
-                          );
-                        },
-                      ),
-                      title: Text(music.title),
-                      subtitle: Selector<PlaylistViewModel, _NowPlayingState>(
-                        selector: (_, vm) => _NowPlayingState(
-                          id: vm.currentMusic?.id,
-                          isPlaying: vm.isPlaying,
-                        ),
-                        builder: (_, state, __) {
-                          final isCurrent = state.id == music.id;
-                          if (!isCurrent) {
-                            return Text(music.artist);
-                          }
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(music.artist),
-                              const SizedBox(height: 4),
-                              StreamBuilder<Duration>(
-                                stream: context
-                                    .read<PlaylistViewModel>()
-                                    .positionStream,
-                                builder: (_, snapshot) {
-                                  final position =
-                                      snapshot.data ?? Duration.zero;
-                                  final duration =
-                                      context
-                                          .read<PlaylistViewModel>()
-                                          .player
-                                          .duration ??
-                                      Duration.zero;
-
-                                  return MiniProgressBar(
-                                    position: position,
-                                    duration: duration,
-                                    color: color,
-                                  );
-                                },
-                              ),
-                            ],
-                          );
-                        },
-                      ),
+                    child: InkWell(
                       onTap: () async {
                         final vm = context.read<PlaylistViewModel>();
                         await vm.playMusic(musics, index);
-
-                        if (!context.mounted) return;
+                      },
+                      onDoubleTap: () {
                         Navigator.pushNamed(context, AppRoutes.player);
                       },
+                      child: ListTile(
+                        leading: Selector<PlaylistViewModel, _NowPlayingState>(
+                          selector: (_, vm) => _NowPlayingState(
+                            id: vm.currentMusic?.id,
+                            isPlaying: vm.isPlaying,
+                          ),
+                          builder: (_, state, __) {
+                            final isCurrent = state.id == music.id;
+                            if (!isCurrent) {
+                              return ArtworkThumb(
+                                artworkUrl: music.artworkUrl,
+                                audioId: music.sourceId ?? music.id,
+                              );
+                            }
+                            return MiniEqualizer(
+                              isPlaying: state.isPlaying,
+                              color: color,
+                              size: 22,
+                            );
+                          },
+                        ),
+                        title: Text(music.title),
+                        subtitle: Selector<PlaylistViewModel, _NowPlayingState>(
+                          selector: (_, vm) => _NowPlayingState(
+                            id: vm.currentMusic?.id,
+                            isPlaying: vm.isPlaying,
+                          ),
+                          builder: (_, state, __) {
+                            final isCurrent = state.id == music.id;
+                            if (!isCurrent) return Text(music.artist);
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(music.artist),
+                                const SizedBox(height: 4),
+                                StreamBuilder<Duration>(
+                                  stream: context
+                                      .read<PlaylistViewModel>()
+                                      .positionStream,
+                                  builder: (_, snapshot) {
+                                    final position = snapshot.data ?? Duration.zero;
+                                    final duration = context
+                                            .read<PlaylistViewModel>()
+                                            .player
+                                            .duration ??
+                                        Duration.zero;
+                                    return MiniProgressBar(
+                                      position: position,
+                                      duration: duration,
+                                      color: color,
+                                    );
+                                  },
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
                     ),
                   );
                 }, childCount: musics.length),
@@ -218,19 +235,13 @@ class _GenreDetailViewState extends State<GenreDetailView> {
     );
   }
 
-  // ===============================
-  // SCROLL PREMIUM
-  // ===============================
   void _scrollToCurrentMusic(BuildContext context) {
     final vm = context.read<PlaylistViewModel>();
     final currentId = vm.currentMusic?.id;
-
     if (currentId == null) return;
 
     final key = _itemKeys[currentId];
-    if (key == null) return;
-
-    final ctx = key.currentContext;
+    final ctx = key?.currentContext;
     if (ctx == null) return;
 
     Scrollable.ensureVisible(

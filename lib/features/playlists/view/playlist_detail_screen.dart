@@ -1,18 +1,16 @@
-// lib/views/playlist/playlist_detail_screen.dart
-
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:music_music/shared/widgets/playlist_sticky_controls.dart';
-import 'package:music_music/shared/widgets/swipe_to_reveal_actions.dart';
-import 'package:music_music/core/theme/app_shadows.dart';
 import 'package:provider/provider.dart';
 
+import 'package:music_music/app/routes.dart';
+import 'package:music_music/core/theme/app_shadows.dart';
 import 'package:music_music/data/models/music_entity.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
-import 'package:music_music/app/routes.dart';
 import 'package:music_music/shared/widgets/artwork_image.dart';
+import 'package:music_music/shared/widgets/playlist_sticky_controls.dart';
+import 'package:music_music/shared/widgets/swipe_to_reveal_actions.dart';
 
 class PlaylistDetailScreen extends StatefulWidget {
   final int playlistId;
@@ -30,10 +28,12 @@ class PlaylistDetailScreen extends StatefulWidget {
 
 class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   final TextEditingController _searchController = TextEditingController();
-  List<MusicEntity> _allMusics = [];
-  List<MusicEntity> _filteredMusics = [];
   final ValueNotifier<List<MusicEntity>> _displayedMusics =
       ValueNotifier<List<MusicEntity>>(<MusicEntity>[]);
+  final Set<int> _removingMusicIds = <int>{};
+
+  List<MusicEntity> _allMusics = [];
+  List<MusicEntity> _filteredMusics = [];
 
   @override
   void initState() {
@@ -45,7 +45,6 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   @override
   void didUpdateWidget(covariant PlaylistDetailScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-
     if (oldWidget.playlistId != widget.playlistId) {
       _reloadMusics();
     }
@@ -63,10 +62,10 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
         .read<PlaylistViewModel>()
         .getMusicsFromPlaylistV2(widget.playlistId)
         .then((musics) {
-          _allMusics = musics;
-          _filteredMusics = musics;
-          _syncDisplayedMusics();
-        });
+      _allMusics = musics;
+      _filteredMusics = musics;
+      _syncDisplayedMusics();
+    });
   }
 
   void _filterMusics() {
@@ -86,6 +85,89 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     _displayedMusics.value = List<MusicEntity>.unmodifiable(_filteredMusics);
   }
 
+  Future<void> _openMusicSelection() async {
+    final result = await Navigator.pushNamed(
+      context,
+      AppRoutes.musicSelection,
+      arguments: MusicSelectionArgs(
+        playlistId: widget.playlistId,
+        playlistName: widget.playlistName,
+      ),
+    );
+    _reloadMusics();
+
+    if (!mounted) return;
+    final addedCount = result is int ? result : 0;
+    if (addedCount > 0) {
+      final label = addedCount == 1 ? 'musica adicionada' : 'musicas adicionadas';
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            duration: const Duration(milliseconds: 1400),
+            content: Text('$addedCount $label na playlist'),
+          ),
+        );
+    }
+  }
+
+  Future<void> _removeMusicWithUndo(MusicEntity music) async {
+    final musicId = music.id;
+    if (musicId == null) return;
+
+    final allIndex = _allMusics.indexWhere((m) => m.id == musicId);
+    final filteredIndex = _filteredMusics.indexWhere((m) => m.id == musicId);
+    if (allIndex == -1 || filteredIndex == -1) return;
+
+    setState(() {
+      _removingMusicIds.add(musicId);
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 180));
+    if (!mounted) return;
+
+    final vm = context.read<PlaylistViewModel>();
+    await vm.removeMusicFromPlaylist(widget.playlistId, musicId);
+
+    _allMusics.removeWhere((m) => m.id == musicId);
+    _filteredMusics.removeWhere((m) => m.id == musicId);
+    _syncDisplayedMusics();
+
+    setState(() {
+      _removingMusicIds.remove(musicId);
+    });
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: const Text('Musica removida da playlist'),
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: 'Desfazer',
+            onPressed: () async {
+              await vm.addMusicToPlaylistV2(widget.playlistId, musicId);
+
+              final insertAll = allIndex.clamp(0, _allMusics.length);
+              _allMusics.insert(insertAll, music);
+
+              final query = _searchController.text.toLowerCase();
+              final passesFilter =
+                  query.isEmpty ||
+                  music.title.toLowerCase().contains(query) ||
+                  music.artist.toLowerCase().contains(query);
+              if (passesFilter) {
+                final insertFiltered = filteredIndex.clamp(0, _filteredMusics.length);
+                _filteredMusics.insert(insertFiltered, music);
+              }
+
+              _syncDisplayedMusics();
+            },
+          ),
+        ),
+      );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -94,25 +176,16 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
         icon: const Icon(Icons.add),
-        label: const Text('Adicionar música'),
+        label: const Text('Adicionar musica'),
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
         onPressed: () async {
           HapticFeedback.selectionClick();
-          await Navigator.pushNamed(
-            context,
-            AppRoutes.musicSelection,
-            arguments: MusicSelectionArgs(
-              playlistId: widget.playlistId,
-              playlistName: widget.playlistName,
-            ),
-          );
-          _reloadMusics();
+          await _openMusicSelection();
         },
       ),
       body: CustomScrollView(
         slivers: [
-          // ?? HEADER GRANDE
           SliverAppBar(
             expandedHeight: 220,
             pinned: true,
@@ -138,14 +211,10 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               background: _buildHeaderBackground(theme),
             ),
           ),
-
-          // ?? CONTROLES STICKY (GRUDAM NO TOPO)
           SliverPersistentHeader(
             pinned: true,
             delegate: PlaylistStickyControls(),
           ),
-
-          // ?? LISTA
           ValueListenableBuilder<List<MusicEntity>>(
             valueListenable: _displayedMusics,
             builder: (_, musics, __) {
@@ -177,44 +246,31 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Esta playlist ainda está vazia',
+                'Esta playlist ainda esta vazia',
                 style: theme.textTheme.titleMedium,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
-                'Adicione músicas para começar a curtir ??',
+                'Adicione musicas para comecar a curtir',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
-
-              /// ?? BOTÃO DE AÇÃO
               ElevatedButton.icon(
                 icon: const Icon(Icons.add),
-                label: const Text('Adicionar músicas'),
+                label: const Text('Adicionar musicas'),
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 14,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
                 onPressed: () async {
                   HapticFeedback.selectionClick();
-                  await Navigator.pushNamed(
-                    context,
-                    AppRoutes.musicSelection,
-                    arguments: MusicSelectionArgs(
-                      playlistId: widget.playlistId,
-                      playlistName: widget.playlistName,
-                    ),
-                  );
-                  _reloadMusics();
+                  await _openMusicSelection();
                 },
               ),
             ],
@@ -228,100 +284,87 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate((context, index) {
           final music = musics[index];
-
-          final shadows =
-              Theme.of(context).extension<AppShadows>()?.surface ?? [];
-
+          final shadows = Theme.of(context).extension<AppShadows>()?.surface ?? [];
           ArtworkCache.preload(context, music.artworkUrl);
+
+          final isRemoving = music.id != null && _removingMusicIds.contains(music.id);
 
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            child: SwipeToRevealActions(
-              isFavorite: music.isFavorite,
-              onToggleFavorite: () async {
-                final vm = context.read<PlaylistViewModel>();
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 180),
+              opacity: isRemoving ? 0.0 : 1.0,
+              child: AnimatedScale(
+                duration: const Duration(milliseconds: 180),
+                scale: isRemoving ? 0.95 : 1.0,
+                child: SwipeToRevealActions(
+                  isFavorite: music.isFavorite,
+                  onToggleFavorite: () async {
+                    final vm = context.read<PlaylistViewModel>();
+                    HapticFeedback.selectionClick();
+                    final newValue = await vm.toggleFavorite(music);
 
-                HapticFeedback.selectionClick();
-                final newValue = await vm.toggleFavorite(music);
-
-                final index = _allMusics.indexWhere((m) => m.id == music.id);
-                if (index != -1) {
-                  _allMusics[index] = _allMusics[index].copyWith(
-                    isFavorite: newValue,
-                  );
-                }
-
-                final filteredIndex = _filteredMusics.indexWhere(
-                  (m) => m.id == music.id,
-                );
-                if (filteredIndex != -1) {
-                  _filteredMusics[filteredIndex] =
-                      _filteredMusics[filteredIndex].copyWith(
+                    final allIndex = _allMusics.indexWhere((m) => m.id == music.id);
+                    if (allIndex != -1) {
+                      _allMusics[allIndex] = _allMusics[allIndex].copyWith(
                         isFavorite: newValue,
                       );
-                }
-                _syncDisplayedMusics();
-              },
+                    }
 
-              onDelete: () {
-                final musicId = music.id;
-                if (musicId == null) return;
-
-                HapticFeedback.selectionClick();
-                context.read<PlaylistViewModel>().removeMusicFromPlaylist(
-                  widget.playlistId,
-                  musicId,
-                );
-
-                _allMusics.removeWhere((m) => m.id == musicId);
-                _filteredMusics.removeWhere((m) => m.id == musicId);
-                _syncDisplayedMusics();
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Música removida da playlist'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              },
-
-              child: _PressableTile(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  if (viewModel.isShuffled) {
-                    final shuffled = List<MusicEntity>.from(_allMusics)
-                      ..shuffle();
-                    viewModel.playMusic(shuffled, 0);
-                  } else {
-                    viewModel.playMusic(_allMusics, index);
-                  }
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: theme.cardColor,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: shadows,
-                  ),
-                  child: ListTile(
-                    leading: ArtworkThumb(
-                      artworkUrl: music.artworkUrl,
-                      audioId: music.sourceId ?? music.id,
-                    ),
-                    title: Text(music.title),
-                    subtitle: Text(music.artist),
-                    trailing: Selector<PlaylistViewModel, _NowPlayingState>(
-                      selector: (_, vm) => _NowPlayingState(
-                        id: vm.currentMusic?.id,
-                        isPlaying: vm.isPlaying,
+                    final filteredIndex = _filteredMusics.indexWhere((m) => m.id == music.id);
+                    if (filteredIndex != -1) {
+                      _filteredMusics[filteredIndex] =
+                          _filteredMusics[filteredIndex].copyWith(
+                        isFavorite: newValue,
+                      );
+                    }
+                    _syncDisplayedMusics();
+                  },
+                  onDelete: () {
+                    HapticFeedback.selectionClick();
+                    _removeMusicWithUndo(music);
+                  },
+                  child: _PressableTile(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      if (viewModel.isShuffled) {
+                        final shuffled = List<MusicEntity>.from(_allMusics)..shuffle();
+                        viewModel.playMusic(shuffled, 0);
+                      } else {
+                        viewModel.playMusic(_allMusics, index);
+                      }
+                    },
+                    onDoubleTap: () {
+                      Navigator.pushNamed(context, AppRoutes.player);
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: shadows,
                       ),
-                      builder: (_, state, __) {
-                        final isCurrent = state.id == music.id;
-                        if (!isCurrent) return const SizedBox.shrink();
-                        return Icon(
-                          Icons.equalizer,
-                          color: theme.colorScheme.primary,
-                        );
-                      },
+                      child: ListTile(
+                        leading: ArtworkThumb(
+                          artworkUrl: music.artworkUrl,
+                          audioId: music.sourceId ?? music.id,
+                        ),
+                        title: Text(music.title),
+                        subtitle: Text(music.artist),
+                        trailing: Selector<PlaylistViewModel, _NowPlayingState>(
+                          selector: (_, vm) => _NowPlayingState(
+                            id: vm.currentMusic?.id,
+                            isPlaying: vm.isPlaying,
+                          ),
+                          builder: (_, state, __) {
+                            final isCurrent = state.id == music.id;
+                            if (!isCurrent) return const SizedBox.shrink();
+                            return Icon(
+                              Icons.equalizer,
+                              color: theme.colorScheme.primary,
+                            );
+                          },
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -363,8 +406,13 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
 class _PressableTile extends StatefulWidget {
   final Widget child;
   final VoidCallback onTap;
+  final VoidCallback? onDoubleTap;
 
-  const _PressableTile({required this.child, required this.onTap});
+  const _PressableTile({
+    required this.child,
+    required this.onTap,
+    this.onDoubleTap,
+  });
 
   @override
   State<_PressableTile> createState() => _PressableTileState();
@@ -386,6 +434,7 @@ class _PressableTileState extends State<_PressableTile> {
       onTapUp: (_) => _setPressed(false),
       onTapCancel: () => _setPressed(false),
       onTap: widget.onTap,
+      onDoubleTap: widget.onDoubleTap,
       child: AnimatedScale(
         scale: _pressed ? 0.985 : 1.0,
         duration: const Duration(milliseconds: 120),

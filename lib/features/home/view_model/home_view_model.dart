@@ -4,6 +4,7 @@ import 'package:music_music/data/local/database_helper.dart';
 import 'package:music_music/core/music/music_scanner_factory.dart'
     if (dart.library.html)
         'package:music_music/core/music/music_scanner_factory_web.dart';
+import 'package:music_music/core/utils/podcast_detector.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 
@@ -76,8 +77,10 @@ class HomeViewModel extends ChangeNotifier {
   String get currentQuery => _currentQuery;
 
   final List<MusicEntity> _visibleMusics = [];
+  final List<MusicEntity> _podcastMusics = [];
 
   List<MusicEntity> get visibleMusics => _visibleMusics;
+  List<MusicEntity> get podcastMusics => _podcastMusics;
 
   final List<SearchResult> _searchResults = [];
   List<SearchResult> get searchResults => _searchResults;
@@ -154,7 +157,10 @@ class HomeViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _dbHelper.getAllMusicsV2();
+      final result = (await _dbHelper.getAllMusicsV2())
+          .map(PodcastDetector.normalizeGenre)
+          .map(PodcastDetector.normalizeMediaType)
+          .toList();
 
       _musics
         ..clear()
@@ -163,7 +169,11 @@ class HomeViewModel extends ChangeNotifier {
       // 🔥 ISSO É O QUE FALTAVA
       _visibleMusics
         ..clear()
-        ..addAll(_musics);
+        ..addAll(_musics.where((m) => !PodcastDetector.isPodcast(m)));
+
+      _podcastMusics
+        ..clear()
+        ..addAll(_musics.where(PodcastDetector.isPodcast));
 
       _musicsVersion++;
       _albumGroupsCacheVersion = -1;
@@ -191,7 +201,38 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   Future<void> insertWebMusic(MusicEntity music) async {
-    await _dbHelper.insertMusicV2(music);
+    final normalized = PodcastDetector.normalizeMediaType(
+      PodcastDetector.normalizeGenre(music),
+    );
+    await _dbHelper.insertMusicV2(normalized);
+    await loadMusics();
+  }
+
+  Future<void> setManualMediaType(
+    MusicEntity music, {
+    required bool isPodcast,
+  }) async {
+    final target = isPodcast
+        ? PodcastDetector.mediaTypePodcast
+        : PodcastDetector.mediaTypeMusic;
+    await _dbHelper.updateMediaType(music.audioUrl, target);
+    await loadMusics();
+  }
+
+  Future<void> removeMusicFromLibrary(MusicEntity music) async {
+    await _dbHelper.deleteMusicByAudioUrl(music.audioUrl);
+    await loadMusics();
+  }
+
+  Future<List<MusicEntity>> getRemovedMusics() async {
+    return (await _dbHelper.getDeletedMusicsV2())
+        .map(PodcastDetector.normalizeGenre)
+        .map(PodcastDetector.normalizeMediaType)
+        .toList();
+  }
+
+  Future<void> restoreMusicToLibrary(MusicEntity music) async {
+    await _dbHelper.restoreMusicByAudioUrl(music.audioUrl);
     await loadMusics();
   }
 
@@ -258,7 +299,11 @@ class HomeViewModel extends ChangeNotifier {
 }
 
 List<MusicEntity> processScanIsolate(List<MusicEntity> musics) {
-  return musics.where((m) => m.audioUrl.isNotEmpty).toList();
+  return musics
+      .where((m) => m.audioUrl.isNotEmpty)
+      .map(PodcastDetector.normalizeGenre)
+      .map(PodcastDetector.normalizeMediaType)
+      .toList();
 }
 
 class AlbumGroup {

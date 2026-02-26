@@ -17,7 +17,7 @@ class DatabaseHelper {
 
     _database = await openDatabase(
       path,
-      version: 25,
+      version: 27,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -37,7 +37,9 @@ class DatabaseHelper {
       duration INTEGER,
       album TEXT,
       genre TEXT,
+      mediaType TEXT,
       folderPath TEXT,
+      isDeleted INTEGER NOT NULL DEFAULT 0,
       isFavorite INTEGER NOT NULL DEFAULT 0,
       favoritedAt INTEGER,
       lastPlayedAt INTEGER,
@@ -161,6 +163,20 @@ class DatabaseHelper {
           .execute('ALTER TABLE musics_v2 ADD COLUMN sourceId INTEGER')
           .catchError((_) {});
     }
+
+    if (oldVersion < 26) {
+      await db
+          .execute('ALTER TABLE musics_v2 ADD COLUMN mediaType TEXT')
+          .catchError((_) {});
+    }
+
+    if (oldVersion < 27) {
+      await db
+          .execute(
+            'ALTER TABLE musics_v2 ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0',
+          )
+          .catchError((_) {});
+    }
   }
 
   // =======================
@@ -168,7 +184,19 @@ class DatabaseHelper {
   // =======================
   Future<List<MusicEntity>> getAllMusicsV2() async {
     final db = await database;
-    final result = await db.query('musics_v2');
+    final result = await db.query(
+      'musics_v2',
+      where: 'isDeleted IS NULL OR isDeleted = 0',
+    );
+    return result.map((e) => MusicEntity.fromMap(e)).toList();
+  }
+
+  Future<List<MusicEntity>> getDeletedMusicsV2() async {
+    final db = await database;
+    final result = await db.query(
+      'musics_v2',
+      where: 'isDeleted = 1',
+    );
     return result.map((e) => MusicEntity.fromMap(e)).toList();
   }
 
@@ -184,7 +212,9 @@ class DatabaseHelper {
       'duration': music.duration,
       'album': music.album,
       'genre': music.genre,
+      'mediaType': music.mediaType,
       'folderPath': music.folderPath,
+      'isDeleted': 0,
       'isFavorite': music.isFavorite ? 1 : 0,
       'lastPlayedAt': music.lastPlayedAt,
       'playCount': music.playCount,
@@ -269,7 +299,7 @@ class DatabaseHelper {
 
     final result = await db.query(
       'musics_v2',
-      where: 'isFavorite = ?',
+      where: 'isFavorite = ? AND (isDeleted IS NULL OR isDeleted = 0)',
       whereArgs: [1],
     );
 
@@ -285,7 +315,7 @@ class DatabaseHelper {
 
     final result = await db.query(
       'musics_v2',
-      where: 'lastPlayedAt IS NOT NULL',
+      where: 'lastPlayedAt IS NOT NULL AND (isDeleted IS NULL OR isDeleted = 0)',
       orderBy: 'lastPlayedAt DESC',
       limit: 100,
     );
@@ -333,6 +363,7 @@ class DatabaseHelper {
 
     final result = await db.query(
       'musics_v2',
+      where: 'isDeleted IS NULL OR isDeleted = 0',
       orderBy: 'playCount DESC',
       limit: limit,
     );
@@ -376,6 +407,16 @@ class DatabaseHelper {
       if (currentSourceId == null && music.sourceId != null) {
         updates['sourceId'] = music.sourceId;
       }
+      final currentMediaType = existing.first['mediaType'] as String?;
+      if ((currentMediaType == null || currentMediaType.isEmpty) &&
+          music.mediaType != null &&
+          music.mediaType!.isNotEmpty) {
+        updates['mediaType'] = music.mediaType;
+      }
+      final isDeleted = existing.first['isDeleted'] as int?;
+      if (isDeleted == 1) {
+        return;
+      }
       if (updates.isNotEmpty) {
         await executor.update(
           'musics_v2',
@@ -393,7 +434,9 @@ class DatabaseHelper {
       'artist': music.artist,
       'album': music.album,
       'genre': music.genre,
+      'mediaType': music.mediaType,
       'folderPath': music.folderPath,
+      'isDeleted': 0,
       'audioUrl': music.audioUrl,
       'artworkUrl': music.artworkUrl,
       'duration': music.duration,
@@ -401,6 +444,61 @@ class DatabaseHelper {
       'lastPlayedAt': null,
       'playCount': 0,
     }, conflictAlgorithm: ConflictAlgorithm.ignore);
+  }
+
+  Future<void> updateMediaType(String audioUrl, String? mediaType) async {
+    final db = await database;
+    await db.update(
+      'musics_v2',
+      {'mediaType': mediaType},
+      where: 'audioUrl = ?',
+      whereArgs: [audioUrl],
+    );
+  }
+
+  Future<void> deleteMusicByAudioUrl(String audioUrl) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      final found = await txn.query(
+        'musics_v2',
+        columns: ['id'],
+        where: 'audioUrl = ?',
+        whereArgs: [audioUrl],
+        limit: 1,
+      );
+
+      final musicId = found.isNotEmpty ? found.first['id'] as int? : null;
+      if (musicId != null) {
+        await txn.delete(
+          'playlist_musics_v2',
+          where: 'musicId = ?',
+          whereArgs: [musicId],
+        );
+      }
+
+      await txn.delete(
+        'playback_queue_items',
+        where: 'audioUrl = ?',
+        whereArgs: [audioUrl],
+      );
+
+      await txn.update(
+        'musics_v2',
+        {'isDeleted': 1, 'isFavorite': 0},
+        where: 'audioUrl = ?',
+        whereArgs: [audioUrl],
+      );
+    });
+  }
+
+  Future<void> restoreMusicByAudioUrl(String audioUrl) async {
+    final db = await database;
+    await db.update(
+      'musics_v2',
+      {'isDeleted': 0},
+      where: 'audioUrl = ?',
+      whereArgs: [audioUrl],
+    );
   }
 
   // =======================

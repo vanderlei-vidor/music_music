@@ -67,16 +67,16 @@ class GenreCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w700,
                   fontSize: 14,
                 ),
               ),
             ),
             Text(
-              '$count músicas',
+              '$count musicas',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: color.withValues(alpha: 0.75),
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],

@@ -86,13 +86,18 @@ class _SwipeToRevealActionsState extends State<SwipeToRevealActions> {
                   children: [
                     // â­ FAVORITO
                     IconButton(
-                      icon: Icon(
-                        widget.isFavorite
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        color: widget.isFavorite
-                            ? Colors.redAccent
-                            : theme.colorScheme.onSurfaceVariant,
+                      icon: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 180),
+                        transitionBuilder: (child, animation) {
+                          return ScaleTransition(scale: animation, child: child);
+                        },
+                        child: Icon(
+                          widget.isFavorite ? Icons.favorite : Icons.favorite_border,
+                          key: ValueKey<bool>(widget.isFavorite),
+                          color: widget.isFavorite
+                              ? Colors.redAccent
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                       onPressed: widget.onToggleFavorite,
                     ),

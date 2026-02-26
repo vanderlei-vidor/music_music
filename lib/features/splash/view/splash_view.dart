@@ -154,7 +154,7 @@ class _SplashViewState extends State<SplashView> {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        'Preparando tudoâ€¦',
+                        'Preparando tudo para você',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: Colors.white70,
                         ),

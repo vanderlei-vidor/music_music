@@ -19,6 +19,8 @@ class GenresView extends StatefulWidget {
 class _GenresViewState extends State<GenresView>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  String _query = '';
+  _GenreSort _sort = _GenreSort.az;
 
   @override
   void initState() {
@@ -52,7 +54,18 @@ class _GenresViewState extends State<GenresView>
       genres.putIfAbsent(genre, () => []).add(m);
     }
 
-    final genreNames = genres.keys.toList()..sort();
+    final genreNames = genres.keys.toList();
+    final filteredGenres = genreNames
+        .where((g) => g.toLowerCase().contains(_query.trim().toLowerCase()))
+        .toList();
+    filteredGenres.sort((a, b) {
+      switch (_sort) {
+        case _GenreSort.az:
+          return a.toLowerCase().compareTo(b.toLowerCase());
+        case _GenreSort.mostSongs:
+          return genres[b]!.length.compareTo(genres[a]!.length);
+      }
+    });
     final columns = Responsive.value(
       context,
       compact: 2,
@@ -85,67 +98,126 @@ class _GenresViewState extends State<GenresView>
       return const _GenresSkeleton();
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: columns,
-        mainAxisSpacing: mainSpacing,
-        crossAxisSpacing: crossSpacing,
-        mainAxisExtent: mainExtent,
-      ),
-      itemCount: genreNames.length,
-      itemBuilder: (context, index) {
-        final genre = genreNames[index];
-        final genreMusics = genres[genre]!;
-        final cover = genreMusics.isEmpty ? null : genreMusics.first;
-
-        return AnimatedBuilder(
-          animation: _controller,
-          child: Hero(
-            tag: 'genre_$genre',
-            child: Material(
-              color: Colors.transparent,
-              child: GenreCard(
-                genre: genre,
-                count: genreMusics.length,
-                artworkUrl: cover?.artworkUrl,
-                audioId: cover == null ? null : (cover.sourceId ?? cover.id),
-                onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    AppRoutes.genreDetail,
-                    arguments: GenreDetailArgs(
-                      genre: genre,
-                      musics: genreMusics,
-                    ),
-                  );
-                },
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: TextField(
+            onChanged: (value) => setState(() => _query = value),
+            decoration: InputDecoration(
+              hintText: 'Buscar genero (${filteredGenres.length})',
+              prefixIcon: const Icon(Icons.search_rounded),
+              isDense: true,
+              filled: true,
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
               ),
             ),
           ),
-          builder: (context, child) {
-            final animation = CurvedAnimation(
-              parent: _controller,
-              curve: Interval(
-                (index / genreNames.length).clamp(0.0, 1.0),
-                1.0,
-                curve: Curves.easeOutCubic,
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Row(
+            children: [
+              ChoiceChip(
+                label: const Text('A-Z'),
+                selected: _sort == _GenreSort.az,
+                onSelected: (_) => setState(() => _sort = _GenreSort.az),
               ),
-            );
+              const SizedBox(width: 8),
+              ChoiceChip(
+                label: const Text('Mais músicas'),
+                selected: _sort == _GenreSort.mostSongs,
+                onSelected: (_) => setState(() => _sort = _GenreSort.mostSongs),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: filteredGenres.isEmpty
+              ? const _GenresEmptyState()
+              : GridView.builder(
+                  padding: const EdgeInsets.all(16),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    mainAxisSpacing: mainSpacing,
+                    crossAxisSpacing: crossSpacing,
+                    mainAxisExtent: mainExtent,
+                  ),
+                  itemCount: filteredGenres.length,
+                  itemBuilder: (context, index) {
+                    final genre = filteredGenres[index];
+                    final genreMusics = genres[genre]!;
+                    final cover = genreMusics.isEmpty ? null : genreMusics.first;
 
-            return FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 0.15),
-                  end: Offset.zero,
-                ).animate(animation),
-                child: child,
-              ),
-            );
-          },
-        );
-      },
+                    return AnimatedBuilder(
+                      animation: _controller,
+                      child: Hero(
+                        tag: 'genre_$genre',
+                        child: Material(
+                          color: Colors.transparent,
+                          child: GenreCard(
+                            genre: genre,
+                            count: genreMusics.length,
+                            artworkUrl: cover?.artworkUrl,
+                            audioId: cover == null ? null : (cover.sourceId ?? cover.id),
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                AppRoutes.genreDetail,
+                                arguments: GenreDetailArgs(
+                                  genre: genre,
+                                  musics: genreMusics,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      builder: (context, child) {
+                        final animation = CurvedAnimation(
+                          parent: _controller,
+                          curve: Interval(
+                            (index / filteredGenres.length).clamp(0.0, 1.0),
+                            1.0,
+                            curve: Curves.easeOutCubic,
+                          ),
+                        );
+
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0, 0.15),
+                              end: Offset.zero,
+                            ).animate(animation),
+                            child: child,
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+enum _GenreSort { az, mostSongs }
+
+class _GenresEmptyState extends StatelessWidget {
+  const _GenresEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        'Nenhum genero encontrado',
+        style: Theme.of(context).textTheme.bodyMedium,
+      ),
     );
   }
 }

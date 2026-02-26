@@ -1,5 +1,3 @@
-// lib/views/playlist/music_selection_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -27,16 +25,14 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
   late final PlaylistViewModel _viewModel;
 
   bool _isLoading = true;
+  bool _isSaving = false;
+  bool _isSearching = false;
   List<MusicEntity> _allMusics = [];
   List<MusicEntity> _filteredMusics = [];
 
   final Set<int> _existingMusicIds = <int>{};
-  final ValueNotifier<Set<int>> _selectedMusicIds = ValueNotifier<Set<int>>(
-    <int>{},
-  );
-
+  final ValueNotifier<Set<int>> _selectedMusicIds = ValueNotifier<Set<int>>(<int>{});
   final TextEditingController _searchController = TextEditingController();
-  bool _isSearching = false;
 
   @override
   void initState() {
@@ -56,11 +52,8 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
   Future<void> _loadAllMusics() async {
     try {
       final db = DatabaseHelper.instance;
-
       final allMusics = await db.getAllMusicsV2();
-      final playlistMusics = await _viewModel.getMusicsFromPlaylistV2(
-        widget.playlistId,
-      );
+      final playlistMusics = await _viewModel.getMusicsFromPlaylistV2(widget.playlistId);
 
       _existingMusicIds
         ..clear()
@@ -74,32 +67,36 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Erro ao carregar músicas: $e');
+      debugPrint('Erro ao carregar musicas: $e');
       setState(() => _isLoading = false);
     }
   }
 
-  void _confirmSelection() async {
-    for (final musicId in _selectedMusicIds.value) {
+  Future<void> _confirmSelection() async {
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
+    final selected = _selectedMusicIds.value;
+    final newlyAddedIds = selected.difference(_existingMusicIds);
+
+    for (final musicId in selected) {
       if (!_existingMusicIds.contains(musicId)) {
         await _viewModel.addMusicToPlaylistV2(widget.playlistId, musicId);
       }
     }
     if (!mounted) return;
-    Navigator.pop(context);
+    HapticFeedback.mediumImpact();
+    Navigator.pop(context, newlyAddedIds.length);
   }
 
   void _filterMusics() {
     final query = _searchController.text.toLowerCase();
     setState(() {
-      if (query.isEmpty) {
-        _filteredMusics = _allMusics;
-      } else {
-        _filteredMusics = _allMusics.where((music) {
-          return music.title.toLowerCase().contains(query) ||
-              music.artist.toLowerCase().contains(query);
-        }).toList();
-      }
+      _filteredMusics = query.isEmpty
+          ? _allMusics
+          : _allMusics.where((music) {
+              return music.title.toLowerCase().contains(query) ||
+                  music.artist.toLowerCase().contains(query);
+            }).toList();
     });
   }
 
@@ -113,12 +110,12 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
             ? TextField(
                 controller: _searchController,
                 autofocus: true,
-                decoration: InputDecoration(
-                  hintText: 'Buscar músicas...',
+                decoration: const InputDecoration(
+                  hintText: 'Buscar musicas...',
                   border: InputBorder.none,
                 ),
               )
-            : Text('Adicionar à ${widget.playlistName}'),
+            : Text('Adicionar a ${widget.playlistName}'),
         actions: [
           IconButton(
             icon: Icon(_isSearching ? Icons.close : Icons.search),
@@ -133,78 +130,133 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
               });
             },
           ),
-          TextButton(
-            onPressed: () {
-              if (_selectedMusicIds.value.isEmpty) return;
-              HapticFeedback.selectionClick();
-              _confirmSelection();
+          ValueListenableBuilder<Set<int>>(
+            valueListenable: _selectedMusicIds,
+            builder: (_, selected, __) {
+              final addedNow = selected.difference(_existingMusicIds).length;
+              return TextButton(
+                onPressed: selected.isEmpty || _isSaving
+                    ? null
+                    : () {
+                        HapticFeedback.selectionClick();
+                        _confirmSelection();
+                      },
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  child: _isSaving
+                      ? SizedBox(
+                          key: const ValueKey('saving'),
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.2,
+                            color: theme.colorScheme.primary,
+                          ),
+                        )
+                      : Text(
+                          addedNow > 0 ? 'Confirmar ($addedNow)' : 'Confirmar',
+                          key: const ValueKey('confirm'),
+                          style: TextStyle(color: theme.colorScheme.primary),
+                        ),
+                ),
+              );
             },
-            child: Text(
-              'Confirmar',
-              style: TextStyle(color: theme.colorScheme.primary),
-            ),
           ),
         ],
       ),
       body: _isLoading
-          ? Center(
-              child: CircularProgressIndicator(
-                color: theme.colorScheme.primary,
-              ),
-            )
+          ? Center(child: CircularProgressIndicator(color: theme.colorScheme.primary))
           : ListView.builder(
               itemCount: _filteredMusics.length,
               itemBuilder: (context, index) {
                 final music = _filteredMusics[index];
                 final musicId = music.id;
-
-                if (musicId == null) {
-                  return const SizedBox.shrink();
-                }
+                if (musicId == null) return const SizedBox.shrink();
 
                 final isExisting = _existingMusicIds.contains(musicId);
-
                 ArtworkCache.preload(context, music.artworkUrl);
 
                 return ValueListenableBuilder<Set<int>>(
                   valueListenable: _selectedMusicIds,
                   builder: (_, selectedSet, __) {
                     final isSelected = selectedSet.contains(musicId);
+                    final highlight = isSelected
+                        ? theme.colorScheme.primary.withValues(alpha: 0.12)
+                        : theme.cardColor;
 
-                    return _PressableTile(
-                      onTap: isExisting
-                          ? null
-                          : () {
-                              HapticFeedback.selectionClick();
-                              final next = Set<int>.from(selectedSet);
-                              if (isSelected) {
-                                next.remove(musicId);
-                              } else {
-                                next.add(musicId);
-                              }
-                              _selectedMusicIds.value = next;
-                            },
-                      child: ListTile(
-                        leading: ArtworkThumb(
-                          artworkUrl: music.artworkUrl,
-                          audioId: music.sourceId ?? music.id,
-                        ),
-                        title: Text(music.title),
-                        subtitle: Text(music.artist),
-                        trailing: Checkbox(
-                          value: isSelected,
-                          onChanged: isExisting
-                              ? null
-                              : (value) {
-                                  HapticFeedback.selectionClick();
-                                  final next = Set<int>.from(selectedSet);
-                                  if (value == true) {
-                                    next.add(musicId);
-                                  } else {
-                                    next.remove(musicId);
-                                  }
-                                  _selectedMusicIds.value = next;
-                                },
+                    return TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: 1),
+                      duration: Duration(milliseconds: 180 + (index % 8) * 18),
+                      curve: Curves.easeOutCubic,
+                      builder: (_, t, child) {
+                        return Opacity(
+                          opacity: t,
+                          child: Transform.translate(
+                            offset: Offset(0, (1 - t) * 8),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: _PressableTile(
+                        onTap: isExisting
+                            ? null
+                            : _isSaving
+                            ? null
+                            : () {
+                                HapticFeedback.selectionClick();
+                                final next = Set<int>.from(selectedSet);
+                                if (isSelected) {
+                                  next.remove(musicId);
+                                } else {
+                                  next.add(musicId);
+                                }
+                                _selectedMusicIds.value = next;
+                              },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          curve: Curves.easeOutCubic,
+                          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: highlight,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected
+                                  ? theme.colorScheme.primary.withValues(alpha: 0.6)
+                                  : Colors.transparent,
+                            ),
+                          ),
+                          child: ListTile(
+                            leading: ArtworkThumb(
+                              artworkUrl: music.artworkUrl,
+                              audioId: music.sourceId ?? music.id,
+                            ),
+                            title: Text(music.title),
+                            subtitle: Text(
+                              isExisting ? '${music.artist} • ja esta na playlist' : music.artist,
+                            ),
+                            trailing: IgnorePointer(
+                              ignoring: _isSaving,
+                              child: AnimatedScale(
+                                scale: isSelected ? 1.0 : 0.92,
+                                duration: const Duration(milliseconds: 140),
+                                child: Checkbox(
+                                  value: isSelected,
+                                  onChanged: isExisting
+                                      ? null
+                                      : (value) {
+                                          HapticFeedback.selectionClick();
+                                          final next = Set<int>.from(selectedSet);
+                                          if (value == true) {
+                                            next.add(musicId);
+                                          } else {
+                                            next.remove(musicId);
+                                          }
+                                          _selectedMusicIds.value = next;
+                                        },
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     );

@@ -63,6 +63,7 @@ class PlaylistViewModel extends ChangeNotifier {
   bool _isPersistingQueue = false;
   DateTime? _lastQueuePersistAt;
   Duration _lastPersistedPosition = Duration.zero;
+  final List<PlaybackIssue> _playbackIssues = [];
 
   // =====================
   // GETTERS
@@ -94,6 +95,13 @@ class PlaylistViewModel extends ChangeNotifier {
   Color _currentDominantColor = Colors.blueGrey.shade600;
 
   Color get currentDominantColor => _currentDominantColor;
+  List<PlaybackIssue> get playbackIssues => List.unmodifiable(_playbackIssues);
+
+  void clearPlaybackIssues() {
+    if (_playbackIssues.isEmpty) return;
+    _playbackIssues.clear();
+    notifyListeners();
+  }
 
   String? _currentGenre;
   Color? _currentGenreColor;
@@ -145,6 +153,7 @@ class PlaylistViewModel extends ChangeNotifier {
         _clearSleepTimer();
       }
     });
+
 
     loadAllMusics();
     loadRecentMusics();
@@ -279,7 +288,7 @@ class PlaylistViewModel extends ChangeNotifier {
     final children = <AudioSource>[];
 
     for (final music in _queueMusics) {
-      final uri = Uri.parse(music.audioUrl);
+      final uri = _resolveAudioUri(music);
 
       children.add(
         AudioSource.uri(
@@ -302,10 +311,22 @@ class PlaylistViewModel extends ChangeNotifier {
       children: children,
     );
 
-    await _player.setAudioSource(
-      playlist,
-      initialIndex: currentIndex.clamp(0, children.length - 1),
-    );
+    try {
+      await _player.setAudioSource(
+        playlist,
+        initialIndex: currentIndex.clamp(0, children.length - 1),
+      );
+    } catch (e, st) {
+      final idx = currentIndex.clamp(0, _queueMusics.length - 1);
+      final music = _queueMusics.isEmpty ? null : _queueMusics[idx];
+      _reportPlaybackIssue(
+        stage: 'set_audio_source',
+        error: e,
+        stackTrace: st,
+        music: music,
+      );
+      rethrow;
+    }
 
     await _player.setShuffleModeEnabled(_isShuffled);
 
@@ -313,6 +334,30 @@ class PlaylistViewModel extends ChangeNotifier {
       await _player.play();
     }
     _persistPlaybackQueue();
+  }
+
+  Uri _resolveAudioUri(MusicEntity music) {
+    final raw = music.audioUrl.trim();
+    if (raw.isEmpty) return Uri();
+
+    if (raw.startsWith('content://') ||
+        raw.startsWith('file://') ||
+        raw.startsWith('http://') ||
+        raw.startsWith('https://')) {
+      return Uri.parse(raw);
+    }
+
+    // Android scoped storage: MediaStore content URI is more reliable than file path.
+    if (raw.startsWith('/') && music.sourceId != null) {
+      return Uri.parse('content://media/external/audio/media/${music.sourceId}');
+    }
+
+    final isWindowsPath = RegExp(r'^[a-zA-Z]:\\').hasMatch(raw) ||
+        raw.startsWith('\\\\');
+    if (isWindowsPath) return Uri.file(raw);
+
+    if (raw.startsWith('/')) return Uri.file(raw);
+    return Uri.parse(raw);
   }
 
   // =====================
@@ -327,7 +372,7 @@ class PlaylistViewModel extends ChangeNotifier {
 
       final newMusic = _queueMusics[index];
 
-      if (_currentMusic?.id != newMusic.id) {
+      if (_currentMusic?.audioUrl != newMusic.audioUrl) {
         _currentMusic = newMusic;
         // 🎼 gênero atual
         _currentGenre = newMusic.genre;
@@ -384,30 +429,41 @@ class PlaylistViewModel extends ChangeNotifier {
     if (queue.isEmpty) return;
 
     final isDifferentQueue = !listEquals(
-      _queueMusics.map((e) => e.id).toList(),
-      queue.map((e) => e.id).toList(),
+      _queueMusics.map((e) => e.audioUrl).toList(),
+      queue.map((e) => e.audioUrl).toList(),
     );
 
-    if (isDifferentQueue) {
-      _queueMusics = List.from(queue);
-      await _setAudioSource(initialIndex: index);
-    } else {
-      await _player.seek(Duration.zero, index: index);
-    }
+    try {
+      if (isDifferentQueue) {
+        _queueMusics = List.from(queue);
+        await _setAudioSource(initialIndex: index);
+      } else {
+        await _player.seek(Duration.zero, index: index);
+      }
 
-    if (_isShuffled) {
-      await _player.setShuffleModeEnabled(true);
-      await _player.shuffle();
-    }
+      if (_isShuffled) {
+        await _player.setShuffleModeEnabled(true);
+        await _player.shuffle();
+      }
 
-    _currentMusic = _queueMusics[index];
-    if (kDebugMode) {
-      debugPrint('play called');
-    }
-    await _player.play();
+      _currentMusic = _queueMusics[index];
+      if (kDebugMode) {
+        debugPrint('play called');
+      }
+      await _player.play();
 
-    _persistPlaybackQueue();
-    notifyListeners();
+      _persistPlaybackQueue();
+      notifyListeners();
+    } catch (e, st) {
+      final safeIndex = index.clamp(0, queue.length - 1);
+      _reportPlaybackIssue(
+        stage: 'play_music',
+        error: e,
+        stackTrace: st,
+        music: queue[safeIndex],
+      );
+      rethrow;
+    }
   }
 
   // ⏭️ / ⏮️
@@ -527,12 +583,12 @@ class PlaylistViewModel extends ChangeNotifier {
 
     await _dbHelper.toggleFavorite(music.audioUrl, newValue);
 
-    final index = _queueMusics.indexWhere((m) => m.id == music.id);
+    final index = _queueMusics.indexWhere((m) => m.audioUrl == music.audioUrl);
     if (index != -1) {
       _queueMusics[index] = music.copyWith(isFavorite: newValue);
     }
 
-    if (_currentMusic?.id == music.id) {
+    if (_currentMusic?.audioUrl == music.audioUrl && index != -1) {
       _currentMusic = _queueMusics[index];
     }
 
@@ -634,6 +690,33 @@ class PlaylistViewModel extends ChangeNotifier {
     _playerStateSub?.cancel();
     _player.dispose();
     super.dispose();
+  }
+
+  void _reportPlaybackIssue({
+    required String stage,
+    required Object error,
+    StackTrace? stackTrace,
+    MusicEntity? music,
+  }) {
+    final issue = PlaybackIssue(
+      when: DateTime.now(),
+      stage: stage,
+      audioUrl: music?.audioUrl,
+      title: music?.title,
+      message: error.toString(),
+    );
+    _playbackIssues.insert(0, issue);
+    if (_playbackIssues.length > 30) {
+      _playbackIssues.removeRange(30, _playbackIssues.length);
+    }
+
+    debugPrint(
+      '[PlaybackIssue][$stage] ${music?.title ?? 'unknown'} | ${music?.audioUrl ?? '-'} | $error',
+    );
+    if (stackTrace != null) {
+      debugPrint(stackTrace.toString());
+    }
+    notifyListeners();
   }
 
   void _startSleepCountdown(Duration remaining, {bool force = true}) {
@@ -958,6 +1041,22 @@ class PlaylistViewModel extends ChangeNotifier {
 
     return result;
   }
+}
+
+class PlaybackIssue {
+  final DateTime when;
+  final String stage;
+  final String? audioUrl;
+  final String? title;
+  final String message;
+
+  const PlaybackIssue({
+    required this.when,
+    required this.stage,
+    required this.audioUrl,
+    required this.title,
+    required this.message,
+  });
 }
 
 

@@ -1,11 +1,12 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
-import 'package:music_music/features/player/view/mini_player_view.dart';
-import 'package:music_music/delegates/music_search_delegate.dart';
+import 'package:music_music/app/routes.dart';
 import 'package:music_music/data/models/music_entity.dart';
+import 'package:music_music/delegates/music_search_delegate.dart';
+import 'package:music_music/features/player/view/mini_player_view.dart';
+import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 
 class PlaylistView extends StatefulWidget {
   const PlaylistView({super.key});
@@ -22,18 +23,18 @@ class _PlaylistViewState extends State<PlaylistView> {
     final theme = Theme.of(context);
     final controller = TextEditingController();
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: theme.cardColor,
         title: Text(
-          'Criar Nova Playlist',
+          'Criar nova playlist',
           style: TextStyle(color: theme.colorScheme.onSurface),
         ),
         content: TextField(
           controller: controller,
           decoration: InputDecoration(
-            labelText: 'Nome da Playlist',
+            labelText: 'Nome da playlist',
             labelStyle: TextStyle(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
@@ -53,10 +54,9 @@ class _PlaylistViewState extends State<PlaylistView> {
           ),
           TextButton(
             onPressed: () {
-              if (controller.text.isNotEmpty) {
-                viewModel.createPlaylist(controller.text);
-                Navigator.pop(context);
-              }
+              if (controller.text.trim().isEmpty) return;
+              viewModel.createPlaylist(controller.text.trim());
+              Navigator.pop(context);
             },
             child: Text(
               'Criar',
@@ -75,7 +75,7 @@ class _PlaylistViewState extends State<PlaylistView> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Músicas',
+          'Musicas',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: theme.colorScheme.onSurface,
@@ -95,31 +95,25 @@ class _PlaylistViewState extends State<PlaylistView> {
             onPressed: () {
               _showCreatePlaylistDialog(
                 context,
-                Provider.of<PlaylistViewModel>(context, listen: false),
+                context.read<PlaylistViewModel>(),
               );
             },
           ),
           IconButton(
             icon: Icon(Icons.search, color: theme.colorScheme.onSurface),
             onPressed: () {
-              final viewModel = Provider.of<PlaylistViewModel>(
-                context,
-                listen: false,
-              );
+              final viewModel = context.read<PlaylistViewModel>();
               showSearch(
                 context: context,
-                delegate: MusicSearchDelegate(
-                  viewModel.musics, // âœ… MusicEntity direto
-                ),
+                delegate: MusicSearchDelegate(viewModel.libraryMusics),
               );
             },
           ),
         ],
       ),
       body: Consumer<PlaylistViewModel>(
-        builder: (context, viewModel, child) {
-          final List<MusicEntity> musics = viewModel.musics;
-
+        builder: (context, viewModel, _) {
+          final musics = viewModel.libraryMusics;
           if (musics.isEmpty) {
             return Center(
               child: CircularProgressIndicator(
@@ -135,10 +129,9 @@ class _PlaylistViewState extends State<PlaylistView> {
                   itemCount: musics.length,
                   itemBuilder: (context, index) {
                     final music = musics[index];
-                    final isPlaying = viewModel.currentMusic?.id == music.id;
 
                     return Dismissible(
-                      key: ValueKey(music.audioUrl),
+                      key: ValueKey(music.id ?? music.audioUrl),
                       direction: DismissDirection.horizontal,
                       background: _swipeFavoriteBackground(
                         isFavorite: music.isFavorite,
@@ -152,19 +145,23 @@ class _PlaylistViewState extends State<PlaylistView> {
                       ),
                       confirmDismiss: (_) async {
                         HapticFeedback.lightImpact();
-                        context.read<PlaylistViewModel>().toggleFavorite(music);
-                        return false; // ðŸ”¥ nÃ£o remove da lista
+                        await context.read<PlaylistViewModel>().toggleFavorite(music);
+                        return false;
                       },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 8,
                         ),
-                        child: _animatedMusicTile(
-                          context,
-                          theme,
-                          music,
-                          isPlaying,
+                        child: _PressableTile(
+                          onTap: () {
+                            final vm = context.read<PlaylistViewModel>();
+                            vm.playMusic(vm.libraryMusics, index);
+                          },
+                          onDoubleTap: () {
+                            Navigator.pushNamed(context, AppRoutes.player);
+                          },
+                          child: _musicTile(context, theme, music),
                         ),
                       ),
                     );
@@ -180,82 +177,143 @@ class _PlaylistViewState extends State<PlaylistView> {
   }
 
   Widget _swipeFavoriteBackground({
-  required bool isFavorite,
-  required ThemeData theme,
-  required bool isLeft,
-}) {
-  return Container(
-    alignment: isLeft ? Alignment.centerLeft : Alignment.centerRight,
-    padding: const EdgeInsets.symmetric(horizontal: 24),
-    decoration: BoxDecoration(
-      color: isFavorite
-          ? Colors.grey.shade800
-          : Colors.redAccent,
-      borderRadius: BorderRadius.circular(15),
-    ),
-    child: Icon(
-      isFavorite ? Icons.favorite_border : Icons.favorite,
-      color: Colors.white,
-      size: 30,
-    ),
-  );
-}
-Widget _animatedMusicTile(
-  BuildContext context,
-  ThemeData theme,
-  MusicEntity music,
-  bool isPlaying,
-) {
-  return AnimatedScale(
-    scale: music.isFavorite ? 1.0 : 0.97,
-    duration: const Duration(milliseconds: 200),
-    curve: Curves.easeOut,
-    child: AnimatedOpacity(
-      opacity: 1,
-      duration: const Duration(milliseconds: 200),
-      child: _musicTile(context, theme, music, isPlaying),
-    ),
-  );
-}
+    required bool isFavorite,
+    required ThemeData theme,
+    required bool isLeft,
+  }) {
+    return Container(
+      alignment: isLeft ? Alignment.centerLeft : Alignment.centerRight,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      decoration: BoxDecoration(
+        color: isFavorite ? Colors.grey.shade800 : Colors.redAccent,
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Icon(
+        isFavorite ? Icons.favorite_border : Icons.favorite,
+        color: Colors.white,
+        size: 30,
+      ),
+    );
+  }
 
-Widget _musicTile(
-  BuildContext context,
-  ThemeData theme,
-  MusicEntity music,
-  bool isPlaying,
-) {
-  return Container(
-    decoration: BoxDecoration(
-      color: theme.cardColor,
-      borderRadius: BorderRadius.circular(15),
-      border: isPlaying
-          ? Border.all(color: theme.colorScheme.primary, width: 2)
-          : null,
-      boxShadow: [
-        BoxShadow(
-          color: theme.shadowColor.withValues(alpha: 0.2),
-          blurRadius: 10,
-          offset: const Offset(0, 5),
-        ),
-      ],
-    ),
-    child: ListTile(
-      leading: Icon(Icons.music_note),
-      title: Text(music.title),
-      subtitle: Text(music.artist),
-      onTap: () {
-        context.read<PlaylistViewModel>().playMusic(
-              context.read<PlaylistViewModel>().musics,
-              context.read<PlaylistViewModel>().musics.indexOf(music),
-            );
+  Widget _musicTile(BuildContext context, ThemeData theme, MusicEntity music) {
+    return Selector<PlaylistViewModel, _NowPlayingState>(
+      selector: (_, vm) => _NowPlayingState(
+        id: vm.currentMusic?.id,
+        isPlaying: vm.isPlaying,
+      ),
+      builder: (_, state, __) {
+        final isPlaying = state.id == music.id;
+
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(15),
+            border: isPlaying
+                ? Border.all(color: theme.colorScheme.primary, width: 2)
+                : null,
+            boxShadow: [
+              BoxShadow(
+                color: theme.shadowColor.withValues(alpha: 0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: ListTile(
+            leading: Icon(
+              Icons.music_note,
+              color: isPlaying
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+            title: Text(music.title),
+            subtitle: Text(music.artist),
+            trailing: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              transitionBuilder: (child, animation) {
+                return ScaleTransition(scale: animation, child: child);
+              },
+              child: music.isFavorite
+                  ? const Icon(
+                      Icons.favorite,
+                      key: ValueKey('fav_on'),
+                      color: Colors.redAccent,
+                    )
+                  : const Icon(
+                      Icons.favorite_border,
+                      key: ValueKey('fav_off'),
+                    ),
+            ),
+          ),
+        );
       },
-    ),
-  );
+    );
+  }
 }
 
+class _PressableTile extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  final VoidCallback? onDoubleTap;
 
+  const _PressableTile({
+    required this.child,
+    required this.onTap,
+    this.onDoubleTap,
+  });
+
+  @override
+  State<_PressableTile> createState() => _PressableTileState();
 }
 
+class _PressableTileState extends State<_PressableTile> {
+  bool _pressed = false;
 
+  void _setPressed(bool value) {
+    if (_pressed == value) return;
+    setState(() => _pressed = value);
+  }
 
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTapDown: (_) => _setPressed(true),
+      onTapUp: (_) => _setPressed(false),
+      onTapCancel: () => _setPressed(false),
+      onTap: widget.onTap,
+      onDoubleTap: widget.onDoubleTap,
+      child: AnimatedScale(
+        scale: _pressed ? 0.985 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOutCubic,
+        child: AnimatedOpacity(
+          opacity: _pressed ? 0.92 : 1.0,
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOutCubic,
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}
 
+class _NowPlayingState {
+  final int? id;
+  final bool isPlaying;
+
+  const _NowPlayingState({required this.id, required this.isPlaying});
+
+  @override
+  bool operator ==(Object other) {
+    return other is _NowPlayingState &&
+        other.id == id &&
+        other.isPlaying == isPlaying;
+  }
+
+  @override
+  int get hashCode => Object.hash(id, isPlaying);
+}

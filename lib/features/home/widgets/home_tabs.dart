@@ -15,6 +15,7 @@ import 'package:music_music/shared/widgets/artwork_image.dart';
 import 'package:music_music/shared/widgets/swipe_to_reveal_actions.dart';
 import 'package:music_music/shared/widgets/playlist_play_shuffle_button.dart';
 import 'package:music_music/core/ui/responsive.dart';
+import 'package:music_music/core/utils/podcast_detector.dart';
 
 import 'package:music_music/core/theme/app_shadows.dart';
 import 'package:provider/provider.dart';
@@ -81,10 +82,10 @@ class HomeMusicsTab extends StatelessWidget {
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 140),
           children: [
-            _OpenAllMusicsCard(total: vm.musics.length),
+            _OpenAllMusicsCard(total: vm.visibleMusics.length),
             const SizedBox(height: 16),
             _HomeRailSection(
-              title: 'Feito para voce',
+              title: 'Feito para você',
               queue: vm.visibleMusics,
               items: vm.visibleMusics.take(18).toList(),
             ),
@@ -960,14 +961,38 @@ class HomeFavoritesTab extends StatelessWidget {
   }
 }
 
-class HomePlaylistsTab extends StatelessWidget {
+enum _PlaylistSort { az, mostSongs }
+
+class HomePlaylistsTab extends StatefulWidget {
   const HomePlaylistsTab({super.key});
+
+  @override
+  State<HomePlaylistsTab> createState() => _HomePlaylistsTabState();
+}
+
+class _HomePlaylistsTabState extends State<HomePlaylistsTab> {
+  String _query = '';
+  _PlaylistSort _sort = _PlaylistSort.az;
 
   @override
   Widget build(BuildContext context) {
     return Consumer<PlaylistViewModel>(
       builder: (context, vm, _) {
         final playlists = vm.playlistsWithMusicCount;
+        final filtered = playlists.where((p) {
+          final name = (p['name']?.toString() ?? '').toLowerCase();
+          return name.contains(_query.trim().toLowerCase());
+        }).toList();
+        filtered.sort((a, b) {
+          switch (_sort) {
+            case _PlaylistSort.az:
+              return (a['name']?.toString() ?? '')
+                  .toLowerCase()
+                  .compareTo((b['name']?.toString() ?? '').toLowerCase());
+            case _PlaylistSort.mostSongs:
+              return (b['musicCount'] as int).compareTo(a['musicCount'] as int);
+          }
+        });
 
         if (vm.isLoadingPlaylistsWithCount && playlists.isEmpty) {
           return const _GridSkeleton();
@@ -985,83 +1010,713 @@ class HomePlaylistsTab extends StatelessWidget {
           );
         }
 
-        return GridView.builder(
-          padding: const EdgeInsets.all(16),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: Responsive.value(
+        final crossAxisCount = Responsive.value(
+          context,
+          compact: 2,
+          medium: 3,
+          expanded: 4,
+        );
+        final crossSpacing = Responsive.value(
+          context,
+          compact: 12.0,
+          medium: 14.0,
+          expanded: 16.0,
+        );
+        final mainSpacing = Responsive.value(
+          context,
+          compact: 14.0,
+          medium: 16.0,
+          expanded: 18.0,
+        );
+        final mainExtent =
+            Responsive.value(
               context,
-              compact: 2,
-              medium: 3,
-              expanded: 4,
-            ),
-            crossAxisSpacing: Responsive.value(
-              context,
-              compact: 12.0,
-              medium: 14.0,
-              expanded: 16.0,
-            ),
-            mainAxisSpacing: Responsive.value(
-              context,
-              compact: 14.0,
-              medium: 16.0,
-              expanded: 18.0,
-            ),
-            mainAxisExtent:
-                Responsive.value(
-                  context,
-                  compact: 154.0,
-                  medium: 164.0,
-                  expanded: 172.0,
-                ) +
-                ((MediaQuery.textScalerOf(context).scale(1.0) - 1.0).clamp(
-                      0.0,
-                      0.6,
-                    ) *
-                    36),
-          ),
-          itemCount: playlists.length,
-          itemBuilder: (_, index) {
-            final p = playlists[index];
-            final shadows =
-                Theme.of(context).extension<AppShadows>()?.elevated ?? [];
+              compact: 154.0,
+              medium: 164.0,
+              expanded: 172.0,
+            ) +
+            ((MediaQuery.textScalerOf(context).scale(1.0) - 1.0).clamp(
+                  0.0,
+                  0.6,
+                ) *
+                36);
 
-            return _PressableTile(
-              onTap: () {
-                HapticFeedback.selectionClick();
-                Navigator.pushNamed(
-                  context,
-                  AppRoutes.playlistDetail,
-                  arguments: PlaylistDetailArgs(
-                    playlistId: p['id'],
-                    playlistName: p['name'],
-                  ),
-                );
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: shadows,
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.queue_music, size: 36),
-                      const SizedBox(height: 8),
-                      Text(p['name'], textAlign: TextAlign.center),
-                      Text(
-                        '${p['musicCount']} mÃƒÆ’Ã‚Âºsicas',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: TextField(
+                onChanged: (value) => setState(() => _query = value),
+                decoration: InputDecoration(
+                  hintText: 'Buscar playlist (${filtered.length})',
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  isDense: true,
+                  filled: true,
+                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
                   ),
                 ),
               ),
-            );
-          },
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Row(
+                children: [
+                  ChoiceChip(
+                    label: const Text('A-Z'),
+                    selected: _sort == _PlaylistSort.az,
+                    onSelected: (_) => setState(() => _sort = _PlaylistSort.az),
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('Mais musicas'),
+                    selected: _sort == _PlaylistSort.mostSongs,
+                    onSelected: (_) =>
+                        setState(() => _sort = _PlaylistSort.mostSongs),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: filtered.isEmpty
+                  ? const _EmptyState(
+                      icon: Icons.playlist_remove_rounded,
+                      text: 'Nenhuma playlist encontrada',
+                    )
+                  : GridView.builder(
+                      padding: const EdgeInsets.all(16),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        crossAxisSpacing: crossSpacing,
+                        mainAxisSpacing: mainSpacing,
+                        mainAxisExtent: mainExtent,
+                      ),
+                      itemCount: filtered.length,
+                      itemBuilder: (_, index) {
+                        final p = filtered[index];
+                        final shadows =
+                            Theme.of(context).extension<AppShadows>()?.elevated ?? [];
+                        final musicCount = p['musicCount'] as int;
+
+                        return TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0, end: 1),
+                          duration: Duration(milliseconds: 220 + (index * 18)),
+                          curve: Curves.easeOutCubic,
+                          builder: (_, t, child) {
+                            return Opacity(
+                              opacity: t,
+                              child: Transform.translate(
+                                offset: Offset(0, (1 - t) * 10),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: _PressableTile(
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              Navigator.pushNamed(
+                                context,
+                                AppRoutes.playlistDetail,
+                                arguments: PlaylistDetailArgs(
+                                  playlistId: p['id'],
+                                  playlistName: p['name'],
+                                ),
+                              );
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).cardColor,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: shadows,
+                              ),
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.queue_music, size: 36),
+                                    const SizedBox(height: 8),
+                                    Text(p['name'], textAlign: TextAlign.center),
+                                    Text(
+                                      '$musicCount ${musicCount == 1 ? 'musica' : 'musicas'}',
+                                      style: Theme.of(context).textTheme.bodySmall,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
         );
       },
+    );
+  }
+}
+
+class HomePodcastsTab extends StatefulWidget {
+  const HomePodcastsTab({super.key});
+
+  @override
+  State<HomePodcastsTab> createState() => _HomePodcastsTabState();
+}
+
+class _HomePodcastsTabState extends State<HomePodcastsTab> {
+  String _formatDuration(int? raw) {
+    final ms = PodcastDetector.normalizeDurationToMs(raw ?? 0);
+    if (ms <= 0) return 'Podcast local';
+    final d = Duration(milliseconds: ms);
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60);
+    if (h > 0) return '${h}h ${m}min';
+    return '${d.inMinutes}min';
+  }
+
+  Future<void> _markAsMusic(MusicEntity music) async {
+    await context.read<HomeViewModel>().setManualMediaType(
+          music,
+          isPodcast: false,
+        );
+  }
+
+  Future<void> _removeFromLibrary(MusicEntity music) async {
+    final homeVM = context.read<HomeViewModel>();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Remover da biblioteca'),
+        content: Text(
+          'Deseja remover "${music.title}" da biblioteca?\n\n'
+          'O arquivo fisico no dispositivo nao sera apagado.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Remover'),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true) return;
+    await homeVM.removeMusicFromLibrary(music);
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Podcast removido da biblioteca.')));
+  }
+
+  String _totalRuntimeLabel(List<MusicEntity> podcasts) {
+    final totalMs = podcasts.fold<int>(
+      0,
+      (sum, item) => sum + PodcastDetector.normalizeDurationToMs(item.duration ?? 0),
+    );
+    if (totalMs <= 0) return '--';
+    final d = Duration(milliseconds: totalMs);
+    if (d.inHours > 0) return '${d.inHours}h ${d.inMinutes.remainder(60)}m';
+    return '${d.inMinutes} min';
+  }
+
+  Widget _podcastActions(HomeViewModel vm, List<MusicEntity> podcasts) {
+    final actionLabel = kIsWeb
+        ? 'Classificar manualmente (Upload Web)'
+        : 'Classificar manualmente';
+
+    final theme = Theme.of(context);
+    final totalLabel = _totalRuntimeLabel(podcasts);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onLongPress: kDebugMode ? _openPlaybackDiagnostics : null,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: 1),
+          duration: const Duration(milliseconds: 380),
+          curve: Curves.easeOutCubic,
+          builder: (context, t, child) {
+            return Opacity(
+              opacity: t,
+              child: Transform.translate(
+                offset: Offset(0, (1 - t) * 10),
+                child: child,
+              ),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  theme.colorScheme.primaryContainer.withValues(alpha: 0.88),
+                  theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.95),
+                ],
+              ),
+              border: Border.all(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+              ),
+              boxShadow: theme.extension<AppShadows>()?.surface ?? const [],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: theme.colorScheme.primary.withValues(alpha: 0.16),
+                      ),
+                      child: Icon(
+                        Icons.podcasts_rounded,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Biblioteca de Podcasts',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          Text(
+                            'Curadoria local com controle manual premium',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.72),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _MetricPill(
+                      icon: Icons.mic_rounded,
+                      label: '${podcasts.length} podcasts',
+                    ),
+                    _MetricPill(
+                      icon: Icons.schedule_rounded,
+                      label: totalLabel,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: () => _openManualPicker(vm),
+                      icon: const Icon(Icons.playlist_add_check_circle_outlined),
+                      label: Text(actionLabel),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => _openRestorePicker(vm),
+                      icon: const Icon(Icons.restore_rounded),
+                      label: const Text('Restaurar removidos'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openManualPicker(HomeViewModel vm) async {
+    final candidates = vm.musics
+        .where((m) => !PodcastDetector.isPodcast(m))
+        .toList()
+      ..sort(
+        (a, b) => PodcastDetector.normalizeDurationToMs(
+          b.duration ?? 0,
+        ).compareTo(PodcastDetector.normalizeDurationToMs(a.duration ?? 0)),
+      );
+
+    if (candidates.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nenhum audio disponivel para marcar.')),
+      );
+      return;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        final theme = Theme.of(sheetContext);
+        return SafeArea(
+          child: SizedBox(
+            height: MediaQuery.of(sheetContext).size.height * 0.75,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                  child: Text(
+                    'Marcar como podcast',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: candidates.length,
+                    itemBuilder: (_, i) {
+                      final music = candidates[i];
+                      return ListTile(
+                        leading: ArtworkThumb(
+                          artworkUrl: music.artworkUrl,
+                          audioId: music.sourceId ?? music.id,
+                        ),
+                        title: Text(
+                          music.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Text(
+                          '${music.artist} • ${_formatDuration(music.duration)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: IconButton(
+                          tooltip: 'Marcar como podcast',
+                          onPressed: () async {
+                            await context.read<HomeViewModel>().setManualMediaType(
+                                  music,
+                                  isPodcast: true,
+                                );
+                          },
+                          icon: const Icon(Icons.add_circle_outline_rounded),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openRestorePicker(HomeViewModel vm) async {
+    final removed = await vm.getRemovedMusics();
+    if (!mounted) return;
+
+    if (removed.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nenhum audio removido para restaurar.')),
+      );
+      return;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        final theme = Theme.of(sheetContext);
+        return SafeArea(
+          child: SizedBox(
+            height: MediaQuery.of(sheetContext).size.height * 0.75,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                  child: Text(
+                    'Restaurar removidos',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: removed.length,
+                    itemBuilder: (_, i) {
+                      final music = removed[i];
+                      return ListTile(
+                        leading: ArtworkThumb(
+                          artworkUrl: music.artworkUrl,
+                          audioId: music.sourceId ?? music.id,
+                        ),
+                        title: Text(
+                          music.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Text(
+                          '${music.artist} • ${_formatDuration(music.duration)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: IconButton(
+                          tooltip: 'Restaurar',
+                          onPressed: () async {
+                            await vm.restoreMusicToLibrary(music);
+                          },
+                          icon: const Icon(Icons.restore_rounded),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openPlaybackDiagnostics() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        final theme = Theme.of(sheetContext);
+        return SafeArea(
+          child: SizedBox(
+            height: MediaQuery.of(sheetContext).size.height * 0.82,
+            child: Consumer<PlaylistViewModel>(
+              builder: (context, playerVM, _) {
+                final issues = playerVM.playbackIssues;
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 8, 10),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Diagnostico de reproducao',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: issues.isEmpty
+                                ? null
+                                : () => playerVM.clearPlaybackIssues(),
+                            icon: const Icon(Icons.delete_sweep_rounded),
+                            label: const Text('Limpar'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: issues.isEmpty
+                          ? const _EmptyState(
+                              icon: Icons.verified_rounded,
+                              text: 'Sem erros de reproducao',
+                              subtitle:
+                                  'Quando houver falhas ao tocar audio, elas aparecerao aqui.',
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                              itemCount: issues.length,
+                              itemBuilder: (_, i) {
+                                final issue = issues[i];
+                                final when =
+                                    '${issue.when.hour.toString().padLeft(2, '0')}:'
+                                    '${issue.when.minute.toString().padLeft(2, '0')}:'
+                                    '${issue.when.second.toString().padLeft(2, '0')}';
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          issue.title?.isNotEmpty == true
+                                              ? issue.title!
+                                              : 'Audio desconhecido',
+                                          style: theme.textTheme.bodyMedium?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Etapa: ${issue.stage} • Horario: $when',
+                                          style: theme.textTheme.bodySmall,
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          issue.message,
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: theme.textTheme.bodySmall?.copyWith(
+                                            color: theme.colorScheme.error,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = context.watch<HomeViewModel>();
+    final localPodcasts = context.select<HomeViewModel, List<MusicEntity>>(
+      (vm) => vm.podcastMusics,
+    );
+    final theme = Theme.of(context);
+    final shadows = theme.extension<AppShadows>()?.elevated ?? [];
+
+    if (vm.isLoading) {
+      return const _ListSkeleton();
+    }
+
+    if (localPodcasts.isEmpty) {
+      return Column(
+        children: [
+          _podcastActions(vm, localPodcasts),
+          const Expanded(
+            child: _EmptyState(
+              icon: Icons.podcasts_rounded,
+              text: 'Nenhum podcast local encontrado',
+              subtitle:
+                  'Importe do dispositivo, reescaneie ou classifique manualmente.',
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      children: [
+        _podcastActions(vm, localPodcasts),
+        Expanded(
+          child: ListView.builder(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            itemCount: localPodcasts.length,
+            itemBuilder: (_, i) {
+              final m = localPodcasts[i];
+              ArtworkCache.preload(context, m.artworkUrl);
+              return TweenAnimationBuilder<double>(
+                key: ValueKey('local_podcast_${m.id ?? m.audioUrl}'),
+                tween: Tween(begin: 0, end: 1),
+                duration: Duration(milliseconds: 200 + (i > 10 ? 200 : i * 20)),
+                curve: Curves.easeOutCubic,
+                builder: (_, t, child) {
+                  return Opacity(
+                    opacity: t,
+                    child: Transform.translate(
+                      offset: Offset(0, (1 - t) * 10),
+                      child: child,
+                    ),
+                  );
+                },
+                child: _PressableTile(
+                  onTap: () async {
+                    HapticFeedback.selectionClick();
+                    final playlistVM = context.read<PlaylistViewModel>();
+                    final queue = localPodcasts;
+                    final index = queue.indexWhere(
+                      (x) => x.audioUrl == m.audioUrl,
+                    );
+                    if (index >= 0) {
+                      await playlistVM.playMusic(queue, index);
+                    }
+                  },
+                  onDoubleTap: () => Navigator.pushNamed(context, AppRoutes.player),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: theme.cardColor,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: shadows,
+                    ),
+                    child: ListTile(
+                      leading: ArtworkThumb(
+                        artworkUrl: m.artworkUrl,
+                        audioId: m.sourceId ?? m.id,
+                      ),
+                      title: Text(
+                        m.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        '${m.artist} • ${_formatDuration(m.duration)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: PopupMenuButton<String>(
+                        tooltip: 'Opcoes',
+                        onSelected: (value) async {
+                          if (value == 'as_music') {
+                            await _markAsMusic(m);
+                          } else if (value == 'remove_library') {
+                            await _removeFromLibrary(m);
+                          }
+                        },
+                        itemBuilder: (_) => const [
+                          PopupMenuItem<String>(
+                            value: 'as_music',
+                            child: Text('Mover para Musicas'),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'remove_library',
+                            child: Text('Remover da biblioteca'),
+                          ),
+                        ],
+                        child: const Icon(Icons.more_vert_rounded),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1073,9 +1728,13 @@ class HomeAlbumsTab extends StatefulWidget {
   State<HomeAlbumsTab> createState() => _HomeAlbumsTabState();
 }
 
+enum _AlbumSort { az, mostSongs }
+
 class _HomeAlbumsTabState extends State<HomeAlbumsTab>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  String _query = '';
+  _AlbumSort _sort = _AlbumSort.az;
 
   @override
   void initState() {
@@ -1114,6 +1773,19 @@ class _HomeAlbumsTabState extends State<HomeAlbumsTab>
     final albumGroups = context.select<HomeViewModel, List<AlbumGroup>>(
       (vm) => vm.albumGroups,
     );
+    final filtered = albumGroups.where((g) {
+      final q = _query.trim().toLowerCase();
+      if (q.isEmpty) return true;
+      return g.album.toLowerCase().contains(q);
+    }).toList();
+    filtered.sort((a, b) {
+      switch (_sort) {
+        case _AlbumSort.az:
+          return a.album.toLowerCase().compareTo(b.album.toLowerCase());
+        case _AlbumSort.mostSongs:
+          return b.musics.length.compareTo(a.musics.length);
+      }
+    });
 
     if (albumGroups.isEmpty) {
       return const _GridSkeleton();
@@ -1141,94 +1813,140 @@ class _HomeAlbumsTabState extends State<HomeAlbumsTab>
     final textScale = MediaQuery.textScalerOf(context).scale(1.0);
     final dynamicMainExtent =
         mainExtent + ((textScale - 1.0).clamp(0.0, 0.6) * 42);
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      physics: const BouncingScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: columns,
-        mainAxisSpacing: mainSpacing,
-        crossAxisSpacing: crossSpacing,
-        mainAxisExtent: dynamicMainExtent,
-      ),
-      itemCount: albumGroups.length,
-      itemBuilder: (context, index) {
-        final group = albumGroups[index];
-        final artwork = _getAlbumArtwork(group.musics);
-        final artworkId = _getAlbumArtworkId(group.musics);
-        ArtworkCache.preload(context, artwork);
-
-        return AnimatedBuilder(
-          animation: _controller,
-          child: _PressableTile(
-            onTap: () {
-              HapticFeedback.selectionClick();
-              Navigator.pushNamed(
-                context,
-                AppRoutes.albumDetail,
-                arguments: AlbumDetailArgs(
-                  albumName: group.album,
-                  artistName: group.artist,
-                ),
-              );
-            },
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Hero(
-                    tag: 'album_${group.album}__${group.artist}',
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: AspectRatio(
-                        aspectRatio: 1,
-                        child: ArtworkSquare(
-                          artworkUrl: artwork,
-                          audioId: artworkId,
-                          borderRadius: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  group.album,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                Text(
-                  '${group.artist} • ${group.musics.length} músicas',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: TextField(
+            onChanged: (value) => setState(() => _query = value),
+            decoration: InputDecoration(
+              hintText: 'Buscar album (${filtered.length})',
+              prefixIcon: const Icon(Icons.search_rounded),
+              isDense: true,
+              filled: true,
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
             ),
           ),
-          builder: (context, child) {
-            final animation = CurvedAnimation(
-              parent: _controller,
-              curve: Interval(
-                (index / albumGroups.length).clamp(0.0, 1.0),
-                1.0,
-                curve: Curves.easeOutCubic,
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Row(
+            children: [
+              ChoiceChip(
+                label: const Text('A-Z'),
+                selected: _sort == _AlbumSort.az,
+                onSelected: (_) => setState(() => _sort = _AlbumSort.az),
               ),
-            );
+              const SizedBox(width: 8),
+              ChoiceChip(
+                label: const Text('Mais musicas'),
+                selected: _sort == _AlbumSort.mostSongs,
+                onSelected: (_) => setState(() => _sort = _AlbumSort.mostSongs),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: filtered.isEmpty
+              ? const _EmptyState(
+                  icon: Icons.album_outlined,
+                  text: 'Nenhum album encontrado',
+                )
+              : GridView.builder(
+                  padding: const EdgeInsets.all(16),
+                  physics: const BouncingScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    mainAxisSpacing: mainSpacing,
+                    crossAxisSpacing: crossSpacing,
+                    mainAxisExtent: dynamicMainExtent,
+                  ),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    final group = filtered[index];
+                    final artwork = _getAlbumArtwork(group.musics);
+                    final artworkId = _getAlbumArtworkId(group.musics);
+                    ArtworkCache.preload(context, artwork);
 
-            return FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 0.15),
-                  end: Offset.zero,
-                ).animate(animation),
-                child: child,
-              ),
-            );
-          },
-        );
-      },
+                    return AnimatedBuilder(
+                      animation: _controller,
+                      child: _PressableTile(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          Navigator.pushNamed(
+                            context,
+                            AppRoutes.albumDetail,
+                            arguments: AlbumDetailArgs(
+                              albumName: group.album,
+                              artistName: group.artist,
+                            ),
+                          );
+                        },
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Hero(
+                                tag: 'album_${group.album}__${group.artist}',
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: AspectRatio(
+                                    aspectRatio: 1,
+                                    child: ArtworkSquare(
+                                      artworkUrl: artwork,
+                                      audioId: artworkId,
+                                      borderRadius: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              group.album,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            Text(
+                              '${group.artist} • ${group.musics.length} musicas',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                      builder: (context, child) {
+                        final animation = CurvedAnimation(
+                          parent: _controller,
+                          curve: Interval(
+                            (index / filtered.length).clamp(0.0, 1.0),
+                            1.0,
+                            curve: Curves.easeOutCubic,
+                          ),
+                        );
+
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0, 0.15),
+                              end: Offset.zero,
+                            ).animate(animation),
+                            child: child,
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 }
@@ -1402,8 +2120,13 @@ class _HomeArtistsTabState extends State<HomeArtistsTab> {
 class _PressableTile extends StatefulWidget {
   final Widget child;
   final VoidCallback onTap;
+  final VoidCallback? onDoubleTap;
 
-  const _PressableTile({required this.child, required this.onTap});
+  const _PressableTile({
+    required this.child,
+    required this.onTap,
+    this.onDoubleTap,
+  });
 
   @override
   State<_PressableTile> createState() => _PressableTileState();
@@ -1425,6 +2148,7 @@ class _PressableTileState extends State<_PressableTile> {
       onTapUp: (_) => _setPressed(false),
       onTapCancel: () => _setPressed(false),
       onTap: widget.onTap,
+      onDoubleTap: widget.onDoubleTap,
       child: AnimatedScale(
         scale: _pressed ? 0.985 : 1.0,
         duration: const Duration(milliseconds: 120),
@@ -1458,6 +2182,45 @@ class _CountBadge extends StatelessWidget {
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
               fontWeight: FontWeight.w700,
             ),
+      ),
+    );
+  }
+}
+
+class _MetricPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _MetricPill({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: theme.colorScheme.surface.withValues(alpha: 0.65),
+        border: Border.all(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }

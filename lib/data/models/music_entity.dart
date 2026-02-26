@@ -13,6 +13,7 @@ class MusicEntity {
   final int? duration;
   final String? album;
   final String? genre;
+  final String? mediaType;
   final bool isFavorite;
   final String? folderPath;
 
@@ -30,6 +31,7 @@ class MusicEntity {
     this.duration,
     this.album,
     this.genre,
+    this.mediaType,
     this.isFavorite = false,
     this.lastPlayedAt,
     this.playCount = 0,
@@ -55,6 +57,7 @@ class MusicEntity {
       artist: song.artist ?? 'Artista desconhecido',
       album: song.album,
       genre: song.genre,
+      mediaType: null,
       duration: song.duration,
       audioUrl: song.uri ?? '',
       artworkUrl: null,
@@ -76,6 +79,7 @@ class MusicEntity {
       duration: map['duration'],
       album: map['album'],
       genre: map['genre'],
+      mediaType: map['mediaType'],
       isFavorite: (map['isFavorite'] ?? 0) == 1,
       lastPlayedAt: map['lastPlayedAt'],
       playCount: map['playCount'] ?? 0,
@@ -94,6 +98,7 @@ class MusicEntity {
       'duration': duration,
       'album': album,
       'genre': genre,
+      'mediaType': mediaType,
       'isFavorite': isFavorite ? 1 : 0,
       'lastPlayedAt': lastPlayedAt,
       'playCount': playCount,
@@ -107,6 +112,7 @@ class MusicEntity {
     int? playCount,
     int? sourceId,
     String? genre,
+    String? mediaType,
     String? folderPath,
   }) {
     return MusicEntity(
@@ -119,6 +125,7 @@ class MusicEntity {
       duration: duration,
       album: album,
       genre: genre ?? this.genre,
+      mediaType: mediaType ?? this.mediaType,
       isFavorite: isFavorite ?? this.isFavorite,
       lastPlayedAt: lastPlayedAt ?? this.lastPlayedAt,
       playCount: playCount ?? this.playCount,
@@ -141,6 +148,7 @@ class MusicEntity {
       'duration': duration,
       'album': album,
       'genre': genre,
+      'mediaType': mediaType,
       'isFavorite': isFavorite,
       'lastPlayedAt': lastPlayedAt,
       'playCount': playCount,
@@ -161,6 +169,7 @@ class MusicEntity {
       duration: map['duration'],
       album: map['album'],
       genre: map['genre'],
+      mediaType: map['mediaType'],
       isFavorite: map['isFavorite'] ?? false,
       lastPlayedAt: map['lastPlayedAt'],
       playCount: map['playCount'] ?? 0,

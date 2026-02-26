@@ -66,16 +66,17 @@ class FolderCard extends StatelessWidget {
                         folderName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: theme.textTheme.titleSmall?.copyWith(
                           color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.1,
                         ),
                       ),
                       Text(
-                        '${musics.length} músicas',
-                        style: const TextStyle(
+                        '${musics.length} musicas',
+                        style: theme.textTheme.labelMedium?.copyWith(
                           color: Colors.white70,
-                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],

@@ -18,6 +18,8 @@ class PlaylistsScreen extends StatefulWidget {
 
 class _PlaylistsScreenState extends State<PlaylistsScreen> {
   late Future<List<Map<String, dynamic>>> _playlistsFuture;
+  String _query = '';
+  _PlaylistSort _sort = _PlaylistSort.az;
 
   @override
   void initState() {
@@ -58,12 +60,21 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
           ),
           TextButton(
             onPressed: () {
-              if (controller.text.isNotEmpty) {
-                viewModel.createPlaylist(controller.text);
+              final name = controller.text.trim();
+              if (name.isNotEmpty) {
+                viewModel.createPlaylist(name);
                 setState(() {
                   _playlistsFuture = viewModel.getPlaylistsWithMusicCount();
                 });
                 Navigator.pop(context);
+                ScaffoldMessenger.of(context)
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(
+                    SnackBar(
+                      duration: const Duration(milliseconds: 1400),
+                      content: Text('Playlist "$name" criada'),
+                    ),
+                  );
               }
             },
             child: Text(
@@ -104,6 +115,14 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
                 _playlistsFuture = viewModel.getPlaylistsWithMusicCount();
               });
               Navigator.pop(context);
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(
+                  SnackBar(
+                    duration: const Duration(milliseconds: 1400),
+                    content: Text('Playlist "$playlistName" excluida'),
+                  ),
+                );
             },
             child: Text(
               'Sim',
@@ -144,7 +163,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
               HapticFeedback.selectionClick();
               showSearch(
                 context: context,
-                delegate: MusicSearchDelegate(viewModel.musics),
+                delegate: MusicSearchDelegate(viewModel.libraryMusics),
               );
             },
           ),
@@ -158,89 +177,163 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
           }
 
           final playlists = snapshot.data ?? [];
+          final filtered = playlists.where((p) {
+            final name = (p['name']?.toString() ?? '').toLowerCase();
+            return name.contains(_query.trim().toLowerCase());
+          }).toList();
+          filtered.sort((a, b) {
+            switch (_sort) {
+              case _PlaylistSort.az:
+                return (a['name']?.toString() ?? '')
+                    .toLowerCase()
+                    .compareTo((b['name']?.toString() ?? '').toLowerCase());
+              case _PlaylistSort.mostSongs:
+                return (b['musicCount'] as int).compareTo(a['musicCount'] as int);
+            }
+          });
 
           if (playlists.isEmpty) {
             return const Center(
-              child: Text('Você ainda não criou nenhuma playlist.'),
+              child: Text('Voce ainda nao criou nenhuma playlist.'),
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: playlists.length,
-            itemBuilder: (context, index) {
-              final playlist = playlists[index];
-              final id = playlist['id'] as int;
-              final name = playlist['name'] as String;
-              final count = playlist['musicCount'] as int;
-              final shadows =
-                  Theme.of(context).extension<AppShadows>()?.elevated ?? [];
-
-              return Hero(
-                tag: 'playlist_$id',
-                flightShuttleBuilder:
-                    (context, animation, direction, from, to) {
-                  return Material(
-                    color: Colors.transparent,
-                    child: to.widget,
-                  );
-                },
-                child: Material(
-                  color: Colors.transparent,
-                  child: _PressableTile(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      Navigator.pushNamed(
-                        context,
-                        AppRoutes.playlistDetail,
-                        arguments: PlaylistDetailArgs(
-                          playlistId: id,
-                          playlistName: name,
-                        ),
-                      );
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: theme.cardColor,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: shadows,
-                      ),
-                      child: ListTile(
-                        leading: const Icon(Icons.queue_music),
-                        title: Text(
-                          name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        subtitle: Text(
-                          '$count ${count == 1 ? 'música' : 'músicas'}',
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () {
-                            HapticFeedback.selectionClick();
-                            _showDeleteConfirmationDialog(
-                              context,
-                              viewModel,
-                              id,
-                              name,
-                            );
-                          },
-                        ),
-                      ),
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: TextField(
+                  onChanged: (value) => setState(() => _query = value),
+                  decoration: InputDecoration(
+                    hintText: 'Buscar playlist (${filtered.length})',
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    isDense: true,
+                    filled: true,
+                    fillColor: theme.colorScheme.surfaceContainerHighest,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
                     ),
                   ),
                 ),
-              );
-            },
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Row(
+                  children: [
+                    ChoiceChip(
+                      label: const Text('A-Z'),
+                      selected: _sort == _PlaylistSort.az,
+                      onSelected: (_) => setState(() => _sort = _PlaylistSort.az),
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: const Text('Mais musicas'),
+                      selected: _sort == _PlaylistSort.mostSongs,
+                      onSelected: (_) =>
+                          setState(() => _sort = _PlaylistSort.mostSongs),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: filtered.isEmpty
+                    ? const Center(child: Text('Nenhuma playlist encontrada'))
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final playlist = filtered[index];
+                          final id = playlist['id'] as int;
+                          final name = playlist['name'] as String;
+                          final count = playlist['musicCount'] as int;
+                          final shadows =
+                              Theme.of(context).extension<AppShadows>()?.elevated ?? [];
+
+                          return TweenAnimationBuilder<double>(
+                            tween: Tween(begin: 0, end: 1),
+                            duration: Duration(milliseconds: 260 + (index * 24)),
+                            curve: Curves.easeOutCubic,
+                            builder: (_, t, child) {
+                              return Opacity(
+                                opacity: t,
+                                child: Transform.translate(
+                                  offset: Offset(0, (1 - t) * 14),
+                                  child: child,
+                                ),
+                              );
+                            },
+                            child: Hero(
+                              tag: 'playlist_$id',
+                              flightShuttleBuilder:
+                                  (context, animation, direction, from, to) {
+                                return Material(
+                                  color: Colors.transparent,
+                                  child: to.widget,
+                                );
+                              },
+                              child: Material(
+                                color: Colors.transparent,
+                                child: _PressableTile(
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    Navigator.pushNamed(
+                                      context,
+                                      AppRoutes.playlistDetail,
+                                      arguments: PlaylistDetailArgs(
+                                        playlistId: id,
+                                        playlistName: name,
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    margin: const EdgeInsets.only(bottom: 16),
+                                    decoration: BoxDecoration(
+                                      color: theme.cardColor,
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: shadows,
+                                    ),
+                                    child: ListTile(
+                                      leading: const Icon(Icons.queue_music),
+                                      title: Text(
+                                        name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      subtitle: Text(
+                                        '$count ${count == 1 ? 'musica' : 'musicas'}',
+                                      ),
+                                      trailing: IconButton(
+                                        icon: const Icon(Icons.delete),
+                                        onPressed: () {
+                                          HapticFeedback.selectionClick();
+                                          _showDeleteConfirmationDialog(
+                                            context,
+                                            viewModel,
+                                            id,
+                                            name,
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
           );
         },
       ),
     );
   }
 }
+
+enum _PlaylistSort { az, mostSongs }
 
 class _PlaylistsSkeleton extends StatelessWidget {
   const _PlaylistsSkeleton();
