@@ -45,8 +45,12 @@ class _HomeViewState extends State<_HomeView>
   int _featuredStoredIndex = 0;
   int _featuredDayIndex = 0;
   String _featuredPersistedSignature = '';
+  String? _lastPlaybackIssueSignature;
+  DateTime? _lastPlaybackSnackAt;
+  static const Duration _playbackSnackCooldown = Duration(seconds: 7);
 
   late HomeViewModel _homeVM;
+  late PlaylistViewModel _playlistVM;
   late TabController _tabController;
 
   @override
@@ -55,6 +59,8 @@ class _HomeViewState extends State<_HomeView>
 
     _homeVM = context.read<HomeViewModel>();
     _homeVM.addListener(_onHomeChanged);
+    _playlistVM = context.read<PlaylistViewModel>();
+    _playlistVM.addListener(_onPlaybackIssuesChanged);
     _initTabController(6);
     _loadUserName();
     _loadFeaturedSnapshot();
@@ -178,9 +184,95 @@ class _HomeViewState extends State<_HomeView>
     }
   }
 
+  void _onPlaybackIssuesChanged() {
+    final issues = _playlistVM.playbackIssues;
+    if (issues.isEmpty || !mounted) return;
+
+    final latest = issues.first;
+    final signature =
+        '${latest.when.microsecondsSinceEpoch}|${latest.stage}|${latest.audioUrl ?? ''}|${latest.message}';
+    if (_lastPlaybackIssueSignature == signature) return;
+    final now = DateTime.now();
+    if (_lastPlaybackSnackAt != null &&
+        now.difference(_lastPlaybackSnackAt!) < _playbackSnackCooldown) {
+      return;
+    }
+    _lastPlaybackIssueSignature = signature;
+    _lastPlaybackSnackAt = now;
+
+    final theme = Theme.of(context);
+    final title = _issueTitle(latest);
+    final subtitle = latest.title?.trim().isNotEmpty == true
+        ? latest.title!
+        : 'Nao foi possivel tocar o audio selecionado.';
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          backgroundColor: theme.colorScheme.surfaceContainerHighest,
+          duration: const Duration(seconds: 5),
+          content: Row(
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: theme.colorScheme.error,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.78),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          action: SnackBarAction(
+            label: 'Detalhes',
+            onPressed: _openPlaybackIssuesTab,
+          ),
+        ),
+      );
+  }
+
+  String _issueTitle(PlaybackIssue issue) {
+    switch (issue.stage) {
+      case 'set_audio_source':
+        return 'Falha ao preparar a faixa';
+      case 'resume_after_set_source':
+        return 'Falha ao retomar reproducao';
+      case 'play_music':
+        return 'Falha ao iniciar reproducao';
+      default:
+        return 'Falha de reproducao detectada';
+    }
+  }
+
   @override
   void dispose() {
     _homeVM.removeListener(_onHomeChanged);
+    _playlistVM.removeListener(_onPlaybackIssuesChanged);
     _tabController.dispose();
     super.dispose();
   }
@@ -372,6 +464,15 @@ class _HomeViewState extends State<_HomeView>
 
     if (index == 0 && _tabController.index != 0) {
       _tabController.animateTo(0);
+    }
+  }
+
+  void _openPlaybackIssuesTab() {
+    if (_bottomNavIndex != 0) {
+      setState(() => _bottomNavIndex = 0);
+    }
+    if (_tabController.index != 5) {
+      _tabController.animateTo(5);
     }
   }
 

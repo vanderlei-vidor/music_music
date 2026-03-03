@@ -192,15 +192,15 @@ class PlaylistViewModel extends ChangeNotifier {
     _persistPlaybackQueue();
   }
 
-  void setQueueMusics(List<MusicEntity> musics) {
+  Future<void> setQueueMusics(List<MusicEntity> musics) async {
     _queueMusics = musics;
-    _setAudioSource();
-    _persistPlaybackQueue();
+    await _setAudioSource();
+    await _persistPlaybackQueue();
     notifyListeners();
   }
 
   @Deprecated('Use setQueueMusics')
-  void setMusics(List<MusicEntity> musics) => setQueueMusics(musics);
+  Future<void> setMusics(List<MusicEntity> musics) => setQueueMusics(musics);
 
   // =====================
   // DATABASE — PLAYLISTS
@@ -306,14 +306,9 @@ class PlaylistViewModel extends ChangeNotifier {
       );
     }
 
-    final playlist = ConcatenatingAudioSource(
-      useLazyPreparation: true,
-      children: children,
-    );
-
     try {
-      await _player.setAudioSource(
-        playlist,
+      await _player.setAudioSources(
+        children,
         initialIndex: currentIndex.clamp(0, children.length - 1),
       );
     } catch (e, st) {
@@ -325,15 +320,28 @@ class PlaylistViewModel extends ChangeNotifier {
         stackTrace: st,
         music: music,
       );
-      rethrow;
+      return;
     }
 
-    await _player.setShuffleModeEnabled(_isShuffled);
-
-    if (wasPlaying) {
-      await _player.play();
+    try {
+      await _player.setShuffleModeEnabled(_isShuffled);
+      if (wasPlaying) {
+        await _player.play();
+      }
+    } catch (e, st) {
+      final idx = (_player.currentIndex ?? currentIndex).clamp(
+        0,
+        _queueMusics.length - 1,
+      );
+      final music = _queueMusics.isEmpty ? null : _queueMusics[idx];
+      _reportPlaybackIssue(
+        stage: 'resume_after_set_source',
+        error: e,
+        stackTrace: st,
+        music: music,
+      );
     }
-    _persistPlaybackQueue();
+    unawaited(_persistPlaybackQueue());
   }
 
   Uri _resolveAudioUri(MusicEntity music) {
@@ -365,9 +373,8 @@ class PlaylistViewModel extends ChangeNotifier {
   // =====================
   void _listenToSequenceChanges() {
     _player.sequenceStateStream.listen((sequenceState) async {
-      if (sequenceState == null) return;
-
       final index = sequenceState.currentIndex;
+      if (index == null) return;
       if (index < 0 || index >= _queueMusics.length) return;
 
       final newMusic = _queueMusics[index];
@@ -462,7 +469,7 @@ class PlaylistViewModel extends ChangeNotifier {
         stackTrace: st,
         music: queue[safeIndex],
       );
-      rethrow;
+      return;
     }
   }
 
@@ -784,21 +791,24 @@ class PlaylistViewModel extends ChangeNotifier {
     if (restoredQueue.isEmpty) return false;
 
     _restoringQueue = true;
-    _queueMusics = restoredQueue;
+    try {
+      _queueMusics = restoredQueue;
 
-    final rawIndex = saved['currentIndex'] as int? ?? 0;
-    final currentIndex = rawIndex.clamp(0, _queueMusics.length - 1);
-    await _setAudioSource(initialIndex: currentIndex);
+      final rawIndex = saved['currentIndex'] as int? ?? 0;
+      final currentIndex = rawIndex.clamp(0, _queueMusics.length - 1);
+      await _setAudioSource(initialIndex: currentIndex);
 
-    final positionMs = saved['positionMs'] as int? ?? 0;
-    if (positionMs > 0) {
-      await _player.seek(
-        Duration(milliseconds: positionMs),
-        index: currentIndex,
-      );
+      final positionMs = saved['positionMs'] as int? ?? 0;
+      if (positionMs > 0) {
+        await _player.seek(
+          Duration(milliseconds: positionMs),
+          index: currentIndex,
+        );
+      }
+    } finally {
+      _restoringQueue = false;
     }
-    _restoringQueue = false;
-    _persistPlaybackQueue();
+    unawaited(_persistPlaybackQueue());
     return true;
   }
 

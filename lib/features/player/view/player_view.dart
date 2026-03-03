@@ -670,7 +670,7 @@ class _QueueSheet extends StatelessWidget {
 
     return Consumer<PlaylistViewModel>(
       builder: (context, queueVm, _) {
-        final queue = queueVm.musics;
+        final queue = queueVm.queueMusics;
         final currentIndex = queueVm.player.currentIndex ?? 0;
 
         return SizedBox(
@@ -754,7 +754,7 @@ class _QueueSheet extends StatelessWidget {
                           child: ListTile(
                             onTap: () async {
                               HapticFeedback.selectionClick();
-                              await queueVm.playMusic(queueVm.musics, index);
+                              await queueVm.playMusic(queueVm.queueMusics, index);
                               if (context.mounted) Navigator.of(context).pop();
                             },
                             leading: ArtworkThumb(

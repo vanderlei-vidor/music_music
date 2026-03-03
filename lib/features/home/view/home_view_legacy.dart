@@ -148,12 +148,13 @@ class _HomeViewState extends State<HomeView> {
                 // ðŸ”¹ Ver mÃºsicas
                 CustomButton(
                   text: 'Ver Minhas Músicas',
-                  onPressed: () {
+                  onPressed: () async {
                     final playlistVM =
                         context.read<PlaylistViewModel>();
-                    playlistVM.setMusics(
+                    await playlistVM.setQueueMusics(
                       viewModel.musics
                     );
+                    if (!context.mounted) return;
                     Navigator.pushNamed(context, AppRoutes.playlistView);
                   },
                 ),
