@@ -413,6 +413,12 @@ class DatabaseHelper {
           music.mediaType!.isNotEmpty) {
         updates['mediaType'] = music.mediaType;
       }
+      final currentGenre = (existing.first['genre'] as String?)?.trim();
+      if ((currentGenre == null || currentGenre.isEmpty) &&
+          music.genre != null &&
+          music.genre!.trim().isNotEmpty) {
+        updates['genre'] = music.genre;
+      }
       final isDeleted = existing.first['isDeleted'] as int?;
       if (isDeleted == 1) {
         return;

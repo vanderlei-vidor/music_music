@@ -50,13 +50,24 @@ class MusicEntity {
       folderPath = null;
     }
 
+    final rawGenre = song.genre?.trim();
+    final inferredGenre = _inferGenreFromFolderPath(folderPath);
+    final heuristicGenre = _inferGenreFromText(
+      title: song.title,
+      artist: song.artist,
+      album: song.album,
+    );
+    final effectiveGenre = (rawGenre != null && rawGenre.isNotEmpty)
+        ? rawGenre
+        : (inferredGenre ?? heuristicGenre);
+
     return MusicEntity(
       id: song.id,
       sourceId: song.id,
       title: song.title,
       artist: song.artist ?? 'Artista desconhecido',
       album: song.album,
-      genre: song.genre,
+      genre: effectiveGenre,
       mediaType: null,
       duration: song.duration,
       audioUrl: song.uri ?? '',
@@ -65,6 +76,55 @@ class MusicEntity {
       playCount: 0,
       folderPath: folderPath,
     );
+  }
+
+  static String? _inferGenreFromFolderPath(String? folderPath) {
+    if (folderPath == null || folderPath.trim().isEmpty) return null;
+    final normalized = folderPath.replaceAll('\\', '/');
+    final parts = normalized.split('/').where((e) => e.trim().isNotEmpty);
+    if (parts.isEmpty) return null;
+    final last = parts.last.trim();
+    if (last.isEmpty) return null;
+    return last;
+  }
+
+  static String? _inferGenreFromText({
+    required String title,
+    String? artist,
+    String? album,
+  }) {
+    final text = '${title.toLowerCase()} ${artist?.toLowerCase() ?? ''} '
+        '${album?.toLowerCase() ?? ''}';
+
+    if (_containsAny(text, const ['mozart', 'bach', 'beethoven', 'chopin'])) {
+      return 'Classica';
+    }
+    if (_containsAny(text, const ['samba', 'pagode', 'axé', 'axe'])) {
+      return 'Samba/Pagode';
+    }
+    if (_containsAny(text, const ['forro', 'piseiro', 'sertanejo', 'arrocha'])) {
+      return 'Sertanejo/Forro';
+    }
+    if (_containsAny(text, const ['gospel', 'worship', 'louvor'])) {
+      return 'Gospel';
+    }
+    if (_containsAny(text, const ['rock', 'metal', 'punk'])) {
+      return 'Rock';
+    }
+    if (_containsAny(text, const ['funk', 'trap', 'hip hop', 'rap'])) {
+      return 'Hip Hop/Funk';
+    }
+    if (_containsAny(text, const ['jazz', 'blues', 'bossa'])) {
+      return 'Jazz/Blues';
+    }
+    return null;
+  }
+
+  static bool _containsAny(String value, List<String> tokens) {
+    for (final token in tokens) {
+      if (value.contains(token)) return true;
+    }
+    return false;
   }
 
   // 🔥 VINDO DO BANCO

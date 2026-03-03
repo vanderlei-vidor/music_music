@@ -17,7 +17,7 @@ enum SleepTimerMode { off, duration, endOfSong, endOfPlaylist }
 
 class PlaylistViewModel extends ChangeNotifier {
   // 🎧 PLAYER
-  final AudioPlayer _player = AudioPlayer();
+  final AudioPlayer _player;
 
   // 🗄️ DATABASE
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
@@ -71,8 +71,6 @@ class PlaylistViewModel extends ChangeNotifier {
   AudioPlayer get player => _player;
   List<MusicEntity> get libraryMusics => _libraryMusics;
   List<MusicEntity> get queueMusics => _queueMusics;
-  @Deprecated('Use queueMusics para fila de reprodução ou libraryMusics para biblioteca.')
-  List<MusicEntity> get musics => _queueMusics;
   MusicEntity? get currentMusic => _currentMusic;
   bool get isShuffled => _isShuffled;
   LoopMode get repeatMode => _repeatMode;
@@ -112,7 +110,7 @@ class PlaylistViewModel extends ChangeNotifier {
   // =====================
   // INIT
   // =====================
-  PlaylistViewModel() {
+  PlaylistViewModel({AudioPlayer? player}) : _player = player ?? AudioPlayer() {
     _initAudioSession();
     _listenToSequenceChanges();
 
@@ -198,9 +196,6 @@ class PlaylistViewModel extends ChangeNotifier {
     await _persistPlaybackQueue();
     notifyListeners();
   }
-
-  @Deprecated('Use setQueueMusics')
-  Future<void> setMusics(List<MusicEntity> musics) => setQueueMusics(musics);
 
   // =====================
   // DATABASE — PLAYLISTS
@@ -382,11 +377,12 @@ class PlaylistViewModel extends ChangeNotifier {
       if (_currentMusic?.audioUrl != newMusic.audioUrl) {
         _currentMusic = newMusic;
         // 🎼 gênero atual
-        _currentGenre = newMusic.genre;
+        final resolvedGenre = _resolveCurrentGenre(newMusic);
+        _currentGenre = resolvedGenre;
 
         // 🎨 cor do gênero
-        if (newMusic.genre != null && newMusic.genre!.isNotEmpty) {
-          _currentGenreColor = GenreColorHelper.getColor(newMusic.genre!);
+        if (resolvedGenre != null && resolvedGenre.isNotEmpty) {
+          _currentGenreColor = GenreColorHelper.getColor(resolvedGenre);
         } else {
           _currentGenreColor = null;
         }
@@ -590,13 +586,20 @@ class PlaylistViewModel extends ChangeNotifier {
 
     await _dbHelper.toggleFavorite(music.audioUrl, newValue);
 
-    final index = _queueMusics.indexWhere((m) => m.audioUrl == music.audioUrl);
-    if (index != -1) {
-      _queueMusics[index] = music.copyWith(isFavorite: newValue);
+    final queueIndex =
+        _queueMusics.indexWhere((m) => m.audioUrl == music.audioUrl);
+    if (queueIndex != -1) {
+      _queueMusics[queueIndex] = music.copyWith(isFavorite: newValue);
     }
 
-    if (_currentMusic?.audioUrl == music.audioUrl && index != -1) {
-      _currentMusic = _queueMusics[index];
+    final libraryIndex =
+        _libraryMusics.indexWhere((m) => m.audioUrl == music.audioUrl);
+    if (libraryIndex != -1) {
+      _libraryMusics[libraryIndex] = music.copyWith(isFavorite: newValue);
+    }
+
+    if (_currentMusic?.audioUrl == music.audioUrl && queueIndex != -1) {
+      _currentMusic = _queueMusics[queueIndex];
     }
 
     await loadFavoriteMusics();
@@ -987,7 +990,7 @@ class PlaylistViewModel extends ChangeNotifier {
   Map<String, List<MusicEntity>> get folders {
     final Map<String, List<MusicEntity>> result = {};
 
-    for (final m in _queueMusics) {
+    for (final m in _libraryMusics) {
       if (kDebugMode) {
         debugPrint('folder item: ${m.title} | ${m.folderPath}');
       }
@@ -1007,7 +1010,7 @@ class PlaylistViewModel extends ChangeNotifier {
     final Map<String, List<MusicEntity>> temp = {};
 
     // 1️⃣ Normaliza os gêneros
-    for (final m in _queueMusics) {
+    for (final m in _libraryMusics) {
       final genre = GenreNormalizer.normalize(m.genre);
       temp.putIfAbsent(genre, () => []).add(m);
     }
@@ -1051,6 +1054,96 @@ class PlaylistViewModel extends ChangeNotifier {
 
     return result;
   }
+
+  String? _resolveCurrentGenre(MusicEntity music) {
+    final rawGenre = music.genre?.trim();
+    if (rawGenre != null && rawGenre.isNotEmpty) return rawGenre;
+
+    final folder = music.folderPath?.trim();
+    if (folder != null && folder.isNotEmpty) {
+      final normalizedPath = folder.replaceAll('\\', '/');
+      final segments = normalizedPath
+          .split('/')
+          .where((segment) => segment.trim().isNotEmpty)
+          .toList();
+      if (segments.isNotEmpty) {
+        return segments.last.trim();
+      }
+    }
+
+    return _inferGenreFromText(music);
+  }
+
+  String? _inferGenreFromText(MusicEntity music) {
+    final text = _normalizeForGenreGuess(
+      '${music.title} ${music.artist} ${music.album ?? ''}',
+    );
+
+    if (_containsAnyToken(text, const ['mozart', 'bach', 'beethoven', 'chopin'])) {
+      return 'Classica';
+    }
+    if (_containsAnyToken(text, const ['samba', 'pagode', 'axe'])) {
+      return 'Samba/Pagode';
+    }
+    if (_containsAnyToken(text, const ['forro', 'piseiro', 'sertanejo', 'arrocha'])) {
+      return 'Sertanejo/Forro';
+    }
+    if (_containsAnyToken(text, const ['gospel', 'worship', 'louvor'])) {
+      return 'Gospel';
+    }
+    if (_containsAnyToken(text, const ['rock', 'metal', 'punk'])) {
+      return 'Rock';
+    }
+    if (_containsAnyToken(text, const ['funk', 'trap', 'hip hop', 'rap'])) {
+      return 'Hip Hop/Funk';
+    }
+    if (_containsAnyToken(text, const ['jazz', 'blues', 'bossa'])) {
+      return 'Jazz/Blues';
+    }
+    return null;
+  }
+
+  String _normalizeForGenreGuess(String value) {
+    final lowercase = value.toLowerCase();
+    final sb = StringBuffer();
+    const map = {
+      'á': 'a',
+      'à': 'a',
+      'â': 'a',
+      'ã': 'a',
+      'ä': 'a',
+      'é': 'e',
+      'è': 'e',
+      'ê': 'e',
+      'ë': 'e',
+      'í': 'i',
+      'ì': 'i',
+      'î': 'i',
+      'ï': 'i',
+      'ó': 'o',
+      'ò': 'o',
+      'ô': 'o',
+      'õ': 'o',
+      'ö': 'o',
+      'ú': 'u',
+      'ù': 'u',
+      'û': 'u',
+      'ü': 'u',
+      'ç': 'c',
+    };
+    for (final rune in lowercase.runes) {
+      final ch = String.fromCharCode(rune);
+      sb.write(map[ch] ?? ch);
+    }
+    return sb.toString();
+  }
+
+  bool _containsAnyToken(String value, List<String> tokens) {
+    for (final token in tokens) {
+      if (value.contains(token)) return true;
+    }
+    return false;
+  }
 }
 
 class PlaybackIssue {
@@ -1068,6 +1161,7 @@ class PlaybackIssue {
     required this.message,
   });
 }
+
 
 
 

@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import 'package:music_music/app/app_info.dart';
 import 'package:music_music/data/models/music_entity.dart';
+import 'package:music_music/features/player/view/equalizer_sheet.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 
 import 'package:music_music/core/theme/app_shadows.dart';
@@ -361,6 +362,10 @@ class _PlayerViewState extends State<PlayerView> {
                 alignment: Alignment.centerRight,
                 child: _PlayerSideSheet(
                   child: _PlayerControlsSheet(
+                    onOpenEqualizer: () {
+                      Navigator.of(context).pop();
+                      _openEqualizerSheet(context);
+                    },
                     onOpenSpeed: () {
                       final vm = context.read<PlaylistViewModel>();
                       Navigator.of(context).pop();
@@ -418,6 +423,18 @@ class _PlayerViewState extends State<PlayerView> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (_) => const _QueueSheet(),
+    );
+  }
+
+  void _openEqualizerSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => const EqualizerSheet(),
     );
   }
 }
@@ -526,11 +543,13 @@ class _PressableScaleState extends State<_PressableScale> {
 }
 
 class _PlayerControlsSheet extends StatelessWidget {
+  final VoidCallback onOpenEqualizer;
   final VoidCallback onOpenSpeed;
   final VoidCallback onOpenTimer;
   final VoidCallback onOpenQueue;
 
   const _PlayerControlsSheet({
+    required this.onOpenEqualizer,
     required this.onOpenSpeed,
     required this.onOpenTimer,
     required this.onOpenQueue,
@@ -596,6 +615,7 @@ class _PlayerControlsSheet extends StatelessWidget {
                   _PressableScale(
                     onTap: () {
                       HapticFeedback.selectionClick();
+                      onOpenEqualizer();
                     },
                     child: const Icon(Icons.equalizer),
                   ),
