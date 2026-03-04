@@ -371,6 +371,31 @@ class DatabaseHelper {
     return result.map((e) => MusicEntity.fromMap(e)).toList();
   }
 
+  Future<int> reprocessGenresBatch() async {
+    final db = await database;
+    return db.transaction((txn) async {
+      final rows = await txn.query(
+        'musics_v2',
+        columns: ['audioUrl', 'title', 'artist', 'album', 'folderPath', 'genre'],
+        where: '(isDeleted IS NULL OR isDeleted = 0) AND (genre IS NULL OR TRIM(genre) = \'\')',
+      );
+
+      var updated = 0;
+      for (final row in rows) {
+        final inferred = _inferGenreForRow(row);
+        if (inferred == null || inferred.isEmpty) continue;
+        await txn.update(
+          'musics_v2',
+          {'genre': inferred},
+          where: 'audioUrl = ?',
+          whereArgs: [row['audioUrl']],
+        );
+        updated += 1;
+      }
+      return updated;
+    });
+  }
+
   Future<void> insertMusicIfNotExists(MusicEntity music) async {
     final db = await database;
     await _upsertMusicIfNeeded(db, music);
@@ -562,5 +587,86 @@ class DatabaseHelper {
       await txn.delete('playback_queue_items');
       await txn.delete('playback_queue_state', where: 'id = ?', whereArgs: [1]);
     });
+  }
+
+  String? _inferGenreForRow(Map<String, Object?> row) {
+    final folder = row['folderPath']?.toString().trim();
+    if (folder != null && folder.isNotEmpty) {
+      final normalized = folder.replaceAll('\\', '/');
+      final segments = normalized
+          .split('/')
+          .where((segment) => segment.trim().isNotEmpty)
+          .toList();
+      if (segments.isNotEmpty) return segments.last.trim();
+    }
+
+    final text = _normalizeText(
+      '${row['title'] ?? ''} ${row['artist'] ?? ''} ${row['album'] ?? ''}',
+    );
+
+    if (_containsAnyToken(text, const ['mozart', 'bach', 'beethoven', 'chopin'])) {
+      return 'Classica';
+    }
+    if (_containsAnyToken(text, const ['samba', 'pagode', 'axe'])) {
+      return 'Samba/Pagode';
+    }
+    if (_containsAnyToken(text, const ['forro', 'piseiro', 'sertanejo', 'arrocha'])) {
+      return 'Sertanejo/Forro';
+    }
+    if (_containsAnyToken(text, const ['gospel', 'worship', 'louvor'])) {
+      return 'Gospel';
+    }
+    if (_containsAnyToken(text, const ['rock', 'metal', 'punk'])) {
+      return 'Rock';
+    }
+    if (_containsAnyToken(text, const ['funk', 'trap', 'hip hop', 'rap'])) {
+      return 'Hip Hop/Funk';
+    }
+    if (_containsAnyToken(text, const ['jazz', 'blues', 'bossa'])) {
+      return 'Jazz/Blues';
+    }
+    return null;
+  }
+
+  String _normalizeText(String value) {
+    final lowercase = value.toLowerCase();
+    final sb = StringBuffer();
+    const map = {
+      'á': 'a',
+      'à': 'a',
+      'â': 'a',
+      'ã': 'a',
+      'ä': 'a',
+      'é': 'e',
+      'è': 'e',
+      'ê': 'e',
+      'ë': 'e',
+      'í': 'i',
+      'ì': 'i',
+      'î': 'i',
+      'ï': 'i',
+      'ó': 'o',
+      'ò': 'o',
+      'ô': 'o',
+      'õ': 'o',
+      'ö': 'o',
+      'ú': 'u',
+      'ù': 'u',
+      'û': 'u',
+      'ü': 'u',
+      'ç': 'c',
+    };
+    for (final rune in lowercase.runes) {
+      final ch = String.fromCharCode(rune);
+      sb.write(map[ch] ?? ch);
+    }
+    return sb.toString();
+  }
+
+  bool _containsAnyToken(String value, List<String> tokens) {
+    for (final token in tokens) {
+      if (value.contains(token)) return true;
+    }
+    return false;
   }
 }

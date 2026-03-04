@@ -40,6 +40,8 @@ class PlaylistViewModel extends ChangeNotifier {
       List.unmodifiable(_playlistsWithMusicCount);
   bool _isLoadingPlaylistsWithCount = false;
   bool get isLoadingPlaylistsWithCount => _isLoadingPlaylistsWithCount;
+  bool _isReprocessingGenres = false;
+  bool get isReprocessingGenres => _isReprocessingGenres;
 
   // 🎵 STATE
   List<MusicEntity> _libraryMusics = [];
@@ -664,6 +666,20 @@ class PlaylistViewModel extends ChangeNotifier {
   Future<void> loadMostPlayed() async {
     _mostPlayed = await _dbHelper.getMostPlayed(limit: 20);
     notifyListeners();
+  }
+
+  Future<int> runGenreReprocess() async {
+    if (_isReprocessingGenres) return 0;
+    _isReprocessingGenres = true;
+    notifyListeners();
+    try {
+      final updated = await _dbHelper.reprocessGenresBatch();
+      await loadAllMusics();
+      return updated;
+    } finally {
+      _isReprocessingGenres = false;
+      notifyListeners();
+    }
   }
 
   // =====================
