@@ -2,8 +2,7 @@ import 'package:music_music/data/models/search_result.dart';
 import 'package:music_music/data/models/music_entity.dart';
 import 'package:music_music/data/local/database_helper.dart';
 import 'package:music_music/core/music/music_scanner_factory.dart'
-    if (dart.library.html)
-        'package:music_music/core/music/music_scanner_factory_web.dart';
+    if (dart.library.html) 'package:music_music/core/music/music_scanner_factory_web.dart';
 import 'package:music_music/core/utils/podcast_detector.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:async';
@@ -67,6 +66,7 @@ class HomeViewModel extends ChangeNotifier {
     _artistsCacheVersion = _musicsVersion;
     return artists;
   }
+
   bool get isLoading => _isLoading;
   bool get isScanning => _isScanning;
   bool get permissionDenied => _permissionDenied;
@@ -105,7 +105,7 @@ class HomeViewModel extends ChangeNotifier {
       final rawList = await scanner.scan();
 
       if (rawList.isEmpty) {
-        _permissionDenied = true;
+        _permissionDenied = _shouldTreatEmptyScanAsPermissionDenied();
         _isLoading = false;
         notifyListeners();
         return;
@@ -296,6 +296,11 @@ class HomeViewModel extends ChangeNotifier {
     _searchDebounce?.cancel();
     super.dispose();
   }
+
+  bool _shouldTreatEmptyScanAsPermissionDenied() {
+    if (kIsWeb) return false;
+    return defaultTargetPlatform == TargetPlatform.android;
+  }
 }
 
 List<MusicEntity> processScanIsolate(List<MusicEntity> musics) {
@@ -335,5 +340,3 @@ int _calculateSearchScore(MusicEntity m, String q) {
 
   return score;
 }
-
-

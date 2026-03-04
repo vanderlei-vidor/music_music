@@ -20,6 +20,7 @@ import 'package:music_music/features/playlists/view/playlists_screen.dart';
 import 'package:music_music/features/splash/view/splash_view.dart';
 import 'package:music_music/features/settings/view/theme_settings_view.dart';
 import 'package:music_music/features/welcome/view/welcome_view.dart';
+import 'package:music_music/core/ios_upload/ios_import_view.dart';
 import 'package:music_music/data/models/music_entity.dart';
 
 class AppRoutes {
@@ -42,6 +43,7 @@ class AppRoutes {
   static const allMusics = '/all-musics';
   static const playlistDetail = '/playlist';
   static const musicSelection = '/playlist/add';
+  static const iosImport = '/ios-import';
 
   static final RouteObserver<PageRoute<dynamic>> routeObserver =
       RouteObserver<PageRoute<dynamic>>();
@@ -60,6 +62,7 @@ class AppRoutes {
     recent: (_) => const RecentMusicsView(),
     mostPlayed: (_) => const MostPlayedView(),
     allMusics: (_) => const AllMusicsScreen(),
+    iosImport: (_) => const IOSImportView(),
   };
 
   static Widget? buildBasePage(String name) {
@@ -90,6 +93,8 @@ class AppRoutes {
         return const MostPlayedView();
       case allMusics:
         return const AllMusicsScreen();
+      case iosImport:
+        return const IOSImportView();
     }
     return null;
   }
@@ -277,9 +282,7 @@ class _UnknownRoute extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Rota n\u00e3o encontrada')),
-      body: Center(
-        child: Text('Rota n\u00e3o registrada: $name'),
-      ),
+      body: Center(child: Text('Rota n\u00e3o registrada: $name')),
     );
   }
 }

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:on_audio_query/on_audio_query.dart';
@@ -28,6 +28,20 @@ class HomeMusicsTab extends StatelessWidget {
     return Consumer2<HomeViewModel, PlaylistViewModel>(
       builder: (context, vm, playerVM, _) {
         if (vm.permissionDenied) {
+          if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+            return _EmptyState(
+              icon: Icons.wifi_tethering_rounded,
+              text: 'Nenhuma música importada no iPhone',
+              subtitle:
+                  'Use a importação via Wi-Fi para enviar arquivos de áudio para o app.',
+              actionLabel: 'Abrir importação',
+              onAction: () async {
+                await Navigator.pushNamed(context, AppRoutes.iosImport);
+                if (!context.mounted) return;
+                await vm.manualRescan();
+              },
+            );
+          }
           return PermissionDeniedView(onRetry: () => vm.manualRescan());
         }
 
@@ -986,9 +1000,9 @@ class _HomePlaylistsTabState extends State<HomePlaylistsTab> {
         filtered.sort((a, b) {
           switch (_sort) {
             case _PlaylistSort.az:
-              return (a['name']?.toString() ?? '')
-                  .toLowerCase()
-                  .compareTo((b['name']?.toString() ?? '').toLowerCase());
+              return (a['name']?.toString() ?? '').toLowerCase().compareTo(
+                (b['name']?.toString() ?? '').toLowerCase(),
+              );
             case _PlaylistSort.mostSongs:
               return (b['musicCount'] as int).compareTo(a['musicCount'] as int);
           }
@@ -1052,7 +1066,9 @@ class _HomePlaylistsTabState extends State<HomePlaylistsTab> {
                   prefixIcon: const Icon(Icons.search_rounded),
                   isDense: true,
                   filled: true,
-                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  fillColor: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide.none,
@@ -1097,7 +1113,10 @@ class _HomePlaylistsTabState extends State<HomePlaylistsTab> {
                       itemBuilder: (_, index) {
                         final p = filtered[index];
                         final shadows =
-                            Theme.of(context).extension<AppShadows>()?.elevated ?? [];
+                            Theme.of(
+                              context,
+                            ).extension<AppShadows>()?.elevated ??
+                            [];
                         final musicCount = p['musicCount'] as int;
 
                         return TweenAnimationBuilder<double>(
@@ -1137,10 +1156,15 @@ class _HomePlaylistsTabState extends State<HomePlaylistsTab> {
                                   children: [
                                     const Icon(Icons.queue_music, size: 36),
                                     const SizedBox(height: 8),
-                                    Text(p['name'], textAlign: TextAlign.center),
+                                    Text(
+                                      p['name'],
+                                      textAlign: TextAlign.center,
+                                    ),
                                     Text(
                                       '$musicCount ${musicCount == 1 ? 'musica' : 'musicas'}',
-                                      style: Theme.of(context).textTheme.bodySmall,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall,
                                     ),
                                   ],
                                 ),
@@ -1178,9 +1202,9 @@ class _HomePodcastsTabState extends State<HomePodcastsTab> {
 
   Future<void> _markAsMusic(MusicEntity music) async {
     await context.read<HomeViewModel>().setManualMediaType(
-          music,
-          isPodcast: false,
-        );
+      music,
+      isPodcast: false,
+    );
   }
 
   Future<void> _removeFromLibrary(MusicEntity music) async {
@@ -1209,15 +1233,16 @@ class _HomePodcastsTabState extends State<HomePodcastsTab> {
     if (ok != true) return;
     await homeVM.removeMusicFromLibrary(music);
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Podcast removido da biblioteca.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Podcast removido da biblioteca.')),
+    );
   }
 
   String _totalRuntimeLabel(List<MusicEntity> podcasts) {
     final totalMs = podcasts.fold<int>(
       0,
-      (sum, item) => sum + PodcastDetector.normalizeDurationToMs(item.duration ?? 0),
+      (sum, item) =>
+          sum + PodcastDetector.normalizeDurationToMs(item.duration ?? 0),
     );
     if (totalMs <= 0) return '--';
     final d = Duration(milliseconds: totalMs);
@@ -1260,7 +1285,9 @@ class _HomePodcastsTabState extends State<HomePodcastsTab> {
                 end: Alignment.bottomRight,
                 colors: [
                   theme.colorScheme.primaryContainer.withValues(alpha: 0.88),
-                  theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.95),
+                  theme.colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.95,
+                  ),
                 ],
               ),
               border: Border.all(
@@ -1278,7 +1305,9 @@ class _HomePodcastsTabState extends State<HomePodcastsTab> {
                       height: 38,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: theme.colorScheme.primary.withValues(alpha: 0.16),
+                        color: theme.colorScheme.primary.withValues(
+                          alpha: 0.16,
+                        ),
                       ),
                       child: Icon(
                         Icons.podcasts_rounded,
@@ -1301,7 +1330,9 @@ class _HomePodcastsTabState extends State<HomePodcastsTab> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.72),
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.72,
+                              ),
                             ),
                           ),
                         ],
@@ -1331,7 +1362,9 @@ class _HomePodcastsTabState extends State<HomePodcastsTab> {
                   children: [
                     FilledButton.icon(
                       onPressed: () => _openManualPicker(vm),
-                      icon: const Icon(Icons.playlist_add_check_circle_outlined),
+                      icon: const Icon(
+                        Icons.playlist_add_check_circle_outlined,
+                      ),
                       label: Text(actionLabel),
                     ),
                     OutlinedButton.icon(
@@ -1350,14 +1383,12 @@ class _HomePodcastsTabState extends State<HomePodcastsTab> {
   }
 
   Future<void> _openManualPicker(HomeViewModel vm) async {
-    final candidates = vm.musics
-        .where((m) => !PodcastDetector.isPodcast(m))
-        .toList()
-      ..sort(
-        (a, b) => PodcastDetector.normalizeDurationToMs(
-          b.duration ?? 0,
-        ).compareTo(PodcastDetector.normalizeDurationToMs(a.duration ?? 0)),
-      );
+    final candidates =
+        vm.musics.where((m) => !PodcastDetector.isPodcast(m)).toList()..sort(
+          (a, b) => PodcastDetector.normalizeDurationToMs(
+            b.duration ?? 0,
+          ).compareTo(PodcastDetector.normalizeDurationToMs(a.duration ?? 0)),
+        );
 
     if (candidates.isEmpty) {
       if (!mounted) return;
@@ -1410,10 +1441,9 @@ class _HomePodcastsTabState extends State<HomePodcastsTab> {
                         trailing: IconButton(
                           tooltip: 'Marcar como podcast',
                           onPressed: () async {
-                            await context.read<HomeViewModel>().setManualMediaType(
-                                  music,
-                                  isPodcast: true,
-                                );
+                            await context
+                                .read<HomeViewModel>()
+                                .setManualMediaType(music, isPodcast: true);
                           },
                           icon: const Icon(Icons.add_circle_outline_rounded),
                         ),
@@ -1558,15 +1588,17 @@ class _HomePodcastsTabState extends State<HomePodcastsTab> {
                                   child: Padding(
                                     padding: const EdgeInsets.all(12),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           issue.title?.isNotEmpty == true
                                               ? issue.title!
                                               : 'Audio desconhecido',
-                                          style: theme.textTheme.bodyMedium?.copyWith(
-                                            fontWeight: FontWeight.w700,
-                                          ),
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w700,
+                                              ),
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
@@ -1578,9 +1610,10 @@ class _HomePodcastsTabState extends State<HomePodcastsTab> {
                                           issue.message,
                                           maxLines: 3,
                                           overflow: TextOverflow.ellipsis,
-                                          style: theme.textTheme.bodySmall?.copyWith(
-                                            color: theme.colorScheme.error,
-                                          ),
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                                color: theme.colorScheme.error,
+                                              ),
                                         ),
                                       ],
                                     ),
@@ -1665,7 +1698,8 @@ class _HomePodcastsTabState extends State<HomePodcastsTab> {
                       await playlistVM.playMusic(queue, index);
                     }
                   },
-                  onDoubleTap: () => Navigator.pushNamed(context, AppRoutes.player),
+                  onDoubleTap: () =>
+                      Navigator.pushNamed(context, AppRoutes.player),
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
@@ -2023,7 +2057,8 @@ class _HomeArtistsTabState extends State<HomeArtistsTab> {
                 avatar: _CountBadge(count: filtered.length),
                 label: const Text('Mais músicas'),
                 selected: _sort == _ArtistSort.mostSongs,
-                onSelected: (_) => setState(() => _sort = _ArtistSort.mostSongs),
+                onSelected: (_) =>
+                    setState(() => _sort = _ArtistSort.mostSongs),
               ),
             ],
           ),
@@ -2064,10 +2099,15 @@ class _HomeArtistsTabState extends State<HomeArtistsTab> {
                         },
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(16),
                             boxShadow:
-                                Theme.of(context).extension<AppShadows>()?.surface ?? [],
+                                Theme.of(
+                                  context,
+                                ).extension<AppShadows>()?.surface ??
+                                [],
                           ),
                           child: ListTile(
                             shape: RoundedRectangleBorder(
@@ -2077,10 +2117,14 @@ class _HomeArtistsTabState extends State<HomeArtistsTab> {
                               tag: 'artist_$artist',
                               child: CircleAvatar(
                                 radius: 24,
-                                backgroundColor:
-                                    Theme.of(context).colorScheme.primaryContainer,
+                                backgroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.primaryContainer,
                                 child: ClipOval(
-                                  child: artworkUrl != null && artworkUrl.isNotEmpty || artworkId != null
+                                  child:
+                                      artworkUrl != null &&
+                                              artworkUrl.isNotEmpty ||
+                                          artworkId != null
                                       ? SizedBox(
                                           width: 48,
                                           height: 48,
@@ -2091,8 +2135,12 @@ class _HomeArtistsTabState extends State<HomeArtistsTab> {
                                           ),
                                         )
                                       : Text(
-                                          artist.isNotEmpty ? artist[0].toUpperCase() : '?',
-                                          style: const TextStyle(fontWeight: FontWeight.bold),
+                                          artist.isNotEmpty
+                                              ? artist[0].toUpperCase()
+                                              : '?',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                 ),
                               ),
@@ -2179,9 +2227,9 @@ class _CountBadge extends StatelessWidget {
       ),
       child: Text(
         '$count',
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -2208,11 +2256,7 @@ class _MetricPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 14,
-            color: theme.colorScheme.primary,
-          ),
+          Icon(icon, size: 14, color: theme.colorScheme.primary),
           const SizedBox(width: 6),
           Text(
             label,

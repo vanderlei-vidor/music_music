@@ -35,8 +35,7 @@ class _HomeView extends StatefulWidget {
   State<_HomeView> createState() => _HomeViewState();
 }
 
-class _HomeViewState extends State<_HomeView>
-    with TickerProviderStateMixin {
+class _HomeViewState extends State<_HomeView> with TickerProviderStateMixin {
   int _currentIndex = 0;
   int _bottomNavIndex = 0;
   String _userName = 'Usuario';
@@ -212,15 +211,14 @@ class _HomeViewState extends State<_HomeView>
         SnackBar(
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           backgroundColor: theme.colorScheme.surfaceContainerHighest,
           duration: const Duration(seconds: 5),
           content: Row(
             children: [
-              Icon(
-                Icons.warning_amber_rounded,
-                color: theme.colorScheme.error,
-              ),
+              Icon(Icons.warning_amber_rounded, color: theme.colorScheme.error),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -240,7 +238,9 @@ class _HomeViewState extends State<_HomeView>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.78),
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.78,
+                        ),
                       ),
                     ),
                   ],
@@ -653,14 +653,15 @@ class _HomeViewState extends State<_HomeView>
                         ),
                         unselectedLabelStyle: theme.textTheme.labelLarge
                             ?.copyWith(fontSize: isCompact ? 12 : null),
-                        tabs: const [
-                          Tab(height: 34, text: 'Musicas'),
-                          Tab(height: 34, text: 'Albuns'),
-                          Tab(height: 34, text: 'Artistas'),
-                          Tab(height: 34, text: 'Pastas'),
-                          Tab(height: 34, text: 'Generos'),
-                          Tab(height: 34, text: 'Playlists'),
-                        ] +
+                        tabs:
+                            const [
+                              Tab(height: 34, text: 'Musicas'),
+                              Tab(height: 34, text: 'Albuns'),
+                              Tab(height: 34, text: 'Artistas'),
+                              Tab(height: 34, text: 'Pastas'),
+                              Tab(height: 34, text: 'Generos'),
+                              Tab(height: 34, text: 'Playlists'),
+                            ] +
                             (podcastsEnabled
                                 ? const [Tab(height: 34, text: 'Podcasts')]
                                 : const []),
@@ -669,14 +670,15 @@ class _HomeViewState extends State<_HomeView>
                       Expanded(
                         child: TabBarView(
                           controller: _tabController,
-                          children: const [
-                            HomeMusicsTab(),
-                            HomeAlbumsTab(),
-                            HomeArtistsTab(),
-                            FoldersView(),
-                            GenresView(),
-                            HomePlaylistsTab(),
-                          ] +
+                          children:
+                              const [
+                                HomeMusicsTab(),
+                                HomeAlbumsTab(),
+                                HomeArtistsTab(),
+                                FoldersView(),
+                                GenresView(),
+                                HomePlaylistsTab(),
+                              ] +
                               (podcastsEnabled
                                   ? const [HomePodcastsTab()]
                                   : const []),
@@ -774,6 +776,18 @@ class _HomeDrawer extends StatelessWidget {
               label: 'Playlists',
               onTap: () => onOpenTab(5),
             ),
+            if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
+              _DrawerItem(
+                icon: Icons.wifi_tethering_rounded,
+                label: 'Importar no iPhone',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, AppRoutes.iosImport).then((_) {
+                    if (!context.mounted) return;
+                    context.read<HomeViewModel>().manualRescan();
+                  });
+                },
+              ),
             if (context.watch<PodcastPreferences>().enabled)
               _DrawerItem(
                 icon: Icons.podcasts_rounded,
