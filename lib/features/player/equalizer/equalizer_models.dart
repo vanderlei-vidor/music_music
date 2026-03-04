@@ -38,6 +38,36 @@ extension EqualizerOutputProfileX on EqualizerOutputProfile {
   }
 }
 
+enum IosEqProcessingMode {
+  preampOnly,
+  tonalSynthesis,
+  trueMultiband,
+}
+
+extension IosEqProcessingModeX on IosEqProcessingMode {
+  String get storageKey {
+    switch (this) {
+      case IosEqProcessingMode.preampOnly:
+        return 'preamp_only';
+      case IosEqProcessingMode.tonalSynthesis:
+        return 'tonal_synthesis';
+      case IosEqProcessingMode.trueMultiband:
+        return 'true_multiband';
+    }
+  }
+
+  String get label {
+    switch (this) {
+      case IosEqProcessingMode.preampOnly:
+        return 'Preamp-only';
+      case IosEqProcessingMode.tonalSynthesis:
+        return 'Tonal synthesis';
+      case IosEqProcessingMode.trueMultiband:
+        return 'True multiband';
+    }
+  }
+}
+
 class EqualizerUserPreset {
   final String id;
   final String name;

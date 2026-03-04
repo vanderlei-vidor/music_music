@@ -18,6 +18,7 @@ class EqualizerViewModel extends ChangeNotifier {
   bool _enabled = false;
   double _preampDb = 0.0;
   EqualizerPreset _preset = EqualizerPreset.flat;
+  IosEqProcessingMode _iosEqProcessingMode = IosEqProcessingMode.tonalSynthesis;
   EqualizerOutputProfile _activeProfile = EqualizerOutputProfile.headphones;
   bool _autoHeadroomEnabled = true;
   bool _autoGenrePresetEnabled = false;
@@ -54,6 +55,7 @@ class EqualizerViewModel extends ChangeNotifier {
   Map<int, double> get bandGainsDb => Map.unmodifiable(_bandGainsDb);
   bool get autoHeadroomEnabled => _autoHeadroomEnabled;
   bool get autoGenrePresetEnabled => _autoGenrePresetEnabled;
+  IosEqProcessingMode get iosEqProcessingMode => _iosEqProcessingMode;
   EqualizerOutputProfile get activeProfile => _activeProfile;
   List<EqualizerOutputProfile> get availableProfiles =>
       EqualizerOutputProfile.values;
@@ -162,6 +164,13 @@ class EqualizerViewModel extends ChangeNotifier {
       _lastDetectedGenreLabel = null;
       _lastAutoAppliedPreset = null;
     }
+    notifyListeners();
+    _schedulePersistAndApply();
+  }
+
+  void setIosEqProcessingMode(IosEqProcessingMode mode) {
+    if (_iosEqProcessingMode == mode) return;
+    _iosEqProcessingMode = mode;
     notifyListeners();
     _schedulePersistAndApply();
   }
@@ -386,6 +395,7 @@ class EqualizerViewModel extends ChangeNotifier {
         enabled: _enabled,
         preampDb: effectivePreampDb,
         bandGainsDb: _bandGainsDb,
+        iosMode: _iosEqProcessingMode,
       );
       _applyCount += 1;
     } catch (_) {
@@ -421,6 +431,7 @@ class EqualizerViewModel extends ChangeNotifier {
       'preampDb': _preampDb,
       'autoHeadroomEnabled': _autoHeadroomEnabled,
       'autoGenrePresetEnabled': _autoGenrePresetEnabled,
+      'iosEqProcessingMode': _iosEqProcessingMode.storageKey,
       'preset': _preset.name,
       'bandGainsDb': {
         for (final entry in _bandGainsDb.entries)
@@ -434,6 +445,13 @@ class EqualizerViewModel extends ChangeNotifier {
     _preampDb = _toDouble(state['preampDb']) ?? 0.0;
     _autoHeadroomEnabled = state['autoHeadroomEnabled'] != false;
     _autoGenrePresetEnabled = state['autoGenrePresetEnabled'] == true;
+    final iosModeRaw =
+        state['iosEqProcessingMode']?.toString() ??
+        IosEqProcessingMode.tonalSynthesis.storageKey;
+    _iosEqProcessingMode = IosEqProcessingMode.values.firstWhere(
+      (m) => m.storageKey == iosModeRaw,
+      orElse: () => IosEqProcessingMode.tonalSynthesis,
+    );
 
     final presetRaw = state['preset']?.toString() ?? EqualizerPreset.flat.name;
     _preset = EqualizerPreset.values.firstWhere(

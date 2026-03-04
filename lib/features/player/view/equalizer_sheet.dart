@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:math' as math;
 import 'package:provider/provider.dart';
 
@@ -76,6 +77,10 @@ class EqualizerSheet extends StatelessWidget {
                     _LibraryToolsRow(isLoading: isReprocessingGenres),
                     const SizedBox(height: 8),
                     _AutomationRow(vm: vm),
+                    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) ...[
+                      const SizedBox(height: 6),
+                      _IosEqModeRow(vm: vm),
+                    ],
                     if (vm.autoGenrePresetEnabled) ...[
                       const SizedBox(height: 4),
                       _GenreDebugChip(vm: vm),
@@ -605,6 +610,69 @@ class _AutomationRow extends StatelessWidget {
           title: const Text('Preset automático por gênero'),
           value: vm.autoGenrePresetEnabled,
           onChanged: vm.setAutoGenrePresetEnabled,
+        ),
+      ],
+    );
+  }
+}
+
+class _IosEqModeRow extends StatelessWidget {
+  final EqualizerViewModel vm;
+  const _IosEqModeRow({required this.vm});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'iOS EQ Mode (experimental)',
+          style: theme.textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 6),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: IosEqProcessingMode.values.map((mode) {
+              final selected = vm.iosEqProcessingMode == mode;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  selected: selected,
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(mode.label),
+                      if (mode == IosEqProcessingMode.trueMultiband) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.25),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'WIP',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: Colors.amber.shade900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  onSelected: (_) => vm.setIosEqProcessingMode(mode),
+                ),
+              );
+            }).toList(),
+          ),
         ),
       ],
     );

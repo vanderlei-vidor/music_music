@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:music_music/features/player/equalizer/equalizer_models.dart';
 
 abstract class EqualizerBackend {
   void attachPlayer(AudioPlayer player);
@@ -8,6 +9,7 @@ abstract class EqualizerBackend {
     required bool enabled,
     required double preampDb,
     required Map<int, double> bandGainsDb,
+    required IosEqProcessingMode iosMode,
   });
 
   Future<void> dispose();
@@ -16,6 +18,9 @@ abstract class EqualizerBackend {
 EqualizerBackend createPlatformEqualizerBackend() {
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     return AndroidEqualizerBackend();
+  }
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+    return IosEqualizerBackend();
   }
   return NoopEqualizerBackend();
 }
@@ -40,6 +45,7 @@ class NoopEqualizerBackend implements EqualizerBackend {
     required bool enabled,
     required double preampDb,
     required Map<int, double> bandGainsDb,
+    required IosEqProcessingMode iosMode,
   }) async {}
 
   @override
@@ -71,6 +77,7 @@ class AndroidEqualizerBackend implements EqualizerBackend {
     required bool enabled,
     required double preampDb,
     required Map<int, double> bandGainsDb,
+    required IosEqProcessingMode iosMode,
   }) {
     if (_disposed) return Future<void>.value();
     _applyChain = _applyChain
@@ -79,6 +86,7 @@ class AndroidEqualizerBackend implements EqualizerBackend {
             enabled: enabled,
             preampDb: preampDb,
             bandGainsDb: bandGainsDb,
+            iosMode: iosMode,
           ),
         )
         .catchError((Object error, StackTrace stackTrace) {
@@ -92,6 +100,7 @@ class AndroidEqualizerBackend implements EqualizerBackend {
     required bool enabled,
     required double preampDb,
     required Map<int, double> bandGainsDb,
+    required IosEqProcessingMode iosMode,
   }) async {
     if (_player == null || _disposed) return;
 
@@ -134,5 +143,88 @@ class AndroidEqualizerBackend implements EqualizerBackend {
   Future<void> dispose() async {
     _disposed = true;
     await _applyChain;
+  }
+}
+
+class IosEqualizerBackend implements EqualizerBackend {
+  AudioPlayer? _player;
+  bool _attached = false;
+  bool _disposed = false;
+  Future<void> _applyChain = Future<void>.value();
+
+  @override
+  void attachPlayer(AudioPlayer player) {
+    _player = player;
+    _attached = true;
+  }
+
+  @override
+  Future<void> apply({
+    required bool enabled,
+    required double preampDb,
+    required Map<int, double> bandGainsDb,
+    required IosEqProcessingMode iosMode,
+  }) {
+    if (_disposed || !_attached) return Future<void>.value();
+    final player = _player;
+    if (player == null) return Future<void>.value();
+    _applyChain = _applyChain
+        .then(
+          (_) {
+            final effectiveDb = _effectivePreampForMode(
+              preampDb: preampDb,
+              bandGainsDb: bandGainsDb,
+              mode: iosMode,
+            );
+            return player.darwinSetEqualizer(
+              enabled: enabled,
+              preampDb: effectiveDb,
+              bandGainsDb: bandGainsDb,
+            );
+          },
+        )
+        .catchError((Object error, StackTrace stackTrace) {
+          debugPrint('[Equalizer][iOS] apply error: $error');
+          debugPrint(stackTrace.toString());
+        });
+    return _applyChain;
+  }
+
+  double _effectivePreampForMode({
+    required double preampDb,
+    required Map<int, double> bandGainsDb,
+    required IosEqProcessingMode mode,
+  }) {
+    switch (mode) {
+      case IosEqProcessingMode.preampOnly:
+        return preampDb.clamp(-12.0, 12.0).toDouble();
+      case IosEqProcessingMode.tonalSynthesis:
+        final tonalDb = _synthesizedTonalDb(bandGainsDb);
+        return (preampDb + tonalDb).clamp(-12.0, 12.0).toDouble();
+      case IosEqProcessingMode.trueMultiband:
+        // TODO(iOS): switch to native AVAudioEngine multiband when implemented.
+        final tonalDb = _synthesizedTonalDb(bandGainsDb);
+        return (preampDb + tonalDb).clamp(-12.0, 12.0).toDouble();
+    }
+  }
+
+  double _synthesizedTonalDb(Map<int, double> bandGainsDb) {
+    double at(int hz) => bandGainsDb[hz] ?? 0.0;
+
+    final low = (at(31) + at(62) + at(125)) / 3.0;
+    final mid = (at(250) + at(500) + at(1000) + at(2000)) / 4.0;
+    final high = (at(4000) + at(8000) + at(16000)) / 3.0;
+
+    // Weighted synthesis that gives user-perceivable tone shift without
+    // over-amplifying output.
+    final tonal = (low * 0.22) + (mid * 0.10) + (high * 0.18);
+    return tonal.clamp(-4.0, 4.0).toDouble();
+  }
+
+  @override
+  Future<void> dispose() async {
+    _disposed = true;
+    await _applyChain;
+    _player = null;
   }
 }
