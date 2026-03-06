@@ -79,6 +79,7 @@ class AboutView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
                 _FeatureLine('Player local com fila persistida'),
+                _FeatureLine('Gapless playback e crossfade'),
                 _FeatureLine('Equalizador avancado com presets custom'),
                 _FeatureLine('Perfis de audio por dispositivo'),
                 _FeatureLine('Biblioteca com sincronizacao incremental'),
@@ -101,8 +102,9 @@ class AboutView extends StatelessWidget {
           FilledButton.icon(
             onPressed: () async {
               await Clipboard.setData(
-                const ClipboardData(
-                  text: 'Music Music 1.2.0+1 | Flutter app local audio player',
+                ClipboardData(
+                  text:
+                      '${AppInfo.appName} ${AppInfo.appVersion} | Flutter app local audio player',
                 ),
               );
               if (!context.mounted) return;

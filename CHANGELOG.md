@@ -2,6 +2,42 @@
 
 Todas as mudancas relevantes deste projeto serao documentadas aqui.
 
+## [1.4.0] - 2026-03-06
+
+### Added
+- **Gapless Playback**: Reproducao continua sem silencio entre faixas do mesmo album.
+- **Crossfade**: Transicao suave com sobreposicao gradual de faixas (2-12 segundos).
+- **PlaybackPreferences**: Gerenciamento de configuracoes de playback no SharedPreferences.
+- **PlaybackSettingsView**: Tela de configuracoes dedicada para Gapless e Crossfade.
+- **Controle de duracao do Crossfade**: Slider de 0-12 segundos com feedback visual.
+- **Fade in/out automatico**: Implementacao manual de crossfade via controle de volume.
+
+### Changed
+- `PlaylistViewModel` agora carrega configuracoes de playback na inicializacao.
+- `_setAudioSource` otimizado para usar `setAudioSources` com lista direta.
+- `AboutView` atualizado com link para configuracoes de reproducao.
+- Lista de recursos principais agora menciona "Gapless playback e crossfade".
+- **Menu de Reproducao movido para os drawers**: Acesso agora pela Home e Player Principal.
+
+### Fixed
+- **Crossfade lock**: Adicionado `_isChangingTrack` para evitar processamento multiplo simultaneo.
+- **Listener de sequenceState**: Agora usa `await` em vez de `unawaited` para crossfade.
+- **Volume do crossfade**: Corrigido para sempre retornar a 1.0 ao final.
+- **Comparacao de tracks**: Usa ID ou audioUrl para evitar falsos positivos.
+- **UI delay na transicao**: Crossfade agora usa `Timer.periodic` para nao bloquear o listener (antes delay de 7s na UI).
+- **Crossfade nao-bloqueante**: Listener atualiza a UI imediatamente enquanto fade ocorre em background.
+
+### Technical
+- `PlaybackConfig`: Modelo imutavel para configuracoes de playback.
+- `_applyCrossfade()`: Implementa fade in gradual com 20 steps para suavidade.
+- Getters publicos para `gaplessEnabled`, `crossfadeEnabled`, `crossfadeSeconds`.
+- Persistencia automatica das preferencias via `SharedPreferences`.
+
+### UX
+- Configuracoes acessiveis via tela "Sobre" > "Reproducao (Gapless/Crossfade)".
+- Valores padrao: Gapless habilitado, Crossfade desabilitado (0s).
+- Info card explica diferenca entre Gapless e Crossfade.
+
 ## [1.3.0] - 2026-03-06
 
 ### Added

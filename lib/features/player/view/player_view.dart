@@ -412,6 +412,15 @@ class _PlayerViewState extends State<PlayerView> {
               _openEqualizerSheet(context);
             },
           ),
+          _drawerItem(
+            context,
+            icon: Icons.play_circle_outline_rounded,
+            title: 'Reproducao (Gapless/Crossfade)',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, AppRoutes.playbackSettings);
+            },
+          ),
         ],
       ),
     );

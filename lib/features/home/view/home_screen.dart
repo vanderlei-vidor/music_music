@@ -796,6 +796,14 @@ class _HomeDrawer extends StatelessWidget {
                 });
               },
             ),
+            _DrawerItem(
+              icon: Icons.play_circle_outline_rounded,
+              label: 'Reproducao (Gapless/Crossfade)',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, AppRoutes.playbackSettings);
+              },
+            ),
             _DrawerSwitchItem(
               icon: Icons.podcasts_rounded,
               label: 'Podcasts',

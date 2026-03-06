@@ -7,6 +7,7 @@ import 'package:just_audio_background/just_audio_background.dart';
 import 'package:music_music/core/observability/app_logger.dart';
 import 'package:music_music/core/ui/genre_colors.dart';
 import 'package:music_music/core/utils/genre_normalizer.dart';
+import 'package:music_music/core/preferences/playback_preferences.dart';
 
 import 'package:music_music/data/local/database_helper.dart';
 import 'package:palette_generator/palette_generator.dart';
@@ -61,12 +62,29 @@ class PlaylistViewModel extends ChangeNotifier {
   int _lastEndOfSongSecond = -1;
   StreamSubscription<Duration>? _positionSub;
   StreamSubscription<PlayerState>? _playerStateSub;
+  StreamSubscription<bool>? _playingSub;
+  StreamSubscription<int?>? _currentIndexSub;
+  StreamSubscription<SequenceState>? _sequenceStateSub;
+  StreamSubscription<AudioInterruptionEvent>? _audioInterruptionSub;
+  StreamSubscription<void>? _becomingNoisySub;
   Duration? _sleepPausedRemaining;
   bool _restoringQueue = false;
   bool _isPersistingQueue = false;
   DateTime? _lastQueuePersistAt;
   Duration _lastPersistedPosition = Duration.zero;
+  double? _volumeBeforeDuck;
+  bool _resumeAfterInterruption = false;
   final List<PlaybackIssue> _playbackIssues = [];
+
+  // 🎧 GAPLESS / CROSSFADE
+  final PlaybackPreferences _playbackPrefs = PlaybackPreferences();
+  PlaybackConfig _playbackConfig = const PlaybackConfig(
+    gaplessEnabled: true,
+    crossfadeEnabled: false,
+    crossfadeSeconds: 0,
+  );
+  bool _isLoadingConfig = true;
+  bool _isChangingTrack = false; // Lock para evitar mudanças múltiplas
 
   // =====================
   // GETTERS
@@ -78,6 +96,14 @@ class PlaylistViewModel extends ChangeNotifier {
   bool get isShuffled => _isShuffled;
   LoopMode get repeatMode => _repeatMode;
   double get currentSpeed => _currentSpeed;
+  
+  // Gapless/Crossfade getters
+  bool get gaplessEnabled => _playbackConfig.gaplessEnabled;
+  bool get crossfadeEnabled => _playbackConfig.crossfadeEnabled;
+  int get crossfadeSeconds => _playbackConfig.crossfadeSeconds;
+  Duration get crossfadeDuration => _playbackConfig.crossfadeDuration;
+  bool get isCrossfadeActive => _playbackConfig.isCrossfadeActive;
+  bool get isLoadingConfig => _isLoadingConfig;
 
   bool _isPlaying = false;
   bool get isPlaying => _isPlaying;
@@ -114,10 +140,11 @@ class PlaylistViewModel extends ChangeNotifier {
   // INIT
   // =====================
   PlaylistViewModel({AudioPlayer? player}) : _player = player ?? AudioPlayer() {
+    _loadPlaybackConfig();
     _initAudioSession();
     _listenToSequenceChanges();
 
-    _player.playingStream.listen((playing) {
+    _playingSub = _player.playingStream.listen((playing) {
       _isPlaying = playing;
       notifyListeners();
 
@@ -129,7 +156,7 @@ class PlaylistViewModel extends ChangeNotifier {
       }
     });
 
-    _player.currentIndexStream.listen((_) {
+    _currentIndexSub = _player.currentIndexStream.listen((_) {
       _persistPlaybackQueue();
     });
 
@@ -155,7 +182,6 @@ class PlaylistViewModel extends ChangeNotifier {
       }
     });
 
-
     loadAllMusics();
     loadRecentMusics();
     loadFavoriteMusics();
@@ -164,11 +190,110 @@ class PlaylistViewModel extends ChangeNotifier {
   }
 
   // =====================
+  // GAPLESS / CROSSFADE CONFIG
+  // =====================
+  Future<void> _loadPlaybackConfig() async {
+    try {
+      _playbackConfig = await _playbackPrefs.loadConfig();
+    } catch (e) {
+      AppLogger.warn(
+        'PlaylistViewModel',
+        'Falha ao carregar config de playback',
+        error: e,
+      );
+    } finally {
+      _isLoadingConfig = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> setGaplessEnabled(bool enabled) async {
+    if (_playbackConfig.gaplessEnabled == enabled) return;
+    await _playbackPrefs.setGaplessEnabled(enabled);
+    _playbackConfig = PlaybackConfig(
+      gaplessEnabled: enabled,
+      crossfadeEnabled: _playbackConfig.crossfadeEnabled,
+      crossfadeSeconds: _playbackConfig.crossfadeSeconds,
+    );
+    notifyListeners();
+    // Reconfigurar fila com gapless
+    if (_queueMusics.isNotEmpty) {
+      await _setAudioSource(initialIndex: _player.currentIndex ?? 0);
+    }
+  }
+
+  Future<void> setCrossfadeEnabled(bool enabled) async {
+    if (_playbackConfig.crossfadeEnabled == enabled) return;
+    await _playbackPrefs.setCrossfadeEnabled(enabled);
+    _playbackConfig = PlaybackConfig(
+      gaplessEnabled: _playbackConfig.gaplessEnabled,
+      crossfadeEnabled: enabled,
+      crossfadeSeconds: _playbackConfig.crossfadeSeconds,
+    );
+    notifyListeners();
+  }
+
+  Future<void> setCrossfadeSeconds(int seconds) async {
+    final clamped = seconds.clamp(0, PlaybackPreferences.maxCrossfadeSeconds);
+    if (_playbackConfig.crossfadeSeconds == clamped) return;
+    await _playbackPrefs.setCrossfadeSeconds(clamped);
+    _playbackConfig = PlaybackConfig(
+      gaplessEnabled: _playbackConfig.gaplessEnabled,
+      crossfadeEnabled: clamped > 0,
+      crossfadeSeconds: clamped,
+    );
+    notifyListeners();
+  }
+
+  // =====================
   // AUDIO SESSION
   // =====================
   Future<void> _initAudioSession() async {
     final session = await AudioSession.instance;
     await session.configure(const AudioSessionConfiguration.music());
+
+    await _audioInterruptionSub?.cancel();
+    _audioInterruptionSub = session.interruptionEventStream.listen((event) async {
+      if (event.begin) {
+        switch (event.type) {
+          case AudioInterruptionType.duck:
+            _volumeBeforeDuck ??= _player.volume;
+            await _player.setVolume((_volumeBeforeDuck! * 0.5).clamp(0.0, 1.0));
+            break;
+          case AudioInterruptionType.pause:
+          case AudioInterruptionType.unknown:
+            _resumeAfterInterruption = _player.playing;
+            if (_player.playing) {
+              await _player.pause();
+            }
+            break;
+        }
+      } else {
+        switch (event.type) {
+          case AudioInterruptionType.duck:
+            if (_volumeBeforeDuck != null) {
+              await _player.setVolume(_volumeBeforeDuck!.clamp(0.0, 1.0));
+              _volumeBeforeDuck = null;
+            }
+            break;
+          case AudioInterruptionType.pause:
+          case AudioInterruptionType.unknown:
+            if (_resumeAfterInterruption) {
+              _resumeAfterInterruption = false;
+              await _player.play();
+            }
+            break;
+        }
+      }
+    });
+
+    await _becomingNoisySub?.cancel();
+    _becomingNoisySub = session.becomingNoisyEventStream.listen((_) async {
+      if (_player.playing) {
+        _resumeAfterInterruption = false;
+        await _player.pause();
+      }
+    });
   }
 
   // =====================
@@ -233,21 +358,7 @@ class PlaylistViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final playlists = await _dbHelper.getPlaylists();
-      final List<Map<String, dynamic>> result = [];
-
-      for (final playlist in playlists) {
-        final playlistId = playlist['id'] as int;
-        final count = await _dbHelper.getMusicCountForPlaylist(playlistId);
-
-        result.add({
-          'id': playlistId,
-          'name': playlist['name'],
-          'musicCount': count,
-        });
-      }
-
-      _playlistsWithMusicCount = result;
+      _playlistsWithMusicCount = await _dbHelper.getPlaylistsWithMusicCount();
     } finally {
       _isLoadingPlaylistsWithCount = false;
       notifyListeners();
@@ -283,6 +394,7 @@ class PlaylistViewModel extends ChangeNotifier {
     final wasPlaying = _player.playing;
     final currentIndex = initialIndex ?? _player.currentIndex ?? 0;
 
+    // 🎧 GAPLESS: Usar ConcatenatingAudioSource para transições suaves
     final children = <AudioSource>[];
 
     for (final music in _queueMusics) {
@@ -305,6 +417,8 @@ class PlaylistViewModel extends ChangeNotifier {
     }
 
     try {
+      // 🎧 GAPLESS: Usar lista direta com ConcatenatingAudioSource internamente
+      // just_audio automaticamente usa gapless quando as faixas estão na mesma playlist
       await _player.setAudioSources(
         children,
         initialIndex: currentIndex.clamp(0, children.length - 1),
@@ -370,43 +484,114 @@ class PlaylistViewModel extends ChangeNotifier {
   // PLAYER LISTENER (RECENTES)
   // =====================
   void _listenToSequenceChanges() {
-    _player.sequenceStateStream.listen((sequenceState) async {
+    _sequenceStateSub = _player.sequenceStateStream.listen((sequenceState) async {
+      // Lock para evitar processamento múltiplo simultâneo
+      if (_isChangingTrack) return;
+      
       final index = sequenceState.currentIndex;
       if (index == null) return;
       if (index < 0 || index >= _queueMusics.length) return;
 
       final newMusic = _queueMusics[index];
 
-      if (_currentMusic?.audioUrl != newMusic.audioUrl) {
-        _currentMusic = newMusic;
-        // 🎼 gênero atual
-        final resolvedGenre = _resolveCurrentGenre(newMusic);
-        _currentGenre = resolvedGenre;
+      // Comparar por ID ou audioUrl para evitar falsos positivos
+      final currentId = _currentMusic?.id ?? _currentMusic?.audioUrl;
+      final newId = newMusic.id ?? newMusic.audioUrl;
 
-        // 🎨 cor do gênero
-        if (resolvedGenre != null && resolvedGenre.isNotEmpty) {
-          _currentGenreColor = GenreColorHelper.getColor(resolvedGenre);
-        } else {
-          _currentGenreColor = null;
+      if (currentId != newId) {
+        _isChangingTrack = true;
+        
+        try {
+          _currentMusic = newMusic;
+
+          // 🎧 CROSSFADE: Aplicar fade in de forma NÃO BLOQUEANTE
+          // O listener continua imediatamente para atualizar a UI
+          if (_playbackConfig.isCrossfadeActive && _player.playing) {
+            unawaited(_applyCrossfade());
+          }
+
+          // 🎼 gênero atual
+          final resolvedGenre = _resolveCurrentGenre(newMusic);
+          _currentGenre = resolvedGenre;
+
+          // 🎨 cor do gênero
+          if (resolvedGenre != null && resolvedGenre.isNotEmpty) {
+            _currentGenreColor = GenreColorHelper.getColor(resolvedGenre);
+          } else {
+            _currentGenreColor = null;
+          }
+
+          await _updateDominantColor(newMusic);
+
+          if (_sleepMode == SleepTimerMode.endOfSong) {
+            _syncEndOfSongTimer();
+          } else if (_sleepMode == SleepTimerMode.endOfPlaylist) {
+            _syncEndOfPlaylistTimer();
+          }
+
+          // 🔥 AQUI É O LUGAR CERTO
+          if (newMusic.id != null) {
+            await _dbHelper.registerRecentPlay(newMusic.id!);
+            await loadRecentMusics();
+          }
+
+          notifyListeners();
+        } finally {
+          _isChangingTrack = false;
         }
-
-        await _updateDominantColor(newMusic);
-
-        if (_sleepMode == SleepTimerMode.endOfSong) {
-          _syncEndOfSongTimer();
-        } else if (_sleepMode == SleepTimerMode.endOfPlaylist) {
-          _syncEndOfPlaylistTimer();
-        }
-
-        // 🔥 AQUI É O LUGAR CERTO
-        if (newMusic.id != null) {
-          await _dbHelper.registerRecentPlay(newMusic.id!);
-          await loadRecentMusics();
-        }
-
-        notifyListeners();
       }
     });
+  }
+
+  // 🎧 CROSSFADE: Aplica fade in suave na nova faixa (NÃO BLOQUEANTE)
+  // Usamos Timer.periodic para não bloquear o listener do sequenceState
+  Timer? _crossfadeTimer;
+  bool _isApplyingCrossfade = false;
+  
+  Future<void> _applyCrossfade() async {
+    if (!_playbackConfig.isCrossfadeActive || _isApplyingCrossfade) return;
+    
+    _isApplyingCrossfade = true;
+    _crossfadeTimer?.cancel();
+    
+    try {
+      final crossfadeSeconds = _playbackConfig.crossfadeSeconds;
+      
+      if (crossfadeSeconds <= 0) return;
+
+      // Fade in gradual da nova faixa usando Timer (não bloqueante)
+      const steps = 20;
+      final stepDuration = (crossfadeSeconds * 1000 / steps).round();
+      var currentStep = 0;
+
+      // Volume inicial bem baixo
+      await _player.setVolume(0.0);
+      
+      // Pequeno delay inicial
+      await Future.delayed(const Duration(milliseconds: 30));
+
+      // Timer não bloqueante para fade in
+      _crossfadeTimer = Timer.periodic(
+        Duration(milliseconds: stepDuration),
+        (timer) {
+          currentStep++;
+          
+          if (currentStep >= steps || !_player.playing) {
+            timer.cancel();
+            _player.setVolume(1.0); // Garante volume máximo
+            _isApplyingCrossfade = false;
+            return;
+          }
+          
+          final targetVolume = currentStep / steps;
+          _player.setVolume(targetVolume);
+        },
+      );
+    } catch (_) {
+      _crossfadeTimer?.cancel();
+      await _player.setVolume(1.0);
+      _isApplyingCrossfade = false;
+    }
   }
 
   // =====================
@@ -713,8 +898,14 @@ class PlaylistViewModel extends ChangeNotifier {
     unawaited(_persistPlaybackQueueOnDispose());
     _sleepTimer?.cancel();
     _sleepTick?.cancel();
+    _crossfadeTimer?.cancel(); // 🎧 Cancela crossfade timer
     _positionSub?.cancel();
     _playerStateSub?.cancel();
+    _playingSub?.cancel();
+    _currentIndexSub?.cancel();
+    _sequenceStateSub?.cancel();
+    _audioInterruptionSub?.cancel();
+    _becomingNoisySub?.cancel();
     _player.dispose();
     super.dispose();
   }

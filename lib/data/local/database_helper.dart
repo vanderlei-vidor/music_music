@@ -234,6 +234,30 @@ class DatabaseHelper {
     return db.query('playlists');
   }
 
+  Future<List<Map<String, dynamic>>> getPlaylistsWithMusicCount() async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT
+        p.id AS id,
+        p.name AS name,
+        COUNT(pm.musicId) AS musicCount
+      FROM playlists p
+      LEFT JOIN playlist_musics_v2 pm
+        ON pm.playlistId = p.id
+      GROUP BY p.id, p.name
+      ORDER BY LOWER(p.name) ASC
+    ''');
+    return result
+        .map(
+          (row) => {
+            'id': row['id'] as int,
+            'name': row['name'] as String,
+            'musicCount': (row['musicCount'] as int?) ?? 0,
+          },
+        )
+        .toList();
+  }
+
   Future<void> deletePlaylist(int playlistId) async {
     final db = await database;
     await db.delete('playlists', where: 'id = ?', whereArgs: [playlistId]);

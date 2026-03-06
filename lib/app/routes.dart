@@ -23,6 +23,7 @@ import 'package:music_music/features/settings/view/about_view.dart';
 import 'package:music_music/features/settings/view/theme_settings_view.dart';
 import 'package:music_music/features/welcome/view/welcome_view.dart';
 import 'package:music_music/core/ios_upload/ios_import_view.dart';
+import 'package:music_music/features/settings/view/playback_settings_view.dart';
 import 'package:music_music/data/models/music_entity.dart';
 
 class AppRoutes {
@@ -45,6 +46,7 @@ class AppRoutes {
   static const allMusics = '/all-musics';
   static const trash = '/trash';
   static const about = '/about';
+  static const playbackSettings = '/settings/playback';
   static const playlistDetail = '/playlist';
   static const musicSelection = '/playlist/add';
   static const iosImport = '/ios-import';
@@ -68,6 +70,7 @@ class AppRoutes {
     allMusics: (_) => const AllMusicsScreen(),
     trash: (_) => const TrashLibraryView(),
     about: (_) => const AboutView(),
+    playbackSettings: (_) => const PlaybackSettingsView(),
     iosImport: (_) => const IOSImportView(),
   };
 
@@ -103,6 +106,8 @@ class AppRoutes {
         return const TrashLibraryView();
       case about:
         return const AboutView();
+      case playbackSettings:
+        return const PlaybackSettingsView();
       case iosImport:
         return const IOSImportView();
     }
