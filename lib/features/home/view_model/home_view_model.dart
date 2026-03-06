@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:music_music/core/music/music_scanner_factory.dart'
     if (dart.library.html) 'package:music_music/core/music/music_scanner_factory_web.dart';
+import 'package:music_music/core/observability/app_logger.dart';
 import 'package:music_music/core/utils/podcast_detector.dart';
 import 'package:music_music/data/local/database_helper.dart';
 import 'package:music_music/data/models/music_entity.dart';
@@ -198,7 +199,11 @@ class HomeViewModel extends ChangeNotifier {
       }
     } catch (e) {
       _lastSyncError = e.toString();
-      debugPrint('Erro ao sincronizar biblioteca: $e');
+      AppLogger.error(
+        'HomeViewModel',
+        'Erro ao sincronizar biblioteca',
+        error: e,
+      );
     } finally {
       _isScanning = false;
       notifyListeners();
@@ -233,7 +238,11 @@ class HomeViewModel extends ChangeNotifier {
       _albumGroupsCacheVersion = -1;
       _artistsCacheVersion = -1;
     } catch (e) {
-      debugPrint('Erro ao carregar musicas: $e');
+      AppLogger.error(
+        'HomeViewModel',
+        'Erro ao carregar musicas',
+        error: e,
+      );
     } finally {
       _isLoading = false;
       _hasHydratedLibrary = true;

@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:on_audio_query/on_audio_query.dart';
@@ -14,6 +14,7 @@ import 'package:music_music/shared/widgets/skeleton.dart';
 import 'package:music_music/shared/widgets/artwork_image.dart';
 import 'package:music_music/shared/widgets/swipe_to_reveal_actions.dart';
 import 'package:music_music/shared/widgets/playlist_play_shuffle_button.dart';
+import 'package:music_music/shared/widgets/app_state_view.dart';
 import 'package:music_music/core/ui/responsive.dart';
 import 'package:music_music/core/utils/podcast_detector.dart';
 
@@ -29,12 +30,12 @@ class HomeMusicsTab extends StatelessWidget {
       builder: (context, vm, playerVM, _) {
         if (vm.permissionDenied) {
           if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
-            return _EmptyState(
+            return AppStateView.error(
               icon: Icons.wifi_tethering_rounded,
-              text: 'Nenhuma música importada no iPhone',
+              title: 'Nenhuma musica importada no iPhone',
               subtitle:
-                  'Use a importação via Wi-Fi para enviar arquivos de áudio para o app.',
-              actionLabel: 'Abrir importação',
+                  'Use a importacao via Wi-Fi para enviar arquivos de audio para o app.',
+              actionLabel: 'Abrir importacao',
               onAction: () async {
                 await Navigator.pushNamed(context, AppRoutes.iosImport);
                 if (!context.mounted) return;
@@ -46,13 +47,15 @@ class HomeMusicsTab extends StatelessWidget {
         }
 
         if (vm.isLoading) {
-          return const _MusicListSkeleton();
+          return const AppStateView.loading(
+            title: 'Carregando biblioteca',
+            subtitle: 'Organizando suas musicas...',
+          );
         }
 
         if (vm.isScanning && vm.visibleMusics.isEmpty) {
-          return const _EmptyState(
-            icon: Icons.sync_rounded,
-            text: 'Sincronizando biblioteca',
+          return const AppStateView.loading(
+            title: 'Sincronizando biblioteca',
             subtitle: 'Buscando musicas do dispositivo em segundo plano.',
           );
         }
@@ -90,9 +93,18 @@ class HomeMusicsTab extends StatelessWidget {
         }
 
         if (vm.visibleMusics.isEmpty) {
-          return _EmptyState(
+          if (vm.lastSyncError != null && vm.lastSyncError!.isNotEmpty) {
+            return AppStateView.error(
+              title: 'Falha ao carregar biblioteca',
+              subtitle: vm.lastSyncError,
+              actionLabel: 'Tentar novamente',
+              onAction: () => vm.manualRescan(),
+            );
+          }
+
+          return AppStateView.empty(
             icon: Icons.library_music,
-            text: 'Nenhuma musica encontrada',
+            title: 'Nenhuma musica encontrada',
             subtitle: kIsWeb
                 ? 'Use a area de upload acima para adicionar suas musicas.'
                 : 'Escaneie seu dispositivo para importar suas musicas.',
@@ -107,7 +119,7 @@ class HomeMusicsTab extends StatelessWidget {
             _OpenAllMusicsCard(total: vm.visibleMusics.length),
             const SizedBox(height: 16),
             _HomeRailSection(
-              title: 'Feito para você',
+              title: 'Feito para voce',
               queue: vm.visibleMusics,
               items: vm.visibleMusics.take(18).toList(),
             ),
@@ -928,7 +940,7 @@ class HomeFavoritesTab extends StatelessWidget {
         if (favorites.isEmpty) {
           return const _EmptyState(
             icon: Icons.favorite_border,
-            text: 'Nenhuma mÃƒÆ’Ã‚Âºsica favorita',
+            text: 'Nenhuma mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºsica favorita',
           );
         }
 
@@ -1442,7 +1454,7 @@ class _HomePodcastsTabState extends State<HomePodcastsTab> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         subtitle: Text(
-                          '${music.artist} • ${_formatDuration(music.duration)}',
+                          '${music.artist} â€¢ ${_formatDuration(music.duration)}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1514,7 +1526,7 @@ class _HomePodcastsTabState extends State<HomePodcastsTab> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         subtitle: Text(
-                          '${music.artist} • ${_formatDuration(music.duration)}',
+                          '${music.artist} â€¢ ${_formatDuration(music.duration)}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1610,7 +1622,7 @@ class _HomePodcastsTabState extends State<HomePodcastsTab> {
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          'Etapa: ${issue.stage} • Horario: $when',
+                                          'Etapa: ${issue.stage} â€¢ Horario: $when',
                                           style: theme.textTheme.bodySmall,
                                         ),
                                         const SizedBox(height: 6),
@@ -1726,7 +1738,7 @@ class _HomePodcastsTabState extends State<HomePodcastsTab> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       subtitle: Text(
-                        '${m.artist} • ${_formatDuration(m.duration)}',
+                        '${m.artist} â€¢ ${_formatDuration(m.duration)}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -1955,7 +1967,7 @@ class _HomeAlbumsTabState extends State<HomeAlbumsTab>
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                             Text(
-                              '${group.artist} • ${group.musics.length} musicas',
+                              '${group.artist} â€¢ ${group.musics.length} musicas',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.bodySmall,
@@ -2063,7 +2075,7 @@ class _HomeArtistsTabState extends State<HomeArtistsTab> {
               const SizedBox(width: 8),
               ChoiceChip(
                 avatar: _CountBadge(count: filtered.length),
-                label: const Text('Mais músicas'),
+                label: const Text('Mais mÃºsicas'),
                 selected: _sort == _ArtistSort.mostSongs,
                 onSelected: (_) =>
                     setState(() => _sort = _ArtistSort.mostSongs),
@@ -2159,7 +2171,7 @@ class _HomeArtistsTabState extends State<HomeArtistsTab> {
                               overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
-                            subtitle: Text('${artistMusics.length} músicas'),
+                            subtitle: Text('${artistMusics.length} mÃºsicas'),
                             trailing: const Icon(Icons.chevron_right),
                           ),
                         ),
@@ -2325,56 +2337,6 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class _MusicListSkeleton extends StatelessWidget {
-  const _MusicListSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final shadows = theme.extension<AppShadows>()?.surface ?? [];
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 8,
-      itemBuilder: (_, __) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: shadows,
-            ),
-            child: const Row(
-              children: [
-                Skeleton(
-                  width: 48,
-                  height: 48,
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Skeleton(width: double.infinity, height: 14),
-                      SizedBox(height: 8),
-                      Skeleton(width: 140, height: 12),
-                    ],
-                  ),
-                ),
-                SizedBox(width: 12),
-                Skeleton(width: 36, height: 12),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
 class _GridSkeleton extends StatelessWidget {
   const _GridSkeleton();
 
@@ -2490,3 +2452,4 @@ class _ListSkeleton extends StatelessWidget {
     );
   }
 }
+

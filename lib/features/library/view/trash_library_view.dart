@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'package:music_music/data/models/music_entity.dart';
 import 'package:music_music/features/home/view_model/home_view_model.dart';
+import 'package:music_music/shared/widgets/app_state_view.dart';
 import 'package:music_music/shared/widgets/artwork_image.dart';
 
 class TrashLibraryView extends StatefulWidget {
@@ -157,40 +158,28 @@ class _TrashLibraryViewState extends State<TrashLibraryView> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const AppStateView.loading(
+              title: 'Carregando lixeira',
+              subtitle: 'Buscando itens removidos...',
+            );
+          }
+
+          if (snapshot.hasError) {
+            return AppStateView.error(
+              title: 'Falha ao carregar lixeira',
+              subtitle: snapshot.error.toString(),
+              actionLabel: 'Tentar novamente',
+              onAction: _reload,
+            );
           }
 
           final musics = snapshot.data ?? const <MusicEntity>[];
           if (musics.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.delete_outline_rounded,
-                      size: 72,
-                      color: theme.colorScheme.primary,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Sua lixeira esta vazia',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Musicas removidas da biblioteca aparecem aqui para restauracao.',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            return const AppStateView.empty(
+              icon: Icons.delete_outline_rounded,
+              title: 'Sua lixeira esta vazia',
+              subtitle:
+                  'Musicas removidas da biblioteca aparecem aqui para restauracao.',
             );
           }
 

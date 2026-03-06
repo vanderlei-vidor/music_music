@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:just_audio_background/just_audio_background.dart';
+import 'package:music_music/core/observability/app_logger.dart';
 import 'package:music_music/core/ui/genre_colors.dart';
 import 'package:music_music/core/utils/genre_normalizer.dart';
 
@@ -453,7 +454,7 @@ class PlaylistViewModel extends ChangeNotifier {
 
       _currentMusic = _queueMusics[index];
       if (kDebugMode) {
-        debugPrint('play called');
+        AppLogger.info('PlaylistViewModel', 'play called');
       }
       await _player.play();
 
@@ -736,12 +737,12 @@ class PlaylistViewModel extends ChangeNotifier {
       _playbackIssues.removeRange(30, _playbackIssues.length);
     }
 
-    debugPrint(
-      '[PlaybackIssue][$stage] ${music?.title ?? 'unknown'} | ${music?.audioUrl ?? '-'} | $error',
+    AppLogger.error(
+      'PlaybackIssue',
+      '[$stage] ${music?.title ?? 'unknown'} | ${music?.audioUrl ?? '-'}',
+      error: error,
+      stackTrace: stackTrace,
     );
-    if (stackTrace != null) {
-      debugPrint(stackTrace.toString());
-    }
     notifyListeners();
   }
 

@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 import 'package:music_music/app/routes.dart';
 import 'package:music_music/features/player/view/mini_player_view.dart';
-import 'package:music_music/features/favorites/widgets/favorite_empty_state.dart';
+import 'package:music_music/shared/widgets/app_state_view.dart';
 
 class FavoritesView extends StatefulWidget {
   const FavoritesView({super.key});
@@ -14,6 +14,9 @@ class FavoritesView extends StatefulWidget {
 }
 
 class _FavoritesViewState extends State<FavoritesView> {
+  bool _isLoadingFavorites = true;
+  String? _loadError;
+
   String _formatDuration(int? duration) {
     if (duration == null) return '00:00';
     final m = duration ~/ 60000;
@@ -25,8 +28,25 @@ class _FavoritesViewState extends State<FavoritesView> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PlaylistViewModel>().loadFavoriteMusics();
+      _loadFavorites();
     });
+  }
+
+  Future<void> _loadFavorites() async {
+    setState(() {
+      _isLoadingFavorites = true;
+      _loadError = null;
+    });
+
+    try {
+      await context.read<PlaylistViewModel>().loadFavoriteMusics();
+    } catch (e) {
+      _loadError = e.toString();
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingFavorites = false);
+      }
+    }
   }
 
   @override
@@ -54,9 +74,26 @@ class _FavoritesViewState extends State<FavoritesView> {
           ),
         ],
       ),
-      body: musics.isEmpty
-          ? const FavoriteEmptyState()
-          : Column(
+      body: _isLoadingFavorites
+          ? const AppStateView.loading(
+              title: 'Carregando favoritas',
+              subtitle: 'Buscando as musicas que voce marcou com coracao.',
+            )
+          : _loadError != null
+              ? AppStateView.error(
+                  title: 'Nao foi possivel carregar favoritas',
+                  subtitle: _loadError!,
+                  actionLabel: 'Tentar novamente',
+                  onAction: _loadFavorites,
+                )
+              : musics.isEmpty
+                  ? AppStateView.empty(
+                      icon: Icons.favorite_border_rounded,
+                      title: 'Nenhuma favorita ainda',
+                      subtitle:
+                          'Marque musicas com coracao para aparecerem aqui.',
+                    )
+                  : Column(
               children: [
                 Expanded(
                   child: ListView.builder(

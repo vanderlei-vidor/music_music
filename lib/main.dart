@@ -1,42 +1,77 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:music_music/core/platform/desktop_init.dart';
-import 'package:music_music/data/remote/database_web.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:just_audio_background/just_audio_background.dart';
+import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 import 'package:music_music/app/app.dart';
+import 'package:music_music/core/observability/app_logger.dart';
+import 'package:music_music/core/platform/desktop_init.dart';
 import 'package:music_music/core/theme/theme_manager.dart';
+import 'package:music_music/data/remote/database_web.dart';
 import 'package:music_music/shared/widgets/artwork_image.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 🌐 WEB
+  FlutterError.onError = (details) {
+    AppLogger.error(
+      'FlutterError',
+      details.exceptionAsString(),
+      error: details.exception,
+      stackTrace: details.stack,
+    );
+    FlutterError.presentError(details);
+  };
+
+  PlatformDispatcher.instance.onError = (error, stack) {
+    AppLogger.error(
+      'PlatformDispatcher',
+      'Unhandled platform error',
+      error: error,
+      stackTrace: stack,
+    );
+    return true;
+  };
+
+  await runZonedGuarded(
+    () async {
+      await _bootstrapApp();
+    },
+    (error, stack) {
+      AppLogger.error(
+        'Zone',
+        'Unhandled zone error',
+        error: error,
+        stackTrace: stack,
+      );
+    },
+  );
+}
+
+Future<void> _bootstrapApp() async {
+  // WEB
   if (kIsWeb) {
     initWebDatabase();
   }
 
-  // 🖥️ DESKTOP (somente aqui usa FFI)
+  // DESKTOP: only here use FFI.
   if (!kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.windows ||
           defaultTargetPlatform == TargetPlatform.linux ||
           defaultTargetPlatform == TargetPlatform.macOS)) {
-
-    // ✅ SQLite FFI apenas no desktop
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
-
     await initDesktop();
   }
 
-  // 📲 MOBILE: lockscreen + notification controls
+  // MOBILE: lockscreen + notification controls.
   if (!kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS)) {
     await JustAudioBackground.init(
       androidNotificationChannelId: 'com.example.music_music.playback',
-      androidNotificationChannelName: 'Reprodução',
+      androidNotificationChannelName: 'Reproducao',
       androidNotificationOngoing: true,
     );
   }
@@ -54,7 +89,7 @@ int _artworkCacheMaxEntries(ThemePreset preset) {
 
   switch (defaultTargetPlatform) {
     case TargetPlatform.android:
-      // Conservador por causa de dispositivos mais antigos (ex.: Android 9)
+      // Conservative on older devices.
       return isDark ? 180 : 140;
     case TargetPlatform.iOS:
       return isDark ? 220 : 180;
@@ -66,4 +101,3 @@ int _artworkCacheMaxEntries(ThemePreset preset) {
       return isDark ? 200 : 160;
   }
 }
-

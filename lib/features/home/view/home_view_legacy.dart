@@ -5,6 +5,7 @@ import 'package:music_music/features/home/view_model/home_view_model.dart';
 
 import 'package:music_music/app/routes.dart';
 import 'package:music_music/shared/widgets/custom_button.dart';
+import 'package:music_music/shared/widgets/app_state_view.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 
 class HomeView extends StatefulWidget {
@@ -95,23 +96,9 @@ class _HomeViewState extends State<HomeView> {
         child: Consumer<HomeViewModel>(
           builder: (context, viewModel, child) {
             if (viewModel.isLoading) {
-              return Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      theme.colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Carregando suas músicas...',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ],
+              return const AppStateView.loading(
+                title: 'Carregando suas musicas',
+                subtitle: 'Preparando sua biblioteca local.',
               );
             }
 

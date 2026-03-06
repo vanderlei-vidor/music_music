@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:music_music/app/app_info.dart';
+import 'package:music_music/core/observability/app_logger.dart';
 
 class AboutView extends StatelessWidget {
   const AboutView({super.key});
@@ -114,6 +115,36 @@ class AboutView extends StatelessWidget {
             },
             icon: const Icon(Icons.copy_rounded),
             label: const Text('Copiar informacoes do app'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () async {
+              final logs = AppLogger.exportAsText(max: 250);
+              await Clipboard.setData(ClipboardData(text: logs));
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Logs recentes copiados para a area de transferencia.'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            icon: const Icon(Icons.bug_report_outlined),
+            label: const Text('Copiar logs recentes'),
+          ),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: () {
+              AppLogger.clear();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Buffer de logs limpo.'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            icon: const Icon(Icons.delete_outline_rounded),
+            label: const Text('Limpar logs'),
           ),
         ],
       ),

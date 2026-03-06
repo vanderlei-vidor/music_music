@@ -2,6 +2,39 @@
 
 Todas as mudancas relevantes deste projeto serao documentadas aqui.
 
+## [1.3.0] - 2026-03-06
+
+### Added
+- Componente compartilhado de estado de tela `AppStateView` com variantes:
+  - `loading`
+  - `empty`
+  - `error` (com CTA opcional)
+- Observabilidade base para diagnostico de erros em runtime:
+  - `AppLogger` com buffer em memoria de logs recentes
+  - exportacao/copia de logs pela tela `Sobre`
+- Smoke tests de rotas principais (`test/smoke_routes_test.dart`) para detectar regressao de navegacao.
+
+### Changed
+- Padronizacao de estados de UI nas telas principais da biblioteca e playlists:
+  - `lib/features/home/widgets/home_tabs.dart`
+  - `lib/features/library/view/all_musics_screen.dart`
+  - `lib/features/library/view/trash_library_view.dart`
+  - `lib/features/playlists/view/playlist_view.dart`
+  - `lib/features/playlists/view/playlists_screen.dart`
+  - `lib/features/playlists/view/music_selection_screen.dart`
+  - `lib/features/favorites/view/favorites_view.dart`
+  - `lib/features/player/view/player_view.dart`
+- Fluxos de empty/error agora oferecem mensagens mais claras e acoes de recuperacao (`Tentar novamente`, `Reescanear`, `Atualizar`).
+- `main.dart` reforcado para captura global de excecoes Flutter/Dart com envio para logger central.
+
+### Fixed
+- Eliminacao de inconsistencias visuais entre telas que usavam estados manuais diferentes.
+- Remocao de loaders de tela redundantes/legados, mantendo spinners somente em acoes locais (ex.: botoes de salvar).
+
+### Quality
+- `flutter analyze` sem issues apos a padronizacao.
+- `flutter test` com suite existente passando (incluindo smoke routes).
+
 ## [1.2.0] - 2026-03-04
 
 ### Added

@@ -7,6 +7,7 @@ import 'package:music_music/data/models/music_entity.dart';
 import 'package:music_music/delegates/music_search_delegate.dart';
 import 'package:music_music/features/player/view/mini_player_view.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
+import 'package:music_music/shared/widgets/app_state_view.dart';
 
 class PlaylistView extends StatefulWidget {
   const PlaylistView({super.key});
@@ -16,6 +17,34 @@ class PlaylistView extends StatefulWidget {
 }
 
 class _PlaylistViewState extends State<PlaylistView> {
+  bool _isLoadingLibrary = true;
+  String? _loadError;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadLibrary();
+    });
+  }
+
+  Future<void> _loadLibrary() async {
+    setState(() {
+      _isLoadingLibrary = true;
+      _loadError = null;
+    });
+
+    try {
+      await context.read<PlaylistViewModel>().loadAllMusics();
+    } catch (e) {
+      _loadError = e.toString();
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingLibrary = false);
+      }
+    }
+  }
+
   void _showCreatePlaylistDialog(
     BuildContext context,
     PlaylistViewModel viewModel,
@@ -114,11 +143,29 @@ class _PlaylistViewState extends State<PlaylistView> {
       body: Consumer<PlaylistViewModel>(
         builder: (context, viewModel, _) {
           final musics = viewModel.libraryMusics;
+          if (_isLoadingLibrary) {
+            return const AppStateView.loading(
+              title: 'Carregando musicas',
+              subtitle: 'Preparando a biblioteca para reproducao.',
+            );
+          }
+
+          if (_loadError != null) {
+            return AppStateView.error(
+              title: 'Nao foi possivel carregar musicas',
+              subtitle: _loadError!,
+              actionLabel: 'Tentar novamente',
+              onAction: _loadLibrary,
+            );
+          }
+
           if (musics.isEmpty) {
-            return Center(
-              child: CircularProgressIndicator(
-                color: theme.colorScheme.primary,
-              ),
+            return AppStateView.empty(
+              icon: Icons.library_music_outlined,
+              title: 'Biblioteca vazia',
+              subtitle: 'Nenhuma musica encontrada no banco local.',
+              actionLabel: 'Atualizar',
+              onAction: _loadLibrary,
             );
           }
 

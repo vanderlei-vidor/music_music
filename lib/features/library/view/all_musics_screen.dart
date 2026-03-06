@@ -7,6 +7,7 @@ import 'package:music_music/data/models/music_entity.dart';
 import 'package:music_music/features/home/view_model/home_view_model.dart';
 import 'package:music_music/features/player/view/mini_player_view.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
+import 'package:music_music/shared/widgets/app_state_view.dart';
 import 'package:music_music/shared/widgets/artwork_image.dart';
 import 'package:music_music/shared/widgets/swipe_to_reveal_actions.dart';
 
@@ -60,13 +61,32 @@ class _AllMusicsScreenState extends State<AllMusicsScreen> {
       appBar: AppBar(title: const Text('Todas as musicas'), centerTitle: true),
       body: Consumer2<HomeViewModel, PlaylistViewModel>(
         builder: (context, homeVM, playerVM, _) {
+          if (homeVM.isLoading && !homeVM.hasHydratedLibrary) {
+            return const AppStateView.loading(
+              title: 'Carregando musicas',
+              subtitle: 'Preparando sua biblioteca para reproduzir.',
+            );
+          }
+
+          if (homeVM.lastSyncError != null && homeVM.musics.isEmpty) {
+            return AppStateView.error(
+              title: 'Nao foi possivel carregar a biblioteca',
+              subtitle: homeVM.lastSyncError!,
+              actionLabel: 'Tentar novamente',
+              onAction: homeVM.manualRescan,
+            );
+          }
+
           final musics = homeVM.musics;
           if (musics.isEmpty) {
-            return Center(
-              child: Text(
-                'Nenhuma musica carregada.',
-                style: theme.textTheme.bodyMedium,
-              ),
+            return AppStateView.empty(
+              icon: Icons.music_off_rounded,
+              title: 'Nenhuma musica carregada',
+              subtitle: homeVM.isScanning
+                  ? 'Sincronizando biblioteca...'
+                  : 'Adicione musicas no dispositivo e toque em reescanear.',
+              actionLabel: 'Reescanear',
+              onAction: homeVM.manualRescan,
             );
           }
           final filtered = _filterMusics(musics, playerVM);
@@ -130,11 +150,10 @@ class _AllMusicsScreenState extends State<AllMusicsScreen> {
               ),
               Expanded(
                 child: filtered.isEmpty
-                    ? Center(
-                        child: Text(
-                          'Nenhum resultado para "$_query".',
-                          style: theme.textTheme.bodyMedium,
-                        ),
+                    ? AppStateView.empty(
+                        icon: Icons.search_off_rounded,
+                        title: 'Nenhum resultado encontrado',
+                        subtitle: 'Nenhuma musica corresponde a "$_query".',
                       )
                     : ListView.separated(
                         padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),

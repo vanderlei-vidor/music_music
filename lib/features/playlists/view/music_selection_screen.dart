@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:music_music/data/local/database_helper.dart';
 import 'package:music_music/data/models/music_entity.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
+import 'package:music_music/shared/widgets/app_state_view.dart';
 import 'package:music_music/shared/widgets/artwork_image.dart';
 
 class MusicSelectionScreen extends StatefulWidget {
@@ -27,6 +28,7 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
   bool _isSearching = false;
+  String? _loadError;
   List<MusicEntity> _allMusics = [];
   List<MusicEntity> _filteredMusics = [];
 
@@ -50,6 +52,11 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
   }
 
   Future<void> _loadAllMusics() async {
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
+
     try {
       final db = DatabaseHelper.instance;
       final allMusics = await db.getAllMusicsV2();
@@ -68,7 +75,10 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
       });
     } catch (e) {
       debugPrint('Erro ao carregar musicas: $e');
-      setState(() => _isLoading = false);
+      setState(() {
+        _loadError = e.toString();
+        _isLoading = false;
+      });
     }
   }
 
@@ -165,8 +175,30 @@ class _MusicSelectionScreenState extends State<MusicSelectionScreen> {
         ],
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: theme.colorScheme.primary))
-          : ListView.builder(
+          ? const AppStateView.loading(
+              title: 'Carregando musicas',
+              subtitle: 'Buscando catalogo para adicionar na playlist.',
+            )
+          : _loadError != null
+              ? AppStateView.error(
+                  title: 'Nao foi possivel carregar musicas',
+                  subtitle: _loadError!,
+                  actionLabel: 'Tentar novamente',
+                  onAction: _loadAllMusics,
+                )
+              : _allMusics.isEmpty
+                  ? const AppStateView.empty(
+                      icon: Icons.library_music_outlined,
+                      title: 'Biblioteca vazia',
+                      subtitle: 'Nao ha musicas disponiveis para adicionar.',
+                    )
+                  : _filteredMusics.isEmpty
+                      ? const AppStateView.empty(
+                          icon: Icons.search_off_rounded,
+                          title: 'Nenhum resultado',
+                          subtitle: 'Tente buscar por outro titulo ou artista.',
+                        )
+                      : ListView.builder(
               itemCount: _filteredMusics.length,
               itemBuilder: (context, index) {
                 final music = _filteredMusics[index];

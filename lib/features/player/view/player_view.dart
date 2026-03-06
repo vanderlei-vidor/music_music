@@ -22,6 +22,7 @@ import 'package:music_music/shared/widgets/speed_button.dart';
 import 'package:music_music/shared/widgets/vertical_volume_slider.dart';
 import 'package:music_music/shared/widgets/volume_equalizer.dart';
 import 'package:music_music/shared/widgets/artwork_image.dart';
+import 'package:music_music/shared/widgets/app_state_view.dart';
 
 import 'package:music_music/app/routes.dart';
 
@@ -65,7 +66,46 @@ class _PlayerViewState extends State<PlayerView> {
     final music = ui.music;
 
     if (music == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      final issue = vm.playbackIssues.isEmpty ? null : vm.playbackIssues.first;
+      if (issue != null) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('Player')),
+          body: AppStateView.error(
+            title: 'Falha ao abrir o player',
+            subtitle: issue.message,
+            actionLabel: 'Voltar para inicio',
+            onAction: () => Navigator.pushNamedAndRemoveUntil(
+              context,
+              AppRoutes.home,
+              (route) => false,
+            ),
+          ),
+        );
+      }
+
+      if (vm.libraryMusics.isEmpty) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('Player')),
+          body: AppStateView.empty(
+            icon: Icons.library_music_rounded,
+            title: 'Nenhuma musica carregada',
+            subtitle: 'Importe ou sincronize sua biblioteca para iniciar.',
+            actionLabel: 'Ir para inicio',
+            onAction: () => Navigator.pushNamedAndRemoveUntil(
+              context,
+              AppRoutes.home,
+              (route) => false,
+            ),
+          ),
+        );
+      }
+
+      return const Scaffold(
+        body: AppStateView.loading(
+          title: 'Preparando reproducao',
+          subtitle: 'Ajustando fila e metadados...',
+        ),
+      );
     }
 
     return Scaffold(

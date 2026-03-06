@@ -7,7 +7,7 @@ import 'package:music_music/app/routes.dart';
 import 'package:music_music/core/theme/app_shadows.dart';
 import 'package:provider/provider.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
-import 'package:music_music/shared/widgets/skeleton.dart';
+import 'package:music_music/shared/widgets/app_state_view.dart';
 
 class PlaylistsScreen extends StatefulWidget {
   const PlaylistsScreen({super.key});
@@ -173,7 +173,23 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
         future: _playlistsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const _PlaylistsSkeleton();
+            return const AppStateView.loading(
+              title: 'Carregando playlists',
+              subtitle: 'Buscando suas playlists salvas.',
+            );
+          }
+
+          if (snapshot.hasError) {
+            return AppStateView.error(
+              title: 'Nao foi possivel carregar playlists',
+              subtitle: snapshot.error.toString(),
+              actionLabel: 'Tentar novamente',
+              onAction: () {
+                setState(() {
+                  _playlistsFuture = viewModel.getPlaylistsWithMusicCount();
+                });
+              },
+            );
           }
 
           final playlists = snapshot.data ?? [];
@@ -193,8 +209,10 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
           });
 
           if (playlists.isEmpty) {
-            return const Center(
-              child: Text('Voce ainda nao criou nenhuma playlist.'),
+            return const AppStateView.empty(
+              icon: Icons.queue_music_rounded,
+              title: 'Nenhuma playlist criada',
+              subtitle: 'Toque em + para criar sua primeira playlist.',
             );
           }
 
@@ -238,7 +256,11 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
               ),
               Expanded(
                 child: filtered.isEmpty
-                    ? const Center(child: Text('Nenhuma playlist encontrada'))
+                    ? const AppStateView.empty(
+                        icon: Icons.search_off_rounded,
+                        title: 'Nenhuma playlist encontrada',
+                        subtitle: 'Tente outro termo de busca.',
+                      )
                     : ListView.builder(
                         padding: const EdgeInsets.all(16),
                         itemCount: filtered.length,
@@ -334,41 +356,6 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
 }
 
 enum _PlaylistSort { az, mostSongs }
-
-class _PlaylistsSkeleton extends StatelessWidget {
-  const _PlaylistsSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 6,
-      itemBuilder: (_, __) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Row(
-            children: const [
-              Skeleton(width: 40, height: 40, borderRadius: BorderRadius.all(Radius.circular(10))),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Skeleton(width: double.infinity, height: 14),
-                    SizedBox(height: 8),
-                    Skeleton(width: 120, height: 12),
-                  ],
-                ),
-              ),
-              SizedBox(width: 12),
-              Skeleton(width: 28, height: 28, borderRadius: BorderRadius.all(Radius.circular(8))),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
 
 class _PressableTile extends StatefulWidget {
   final Widget child;
