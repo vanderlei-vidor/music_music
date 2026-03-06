@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class SwipeToRevealActions extends StatefulWidget {
   final Widget child;
@@ -28,7 +29,17 @@ class SwipeToRevealActions extends StatefulWidget {
 
 class _SwipeToRevealActionsState extends State<SwipeToRevealActions> {
   double _offset = 0;
+  bool _isDragging = false;
+  bool _isOpen = false;
   static const double _maxOffset = -144;
+  static const double _openThresholdFactor = 0.35;
+  static const double _openVelocity = -420;
+  static const double _closeVelocity = 420;
+  static const Duration _snapDuration = Duration(milliseconds: 220);
+
+  void _onDragStart(DragStartDetails _) {
+    _isDragging = true;
+  }
 
   void _onDragUpdate(DragUpdateDetails details) {
     setState(() {
@@ -37,10 +48,26 @@ class _SwipeToRevealActionsState extends State<SwipeToRevealActions> {
     });
   }
 
-  void _onDragEnd(_) {
+  void _onDragEnd(DragEndDetails details) {
+    final velocity = details.primaryVelocity ?? 0;
+    final openThreshold = _maxOffset * _openThresholdFactor;
+
+    final shouldOpen =
+        velocity <= _openVelocity ||
+        (velocity < _closeVelocity && _offset <= openThreshold);
+    final target = shouldOpen ? _maxOffset : 0.0;
+    final nextIsOpen = target == _maxOffset;
+    final changed = nextIsOpen != _isOpen;
+
     setState(() {
-      _offset = _offset < _maxOffset / 2 ? _maxOffset : 0;
+      _isDragging = false;
+      _isOpen = nextIsOpen;
+      _offset = target;
     });
+
+    if (changed) {
+      HapticFeedback.selectionClick();
+    }
   }
 
   Future<void> _confirmDelete() async {
@@ -131,10 +158,13 @@ class _SwipeToRevealActionsState extends State<SwipeToRevealActions> {
             ),
           ),
           GestureDetector(
+            onHorizontalDragStart: _onDragStart,
             onHorizontalDragUpdate: _onDragUpdate,
             onHorizontalDragEnd: _onDragEnd,
-            child: Transform.translate(
-              offset: Offset(_offset, 0),
+            child: AnimatedContainer(
+              duration: _isDragging ? Duration.zero : _snapDuration,
+              curve: Curves.easeOutCubic,
+              transform: Matrix4.translationValues(_offset, 0, 0),
               child: widget.child,
             ),
           ),

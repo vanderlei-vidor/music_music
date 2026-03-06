@@ -154,7 +154,7 @@ class _SplashViewState extends State<SplashView> {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        'Sua biblioteca sera sincronizada em segundo plano',
+                        'carregando as músicas',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: Colors.white70,
                         ),

@@ -70,7 +70,7 @@ class _PlayerViewState extends State<PlayerView> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      drawer: _buildDrawer(context),
+      drawer: _buildDrawer(context, vm),
       appBar: _buildAppBar(context, music),
       body: Stack(
         children: [
@@ -79,115 +79,150 @@ class _PlayerViewState extends State<PlayerView> {
 
           /// CONTEUDO
           SafeArea(
-            child: Column(
-              children: [
-                const Spacer(),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(height: 12),
 
-                /// CAPA
-                Hero(
-                  tag: music.audioUrl,
-                  child: _ArtworkCover(music: music),
-                ),
-
-                const SizedBox(height: _PlayerLayout.spaceL),
-
-                /// TITULO
-                Text(
-                  music.title,
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-
-                const SizedBox(height: _PlayerLayout.spaceXs),
-
-                Text(
-                  music.artist,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-
-                const SizedBox(height: _PlayerLayout.spaceXl),
-
-                /// WAVE + SLIDER
-                AudioWave(
-                  isPlaying: ui.isPlaying,
-                  color: theme.colorScheme.primary,
-                ),
-
-                const SizedBox(height: _PlayerLayout.spaceSm),
-
-                StreamBuilder<Duration>(
-                  stream: vm.positionStream,
-                  builder: (_, posSnap) {
-                    final position = posSnap.data ?? Duration.zero;
-
-                    final duration = Duration(
-                      milliseconds: music.duration ?? 0,
-                    );
-
-                    return ProgressSlider(
-                      position: position,
-                      duration: duration,
-                      onSeek: vm.seek,
-                    );
-                  },
-                ),
-
-                const SizedBox(height: _PlayerLayout.spaceXl),
-
-                /// CONTROLES (AAA)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _PressableScale(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        vm.previousMusic();
-                      },
-                      child: const Icon(
-                        Icons.skip_previous,
-                        size: _PlayerLayout.transportIconSize,
-                      ),
-                    ),
-                    const SizedBox(width: _PlayerLayout.spaceXs),
-                    _PressableScale(
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        vm.playPause();
-                      },
-                      scale: 0.97,
-                      child: IgnorePointer(
-                        child: PlayPauseButton(
-                          isPlaying: ui.isPlaying,
-                          size: _PlayerLayout.playButtonSize,
-                          color: theme.colorScheme.primary,
-                          onTap: () {},
+                        /// CAPA
+                        Hero(
+                          tag: music.audioUrl,
+                          child: _ArtworkCover(music: music),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: _PlayerLayout.spaceXs),
-                    _PressableScale(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        vm.nextMusic();
-                      },
-                      child: const Icon(
-                        Icons.skip_next,
-                        size: _PlayerLayout.transportIconSize,
-                      ),
-                    ),
-                  ],
-                ),
 
-                const Spacer(),
-              ],
+                        const SizedBox(height: _PlayerLayout.spaceL),
+
+                        /// TITULO
+                        Text(
+                          music.title,
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+
+                        const SizedBox(height: _PlayerLayout.spaceXs),
+
+                        Text(
+                          music.artist,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+
+                        const SizedBox(height: _PlayerLayout.spaceXl),
+
+                        /// WAVE + SLIDER
+                        AudioWave(
+                          isPlaying: ui.isPlaying,
+                          color: theme.colorScheme.primary,
+                        ),
+
+                        const SizedBox(height: _PlayerLayout.spaceSm),
+
+                        StreamBuilder<Duration>(
+                          stream: vm.positionStream,
+                          builder: (_, posSnap) {
+                            final position = posSnap.data ?? Duration.zero;
+
+                            final duration = Duration(
+                              milliseconds: music.duration ?? 0,
+                            );
+
+                            return ProgressSlider(
+                              position: position,
+                              duration: duration,
+                              onSeek: vm.seek,
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: _PlayerLayout.spaceXl),
+
+                        /// CONTROLES (AAA)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _PressableScale(
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                vm.previousMusic();
+                              },
+                              child: const Icon(
+                                Icons.skip_previous,
+                                size: _PlayerLayout.transportIconSize,
+                              ),
+                            ),
+                            const SizedBox(width: _PlayerLayout.spaceXs),
+                            _PressableScale(
+                              onTap: () {
+                                HapticFeedback.lightImpact();
+                                vm.playPause();
+                              },
+                              scale: 0.97,
+                              child: IgnorePointer(
+                                child: PlayPauseButton(
+                                  isPlaying: ui.isPlaying,
+                                  size: _PlayerLayout.playButtonSize,
+                                  color: theme.colorScheme.primary,
+                                  onTap: () {},
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: _PlayerLayout.spaceXs),
+                            _PressableScale(
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                vm.nextMusic();
+                              },
+                              child: const Icon(
+                                Icons.skip_next,
+                                size: _PlayerLayout.transportIconSize,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: _PlayerLayout.spaceMd),
+
+                        /// CONTROLES SECUNDARIOS (PREMIUM)
+                        Consumer<PlaylistViewModel>(
+                          builder: (context, controlsVm, _) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 56),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  ShuffleButton(
+                                    isActive: controlsVm.isShuffled,
+                                    onTap: controlsVm.toggleShuffle,
+                                  ),
+                                  RepeatButton(
+                                    mode: controlsVm.repeatMode,
+                                    onTap: controlsVm.toggleRepeatMode,
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
           ),
 
@@ -246,8 +281,13 @@ class _PlayerViewState extends State<PlayerView> {
 
   // ===================== DRAWER =====================
 
-  Widget _buildDrawer(BuildContext context) {
+  Widget _buildDrawer(BuildContext context, PlaylistViewModel vm) {
     final theme = Theme.of(context);
+    final favoritesCount = vm.favoriteMusics.length;
+    final recentCount = vm.recentMusics.length;
+    final mostPlayedCount = vm.mostPlayed.length;
+    final playlistsCount = vm.playlistsWithMusicCount.length;
+    final libraryCount = vm.libraryMusics.length;
 
     return Drawer(
       child: ListView(
@@ -267,38 +307,70 @@ class _PlayerViewState extends State<PlayerView> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  '$libraryCount musicas na biblioteca',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onPrimary.withValues(alpha: 0.88),
+                  ),
+                ),
               ],
             ),
           ),
+          _drawerSection(context, 'Sua biblioteca'),
 
           _drawerItem(
             context,
-            Icons.history,
-            'Tocadas recentemente',
-            AppRoutes.recent,
+            icon: Icons.favorite_rounded,
+            title: 'Favoritas',
+            route: AppRoutes.favorites,
+            count: favoritesCount,
           ),
 
           _drawerItem(
             context,
-            Icons.favorite,
-            'Favoritas',
-            AppRoutes.favorites,
-          ),
-
-          const Divider(),
-
-          _drawerItem(
-            context,
-            Icons.playlist_play,
-            'Playlists',
-            AppRoutes.playlists,
+            icon: Icons.history_rounded,
+            title: 'Tocadas recentemente',
+            route: AppRoutes.recent,
+            count: recentCount,
           ),
 
           _drawerItem(
             context,
-            Icons.trending_up,
-            'Mais tocadas',
-            AppRoutes.mostPlayed,
+            icon: Icons.local_fire_department_rounded,
+            title: 'Mais tocadas',
+            route: AppRoutes.mostPlayed,
+            count: mostPlayedCount,
+          ),
+
+          _drawerSection(context, 'Colecoes'),
+
+          _drawerItem(
+            context,
+            icon: Icons.playlist_play_rounded,
+            title: 'Playlists',
+            route: AppRoutes.playlists,
+            count: playlistsCount,
+          ),
+
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 2),
+            child: FilledButton.icon(
+              onPressed: () => _openCreatePlaylistDialog(context, vm),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Nova playlist'),
+            ),
+          ),
+
+          _drawerSection(context, 'Atalhos'),
+
+          _drawerItem(
+            context,
+            icon: Icons.graphic_eq_rounded,
+            title: 'Equalizador',
+            onTap: () {
+              _openEqualizerSheet(context);
+            },
           ),
         ],
       ),
@@ -307,16 +379,99 @@ class _PlayerViewState extends State<PlayerView> {
 
   Widget _drawerItem(
     BuildContext context,
-    IconData icon,
-    String title,
-    String route,
+    {
+    required IconData icon,
+    required String title,
+    String? route,
+    int? count,
+    VoidCallback? onTap,
+  }
   ) {
+    final theme = Theme.of(context);
     return ListTile(
       leading: Icon(icon),
       title: Text(title),
+      trailing: count == null
+          ? const Icon(Icons.chevron_right_rounded, size: 18)
+          : Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                '$count',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
       onTap: () {
         Navigator.pop(context);
-        Navigator.pushNamed(context, route);
+        if (onTap != null) {
+          onTap();
+          return;
+        }
+        if (route != null) Navigator.pushNamed(context, route);
+      },
+    );
+  }
+
+  Widget _drawerSection(BuildContext context, String title) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: Text(
+        title.toUpperCase(),
+        style: theme.textTheme.labelSmall?.copyWith(
+          letterSpacing: 0.7,
+          fontWeight: FontWeight.w700,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.62),
+        ),
+      ),
+    );
+  }
+
+  void _openCreatePlaylistDialog(BuildContext context, PlaylistViewModel vm) {
+    final controller = TextEditingController();
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Nova playlist'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            textInputAction: TextInputAction.done,
+            decoration: const InputDecoration(
+              hintText: 'Digite o nome da playlist',
+            ),
+            onSubmitted: (_) async {
+              final name = controller.text.trim();
+              if (name.isEmpty) return;
+              await vm.createPlaylist(name);
+              if (!dialogContext.mounted) return;
+              Navigator.of(dialogContext).pop();
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final name = controller.text.trim();
+                if (name.isEmpty) return;
+                await vm.createPlaylist(name);
+                if (!dialogContext.mounted) return;
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Criar'),
+            ),
+          ],
+        );
       },
     );
   }
@@ -600,18 +755,6 @@ class _PlayerControlsSheet extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  ShuffleButton(
-                    isActive: vm.isShuffled,
-                    onTap: vm.toggleShuffle,
-                  ),
-                  RepeatButton(mode: vm.repeatMode, onTap: vm.toggleRepeatMode),
-                  SpeedButton(speed: vm.currentSpeed, onTap: onOpenSpeed),
-                ],
-              ),
-              const SizedBox(height: _PlayerLayout.spaceMd),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
                   _PressableScale(
                     onTap: () {
                       HapticFeedback.selectionClick();
@@ -619,6 +762,20 @@ class _PlayerControlsSheet extends StatelessWidget {
                     },
                     child: const Icon(Icons.equalizer),
                   ),
+                  SpeedButton(speed: vm.currentSpeed, onTap: onOpenSpeed),
+                  _PressableScale(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      onOpenQueue();
+                    },
+                    child: const Icon(Icons.queue_music),
+                  ),
+                ],
+              ),
+              const SizedBox(height: _PlayerLayout.spaceMd),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
                   _PressableScale(
                     onTap: () {
                       HapticFeedback.selectionClick();
@@ -662,13 +819,6 @@ class _PlayerControlsSheet extends StatelessWidget {
                           ),
                       ],
                     ),
-                  ),
-                  _PressableScale(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      onOpenQueue();
-                    },
-                    child: const Icon(Icons.queue_music),
                   ),
                 ],
               ),

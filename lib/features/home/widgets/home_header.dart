@@ -78,6 +78,34 @@ class _HomeHeaderState extends State<HomeHeader>
     widget.onCycleFeatured?.call();
   }
 
+  void _openFeaturedSheet({
+    required String title,
+    required String subtitle,
+    required double artworkSize,
+  }) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) {
+        return _FeaturedDetailsSheet(
+          title: title,
+          subtitle: subtitle,
+          artworkUrl: widget.featuredArtwork,
+          audioId: widget.featuredId,
+          artworkSize: artworkSize,
+          canPlay: widget.canPlay,
+          onPlayAll: widget.onPlayAll,
+          onShuffleAll: widget.onShuffleAll,
+          onCycleFeatured: widget.onCycleFeatured,
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -111,6 +139,9 @@ class _HomeHeaderState extends State<HomeHeader>
     final subtitle =
         widget.featuredSubtitle ??
         'Use a busca no topo para achar musicas, artistas e albuns.';
+    final isFeaturedCompact =
+        sizeClass == SizeClass.compact ||
+        MediaQuery.of(context).size.height < 760;
 
     return Padding(
       padding: pagePadding,
@@ -171,186 +202,397 @@ class _HomeHeaderState extends State<HomeHeader>
             ],
           ),
           SizedBox(height: sizeClass == SizeClass.compact ? 8 : 10),
-          Container(
-            padding: EdgeInsets.all(cardPadding),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  theme.colorScheme.surface.withValues(alpha: 0.98),
-                  theme.colorScheme.surfaceContainerHighest.withValues(
-                    alpha: 0.9,
+          if (isFeaturedCompact)
+            _FeaturedCompactCard(
+              title: title,
+              subtitle: subtitle,
+              artworkUrl: widget.featuredArtwork,
+              audioId: widget.featuredId,
+              artworkSize: 54,
+              onTap: () => _openFeaturedSheet(
+                title: title,
+                subtitle: subtitle,
+                artworkSize: artworkSize,
+              ),
+            )
+          else
+            Container(
+              padding: EdgeInsets.all(cardPadding),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    theme.colorScheme.surface.withValues(alpha: 0.98),
+                    theme.colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.9,
+                    ),
+                  ],
+                ),
+                border: Border.all(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.22),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
                   ),
                 ],
               ),
-              border: Border.all(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.22),
-                  blurRadius: 24,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Destaque do dia',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Destaque do dia',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
-                          ),
-                          IconButton(
-                            tooltip: 'Trocar destaque',
-                            visualDensity: VisualDensity.compact,
-                            onPressed: widget.onCycleFeatured == null
-                                ? null
-                                : _onCycleTap,
-                            icon: RotationTransition(
-                              turns: Tween<double>(
-                                begin: 0,
-                                end: 0.75,
-                              ).animate(_turns),
-                              child: const Icon(Icons.autorenew_rounded),
+                            IconButton(
+                              tooltip: 'Trocar destaque',
+                              visualDensity: VisualDensity.compact,
+                              onPressed: widget.onCycleFeatured == null
+                                  ? null
+                                  : _onCycleTap,
+                              icon: RotationTransition(
+                                turns: Tween<double>(
+                                  begin: 0,
+                                  end: 0.75,
+                                ).animate(_turns),
+                                child: const Icon(Icons.autorenew_rounded),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 3),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        switchInCurve: Curves.easeOutCubic,
-                        switchOutCurve: Curves.easeInCubic,
-                        transitionBuilder: (child, animation) {
-                          return FadeTransition(
-                            opacity: animation,
-                            child: SlideTransition(
-                              position: Tween<Offset>(
-                                begin: const Offset(0.0, 0.2),
-                                end: Offset.zero,
-                              ).animate(animation),
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: Text(
-                          title,
-                          key: ValueKey('featured-title-$title'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        switchInCurve: Curves.easeOutCubic,
-                        switchOutCurve: Curves.easeInCubic,
-                        transitionBuilder: (child, animation) {
-                          return FadeTransition(
-                            opacity: animation,
-                            child: SlideTransition(
-                              position: Tween<Offset>(
-                                begin: const Offset(0.0, 0.2),
-                                end: Offset.zero,
-                              ).animate(animation),
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: Text(
-                          subtitle,
-                          key: ValueKey('featured-subtitle-$subtitle'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.72,
+                        const SizedBox(height: 3),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          switchInCurve: Curves.easeOutCubic,
+                          switchOutCurve: Curves.easeInCubic,
+                          transitionBuilder: (child, animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: Tween<Offset>(
+                                  begin: const Offset(0.0, 0.2),
+                                  end: Offset.zero,
+                                ).animate(animation),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: Text(
+                            title,
+                            key: ValueKey('featured-title-$title'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
-                      ),
-                      SizedBox(
-                        height: sizeClass == SizeClass.compact ? 6 : 8,
-                      ),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          FilledButton(
-                            onPressed: widget.canPlay
-                                ? () => widget.onPlayAll?.call()
-                                : null,
-                            style: FilledButton.styleFrom(
-                              shape: const StadiumBorder(),
-                              padding: EdgeInsets.symmetric(
-                                horizontal: sizeClass == SizeClass.compact
-                                    ? 12
-                                    : 16,
-                                vertical: sizeClass == SizeClass.compact
-                                    ? 8
-                                    : 10,
+                        const SizedBox(height: 4),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          switchInCurve: Curves.easeOutCubic,
+                          switchOutCurve: Curves.easeInCubic,
+                          transitionBuilder: (child, animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: Tween<Offset>(
+                                  begin: const Offset(0.0, 0.2),
+                                  end: Offset.zero,
+                                ).animate(animation),
+                                child: child,
                               ),
-                              visualDensity: VisualDensity.compact,
-                            ),
-                            child: const Text('Tocar tudo'),
-                          ),
-                          TextButton(
-                            onPressed: widget.canPlay
-                                ? () => widget.onShuffleAll?.call()
-                                : null,
-                            style: TextButton.styleFrom(
-                              foregroundColor: theme.colorScheme.onSurface,
-                              backgroundColor: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.09),
-                              shape: const StadiumBorder(),
-                              padding: EdgeInsets.symmetric(
-                                horizontal: sizeClass == SizeClass.compact
-                                    ? 12
-                                    : 16,
-                                vertical: sizeClass == SizeClass.compact
-                                    ? 8
-                                    : 10,
+                            );
+                          },
+                          child: Text(
+                            subtitle,
+                            key: ValueKey('featured-subtitle-$subtitle'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.72,
                               ),
-                              visualDensity: VisualDensity.compact,
                             ),
-                            child: const Text('Aleatorio'),
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(width: sizeClass == SizeClass.compact ? 12 : 14),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 320),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  child: _FeaturedArtwork(
-                    key: ValueKey(
-                      'featured-artwork-${widget.featuredArtwork ?? "none"}',
+                        ),
+                        SizedBox(
+                          height: sizeClass == SizeClass.compact ? 6 : 8,
+                        ),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            FilledButton(
+                              onPressed: widget.canPlay
+                                  ? () => widget.onPlayAll?.call()
+                                  : null,
+                              style: FilledButton.styleFrom(
+                                shape: const StadiumBorder(),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: sizeClass == SizeClass.compact
+                                      ? 12
+                                      : 16,
+                                  vertical: sizeClass == SizeClass.compact
+                                      ? 8
+                                      : 10,
+                                ),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              child: const Text('Tocar tudo'),
+                            ),
+                            TextButton(
+                              onPressed: widget.canPlay
+                                  ? () => widget.onShuffleAll?.call()
+                                  : null,
+                              style: TextButton.styleFrom(
+                                foregroundColor: theme.colorScheme.onSurface,
+                                backgroundColor: theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.09),
+                                shape: const StadiumBorder(),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: sizeClass == SizeClass.compact
+                                      ? 12
+                                      : 16,
+                                  vertical: sizeClass == SizeClass.compact
+                                      ? 8
+                                      : 10,
+                                ),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              child: const Text('Aleatorio'),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    artworkUrl: widget.featuredArtwork,
-                    audioId: widget.featuredId,
-                    size: artworkSize,
                   ),
-                ),
-              ],
+                  SizedBox(width: sizeClass == SizeClass.compact ? 12 : 14),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 320),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    child: _FeaturedArtwork(
+                      key: ValueKey(
+                        'featured-artwork-${widget.featuredArtwork ?? "none"}',
+                      ),
+                      artworkUrl: widget.featuredArtwork,
+                      audioId: widget.featuredId,
+                      size: artworkSize,
+                    ),
+                  ),
+                ],
+              ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeaturedCompactCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String? artworkUrl;
+  final int? audioId;
+  final double artworkSize;
+  final VoidCallback onTap;
+
+  const _FeaturedCompactCard({
+    required this.title,
+    required this.subtitle,
+    required this.artworkUrl,
+    required this.audioId,
+    required this.artworkSize,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Ink(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: theme.colorScheme.surface.withValues(alpha: 0.92),
+            border: Border.all(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+            ),
+          ),
+          child: Row(
+            children: [
+              _FeaturedArtwork(
+                artworkUrl: artworkUrl,
+                audioId: audioId,
+                size: artworkSize,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Destaque do dia',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.68),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.expand_more_rounded),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FeaturedDetailsSheet extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String? artworkUrl;
+  final int? audioId;
+  final double artworkSize;
+  final bool canPlay;
+  final Future<void> Function()? onPlayAll;
+  final Future<void> Function()? onShuffleAll;
+  final VoidCallback? onCycleFeatured;
+
+  const _FeaturedDetailsSheet({
+    required this.title,
+    required this.subtitle,
+    required this.artworkUrl,
+    required this.audioId,
+    required this.artworkSize,
+    required this.canPlay,
+    this.onPlayAll,
+    this.onShuffleAll,
+    this.onCycleFeatured,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              _FeaturedArtwork(
+                artworkUrl: artworkUrl,
+                audioId: audioId,
+                size: artworkSize * 0.72,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Destaque do dia',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Trocar destaque',
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  onCycleFeatured?.call();
+                },
+                icon: const Icon(Icons.autorenew_rounded),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton(
+                  onPressed: canPlay ? () => onPlayAll?.call() : null,
+                  child: const Text('Tocar tudo'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: canPlay ? () => onShuffleAll?.call() : null,
+                  child: const Text('Aleatorio'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
