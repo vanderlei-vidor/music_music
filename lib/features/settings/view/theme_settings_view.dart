@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import 'package:music_music/core/theme/theme_manager.dart';
 import 'package:music_music/core/theme/app_colors.dart';
 import 'package:music_music/core/theme/app_shadows.dart';
-import 'package:music_music/core/preferences/podcast_preferences.dart';
 
 class ThemeSettingsView extends StatelessWidget {
   const ThemeSettingsView({super.key});
@@ -15,7 +14,6 @@ class ThemeSettingsView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final manager = context.watch<ThemeManager>();
-    final podcastPrefs = context.watch<PodcastPreferences>();
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -56,13 +54,6 @@ class ThemeSettingsView extends StatelessWidget {
                 manager.setPreset(ThemePreset.neumorphicDark);
               },
               preview: _ThemePreview.dark(theme),
-            ),
-            const SizedBox(height: 20),
-            SwitchListTile.adaptive(
-              value: podcastPrefs.enabled,
-              onChanged: (v) => podcastPrefs.setEnabled(v),
-              title: const Text('Mostrar aba Podcasts'),
-              subtitle: const Text('Ativa podcasts na Home ao lado de Playlists.'),
             ),
           ],
         ),

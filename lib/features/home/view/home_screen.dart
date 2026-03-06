@@ -16,6 +16,7 @@ import 'package:music_music/features/genres/view/genres_view.dart';
 import 'package:music_music/features/home/view_model/home_view_model.dart';
 import 'package:music_music/features/home/widgets/home_header.dart';
 import 'package:music_music/features/home/widgets/home_tabs.dart';
+import 'package:music_music/features/player/view/equalizer_sheet.dart';
 import 'package:music_music/features/player/view/sliding_player_panel.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 
@@ -36,8 +37,8 @@ class _HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<_HomeView> with TickerProviderStateMixin {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _currentIndex = 0;
-  int _bottomNavIndex = 0;
   String _userName = 'Usuario';
   String? _featuredStoredDate;
   List<String>? _featuredStoredUrls;
@@ -169,7 +170,7 @@ class _HomeViewState extends State<_HomeView> with TickerProviderStateMixin {
     if (_homeVM.showScanSuccess) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Suas musicas foram carregadas com sucesso.'),
+          content: Text(_homeVM.lastSyncSummary),
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.all(16),
           shape: RoundedRectangleBorder(
@@ -452,36 +453,10 @@ class _HomeViewState extends State<_HomeView> with TickerProviderStateMixin {
     Navigator.pushNamed(context, AppRoutes.player);
   }
 
-  void _onBottomNavTap(int index) {
-    if (index == 1) {
-      _openSearch();
-      return;
-    }
-
-    if (_bottomNavIndex != index) {
-      setState(() => _bottomNavIndex = index);
-    }
-
-    if (index == 0 && _tabController.index != 0) {
-      _tabController.animateTo(0);
-    }
-  }
-
   void _openPlaybackIssuesTab() {
-    if (_bottomNavIndex != 0) {
-      setState(() => _bottomNavIndex = 0);
-    }
     if (_tabController.index != 5) {
       _tabController.animateTo(5);
     }
-  }
-
-  void _openHomeTab(int index) {
-    Navigator.pop(context);
-    if (_bottomNavIndex != 0) {
-      setState(() => _bottomNavIndex = 0);
-    }
-    _tabController.animateTo(index);
   }
 
   @override
@@ -494,37 +469,11 @@ class _HomeViewState extends State<_HomeView> with TickerProviderStateMixin {
     final isCompact = width < 420;
 
     return Scaffold(
-      drawer: _HomeDrawer(onOpenTab: _openHomeTab),
+      key: _scaffoldKey,
+      drawer: const _HomeDrawer(),
+      drawerEnableOpenDragGesture: true,
+      drawerEdgeDragWidth: isCompact ? 56 : 72,
       backgroundColor: theme.scaffoldBackgroundColor,
-      bottomNavigationBar: Padding(
-        padding: EdgeInsets.fromLTRB(
-          isCompact ? 16 : 28,
-          0,
-          isCompact ? 16 : 28,
-          isCompact ? 6 : 8,
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: NavigationBar(
-            height: isCompact ? 60 : 64,
-            labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
-            selectedIndex: _bottomNavIndex,
-            onDestinationSelected: _onBottomNavTap,
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home_rounded),
-                label: 'Inicio',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.search_rounded),
-                selectedIcon: Icon(Icons.search_rounded),
-                label: 'Buscar',
-              ),
-            ],
-          ),
-        ),
-      ),
       body: SafeArea(
         child: Stack(
           children: [
@@ -555,8 +504,14 @@ class _HomeViewState extends State<_HomeView> with TickerProviderStateMixin {
                       onAvatarTap: () {
                         _openProfileSheet();
                       },
+                      onOpenDrawer: () {
+                        _scaffoldKey.currentState?.openDrawer();
+                      },
                       onOpenSettings: () {
                         _openProfileSheet();
+                      },
+                      onSearchTap: () {
+                        _openSearch();
                       },
                       onNotificationTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -596,6 +551,50 @@ class _HomeViewState extends State<_HomeView> with TickerProviderStateMixin {
                       onCycleFeatured: featuredQueue.isNotEmpty
                           ? () => _cycleFeatured(featuredQueue, playlistVM)
                           : null,
+                    );
+                  },
+                ),
+                Selector<HomeViewModel, bool>(
+                  selector: (_, vm) => vm.isScanning && vm.musics.isNotEmpty,
+                  builder: (context, isSyncing, _) {
+                    if (!isSyncing) return const SizedBox.shrink();
+                    final theme = Theme.of(context);
+                    return Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: theme.colorScheme.primary.withValues(alpha: 0.25),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Atualizando biblioteca em segundo plano...',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -655,7 +654,7 @@ class _HomeViewState extends State<_HomeView> with TickerProviderStateMixin {
                             ?.copyWith(fontSize: isCompact ? 12 : null),
                         tabs:
                             const [
-                              Tab(height: 34, text: 'Musicas'),
+                              Tab(height: 34, text: 'Inicio'),
                               Tab(height: 34, text: 'Albuns'),
                               Tab(height: 34, text: 'Artistas'),
                               Tab(height: 34, text: 'Pastas'),
@@ -706,9 +705,7 @@ class _HomeViewState extends State<_HomeView> with TickerProviderStateMixin {
 }
 
 class _HomeDrawer extends StatelessWidget {
-  final ValueChanged<int> onOpenTab;
-
-  const _HomeDrawer({required this.onOpenTab});
+  const _HomeDrawer();
 
   @override
   Widget build(BuildContext context) {
@@ -716,7 +713,8 @@ class _HomeDrawer extends StatelessWidget {
 
     return Drawer(
       child: SafeArea(
-        child: Column(
+        child: ListView(
+          padding: EdgeInsets.zero,
           children: [
             Padding(
               padding: const EdgeInsets.all(20),
@@ -738,6 +736,7 @@ class _HomeDrawer extends StatelessWidget {
               ),
             ),
             const Divider(),
+            const _DrawerSectionHeader(label: 'Biblioteca'),
             _DrawerItem(
               icon: Icons.favorite,
               label: 'Favoritas',
@@ -747,34 +746,20 @@ class _HomeDrawer extends StatelessWidget {
               },
             ),
             _DrawerItem(
-              icon: Icons.library_music,
-              label: 'Musicas',
-              onTap: () => onOpenTab(0),
+              icon: Icons.sync_rounded,
+              label: 'Reescanear biblioteca',
+              onTap: () {
+                Navigator.pop(context);
+                context.read<HomeViewModel>().manualRescan();
+              },
             ),
             _DrawerItem(
-              icon: Icons.album,
-              label: 'Albuns',
-              onTap: () => onOpenTab(1),
-            ),
-            _DrawerItem(
-              icon: Icons.person,
-              label: 'Artistas',
-              onTap: () => onOpenTab(2),
-            ),
-            _DrawerItem(
-              icon: Icons.folder,
-              label: 'Pastas',
-              onTap: () => onOpenTab(3),
-            ),
-            _DrawerItem(
-              icon: Icons.graphic_eq,
-              label: 'Generos',
-              onTap: () => onOpenTab(4),
-            ),
-            _DrawerItem(
-              icon: Icons.queue_music,
-              label: 'Playlists',
-              onTap: () => onOpenTab(5),
+              icon: Icons.delete_sweep_outlined,
+              label: 'Lixeira',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, AppRoutes.trash);
+              },
             ),
             if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
               _DrawerItem(
@@ -788,14 +773,66 @@ class _HomeDrawer extends StatelessWidget {
                   });
                 },
               ),
-            if (context.watch<PodcastPreferences>().enabled)
-              _DrawerItem(
-                icon: Icons.podcasts_rounded,
-                label: 'Podcasts',
-                onTap: () => onOpenTab(6),
-              ),
-            const Spacer(),
+            const Divider(height: 28),
+            const _DrawerSectionHeader(label: 'Audio'),
+            _DrawerItem(
+              icon: Icons.graphic_eq_rounded,
+              label: 'Equalizador',
+              onTap: () {
+                Navigator.pop(context);
+                Future<void>.delayed(Duration.zero, () {
+                  if (!context.mounted) return;
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    useSafeArea: true,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(24),
+                      ),
+                    ),
+                    builder: (_) => const EqualizerSheet(),
+                  );
+                });
+              },
+            ),
+            _DrawerSwitchItem(
+              icon: Icons.podcasts_rounded,
+              label: 'Podcasts',
+              value: context.watch<PodcastPreferences>().enabled,
+              onChanged: (value) => context.read<PodcastPreferences>().setEnabled(value),
+            ),
+            _DrawerItem(
+              icon: Icons.bedtime_rounded,
+              label: 'Sleep timer',
+              onTap: () {
+                Navigator.pop(context);
+                Future<void>.delayed(Duration.zero, () {
+                  if (!context.mounted) return;
+                  _openSleepTimerSheet(context);
+                });
+              },
+            ),
+            const Divider(height: 28),
+            const _DrawerSectionHeader(label: 'Atividade'),
+            _DrawerItem(
+              icon: Icons.history_rounded,
+              label: 'Tocadas recentes',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, AppRoutes.recent);
+              },
+            ),
+            _DrawerItem(
+              icon: Icons.local_fire_department_rounded,
+              label: 'Mais tocadas',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, AppRoutes.mostPlayed);
+              },
+            ),
             const Divider(),
+            const _DrawerSectionHeader(label: 'App'),
             _DrawerItem(
               icon: Icons.settings,
               label: 'Temas',
@@ -804,7 +841,49 @@ class _HomeDrawer extends StatelessWidget {
                 Navigator.pushNamed(context, AppRoutes.themes);
               },
             ),
+            _DrawerItem(
+              icon: Icons.info_outline_rounded,
+              label: 'Sobre',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, AppRoutes.about);
+              },
+            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _openSleepTimerSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => const _DrawerSleepTimerSheet(),
+    );
+  }
+}
+
+class _DrawerSectionHeader extends StatelessWidget {
+  final String label;
+
+  const _DrawerSectionHeader({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 6),
+      child: Text(
+        label.toUpperCase(),
+        style: theme.textTheme.labelMedium?.copyWith(
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.6,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.62),
         ),
       ),
     );
@@ -830,6 +909,208 @@ class _DrawerItem extends StatelessWidget {
       leading: Icon(icon, color: theme.colorScheme.primary),
       title: Text(label),
       onTap: onTap,
+    );
+  }
+}
+
+class _DrawerSwitchItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _DrawerSwitchItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SwitchListTile.adaptive(
+      value: value,
+      onChanged: onChanged,
+      secondary: Icon(icon, color: theme.colorScheme.primary),
+      title: Text(label),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+    );
+  }
+}
+
+class _DrawerSleepTimerSheet extends StatefulWidget {
+  const _DrawerSleepTimerSheet();
+
+  @override
+  State<_DrawerSleepTimerSheet> createState() => _DrawerSleepTimerSheetState();
+}
+
+class _DrawerSleepTimerSheetState extends State<_DrawerSleepTimerSheet> {
+  final TextEditingController _minutesController = TextEditingController();
+
+  @override
+  void dispose() {
+    _minutesController.dispose();
+    super.dispose();
+  }
+
+  String _formatDuration(Duration d) {
+    final minutes = d.inMinutes;
+    final seconds = d.inSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  void _setMinutes(PlaylistViewModel vm, int minutes) {
+    if (minutes <= 0) return;
+    vm.setSleepTimer(Duration(minutes: minutes));
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final presets = [5, 10, 15, 30, 60];
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        12,
+        20,
+        20 + MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Consumer<PlaylistViewModel>(
+        builder: (_, vm, __) {
+          final isActive = vm.hasSleepTimer;
+          final activeMinutes = vm.sleepDuration?.inMinutes;
+          final remaining = vm.sleepRemaining;
+          final mode = vm.sleepMode;
+
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+              ),
+              Text(
+                'Sleep Timer',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                isActive
+                    ? (mode == SleepTimerMode.duration
+                        ? 'Ativo por $activeMinutes min'
+                        : mode == SleepTimerMode.endOfSong
+                            ? 'Ativo ate o fim da musica'
+                            : mode == SleepTimerMode.endOfPlaylist
+                                ? 'Ativo ate o fim da playlist'
+                                : 'Ativo')
+                    : 'Escolha quando parar a reproducao',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
+              if (remaining != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'Restante: ${_formatDuration(remaining)}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: presets.map((m) {
+                  final selected = activeMinutes == m && isActive;
+                  return ChoiceChip(
+                    label: Text('$m min'),
+                    selected: selected,
+                    onSelected: (_) => _setMinutes(vm, m),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ChoiceChip(
+                    label: const Text('Fim da musica'),
+                    selected: vm.sleepMode == SleepTimerMode.endOfSong,
+                    onSelected: (_) {
+                      vm.setSleepTimerEndOfSong();
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                  ChoiceChip(
+                    label: const Text('Fim da playlist'),
+                    selected: vm.sleepMode == SleepTimerMode.endOfPlaylist,
+                    onSelected: (_) {
+                      vm.setSleepTimerEndOfPlaylist();
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _minutesController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Digite o numero de minutos',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                onSubmitted: (value) {
+                  final minutes = int.tryParse(value.trim());
+                  if (minutes != null) _setMinutes(vm, minutes);
+                },
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final minutes =
+                            int.tryParse(_minutesController.text.trim());
+                        if (minutes != null) _setMinutes(vm, minutes);
+                      },
+                      child: const Text('Ativar'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  if (isActive)
+                    TextButton(
+                      onPressed: () {
+                        vm.cancelSleepTimer();
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text('Cancelar'),
+                    ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }

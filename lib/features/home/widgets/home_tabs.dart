@@ -49,6 +49,14 @@ class HomeMusicsTab extends StatelessWidget {
           return const _MusicListSkeleton();
         }
 
+        if (vm.isScanning && vm.visibleMusics.isEmpty) {
+          return const _EmptyState(
+            icon: Icons.sync_rounded,
+            text: 'Sincronizando biblioteca',
+            subtitle: 'Buscando musicas do dispositivo em segundo plano.',
+          );
+        }
+
         if (vm.currentQuery.isNotEmpty) {
           return SearchResultsView(
             results: vm.searchResults,

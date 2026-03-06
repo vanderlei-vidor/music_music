@@ -1,4 +1,4 @@
-// lib/views/player/mini_player_view.dart
+﻿// lib/views/player/mini_player_view.dart
 
 import 'dart:ui';
 import 'package:flutter/material.dart';

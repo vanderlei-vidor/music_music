@@ -15,7 +15,9 @@ class HomeHeader extends StatefulWidget {
   final Future<void> Function()? onShuffleAll;
   final VoidCallback? onCycleFeatured;
   final VoidCallback? onAvatarTap;
+  final VoidCallback? onOpenDrawer;
   final VoidCallback? onOpenSettings;
+  final VoidCallback? onSearchTap;
   final VoidCallback? onNotificationTap;
 
   const HomeHeader({
@@ -30,7 +32,9 @@ class HomeHeader extends StatefulWidget {
     this.onShuffleAll,
     this.onCycleFeatured,
     this.onAvatarTap,
+    this.onOpenDrawer,
     this.onOpenSettings,
+    this.onSearchTap,
     this.onNotificationTap,
   });
 
@@ -106,7 +110,7 @@ class _HomeHeaderState extends State<HomeHeader>
     final title = widget.featuredTitle ?? 'Sua trilha de hoje';
     final subtitle =
         widget.featuredSubtitle ??
-        'Abra o Buscar no menu inferior para achar musicas, artistas e albuns.';
+        'Use a busca no topo para achar musicas, artistas e albuns.';
 
     return Padding(
       padding: pagePadding,
@@ -116,6 +120,11 @@ class _HomeHeaderState extends State<HomeHeader>
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              IconButton(
+                onPressed: widget.onOpenDrawer,
+                icon: const Icon(Icons.menu_rounded),
+                tooltip: 'Menu',
+              ),
               _UserAvatar(
                 name: widget.userName,
                 onTap: widget.onAvatarTap,
@@ -148,6 +157,11 @@ class _HomeHeaderState extends State<HomeHeader>
                 onPressed: widget.onOpenSettings,
                 icon: const Icon(Icons.settings_outlined),
                 tooltip: 'Configuracoes',
+              ),
+              IconButton(
+                onPressed: widget.onSearchTap,
+                icon: const Icon(Icons.search_rounded),
+                tooltip: 'Buscar',
               ),
               IconButton(
                 onPressed: widget.onNotificationTap,

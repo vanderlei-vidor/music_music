@@ -8,6 +8,7 @@ import 'package:music_music/features/home/view_model/home_view_model.dart';
 import 'package:music_music/features/player/view/mini_player_view.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 import 'package:music_music/shared/widgets/artwork_image.dart';
+import 'package:music_music/shared/widgets/swipe_to_reveal_actions.dart';
 
 class AllMusicsScreen extends StatefulWidget {
   const AllMusicsScreen({super.key});
@@ -31,9 +32,7 @@ class _AllMusicsScreenState extends State<AllMusicsScreen> {
     List<MusicEntity> musics,
     PlaylistViewModel playerVM,
   ) {
-    final favorites = playerVM.favoriteMusics
-        .map((m) => m.audioUrl)
-        .toSet();
+    final favorites = playerVM.favoriteMusics.map((m) => m.audioUrl).toSet();
     final recent = playerVM.recentMusics.map((m) => m.audioUrl).toSet();
 
     var filtered = musics;
@@ -58,10 +57,7 @@ class _AllMusicsScreenState extends State<AllMusicsScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Todas as musicas'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Todas as musicas'), centerTitle: true),
       body: Consumer2<HomeViewModel, PlaylistViewModel>(
         builder: (context, homeVM, playerVM, _) {
           final musics = homeVM.musics;
@@ -120,9 +116,8 @@ class _AllMusicsScreenState extends State<AllMusicsScreen> {
                     ChoiceChip(
                       label: const Text('Favoritas'),
                       selected: _quickFilter == _QuickFilter.favorites,
-                      onSelected: (_) => setState(
-                        () => _quickFilter = _QuickFilter.favorites,
-                      ),
+                      onSelected: (_) =>
+                          setState(() => _quickFilter = _QuickFilter.favorites),
                     ),
                     ChoiceChip(
                       label: const Text('Recentes'),
@@ -147,38 +142,71 @@ class _AllMusicsScreenState extends State<AllMusicsScreen> {
                         separatorBuilder: (_, __) => const SizedBox(height: 8),
                         itemBuilder: (context, index) {
                           final music = filtered[index];
-                          final isCurrent = playerVM.currentMusic?.id == music.id;
+                          final isCurrent =
+                              playerVM.currentMusic?.id == music.id;
+                          final isFavorite = playerVM.favoriteMusics.any(
+                            (m) => m.audioUrl == music.audioUrl,
+                          );
                           final originalIndex = musics.indexOf(music);
 
-                          return ListTile(
-                            onTap: () async {
-                              HapticFeedback.selectionClick();
-                              await playerVM.playMusic(musics, originalIndex);
-                              if (!context.mounted) return;
-                              Navigator.pushNamed(context, AppRoutes.player);
+                          return SwipeToRevealActions(
+                            key: ValueKey('all-musics-${music.audioUrl}'),
+                            height: 78,
+                            isFavorite: isFavorite,
+                            deleteDialogTitle: 'Remover da biblioteca',
+                            deleteDialogMessage:
+                                'Deseja remover "${music.title}" da biblioteca?\n\n'
+                                'O arquivo fisico no dispositivo nao sera apagado.',
+                            deleteConfirmLabel: 'Remover',
+                            onToggleFavorite: () async {
+                              await playerVM.toggleFavorite(music);
                             },
-                            leading: ArtworkThumb(artworkUrl: music.artworkUrl),
-                            title: Text(
-                              music.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            onDelete: () async {
+                              await homeVM.removeMusicFromLibrary(music);
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Musica movida para a lixeira.',
+                                  ),
+                                ),
+                              );
+                            },
+                            child: ListTile(
+                              onTap: () async {
+                                HapticFeedback.selectionClick();
+                                await playerVM.playMusic(musics, originalIndex);
+                                if (!context.mounted) return;
+                                Navigator.pushNamed(context, AppRoutes.player);
+                              },
+                              leading: ArtworkThumb(
+                                artworkUrl: music.artworkUrl,
+                                audioId: music.sourceId ?? music.id,
+                              ),
+                              title: Text(
+                                music.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Text(
+                                music.artist,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              trailing: isCurrent
+                                  ? Icon(
+                                      Icons.equalizer_rounded,
+                                      color: theme.colorScheme.primary,
+                                    )
+                                  : null,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              tileColor: theme
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withValues(alpha: 1),
                             ),
-                            subtitle: Text(
-                              music.artist,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            trailing: isCurrent
-                                ? Icon(
-                                    Icons.equalizer_rounded,
-                                    color: theme.colorScheme.primary,
-                                  )
-                                : null,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            tileColor: theme.colorScheme.surfaceContainerHighest
-                                .withValues(alpha: 0.5),
                           );
                         },
                       ),

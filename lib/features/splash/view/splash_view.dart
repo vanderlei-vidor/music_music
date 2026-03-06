@@ -59,14 +59,14 @@ class _SplashViewState extends State<SplashView> {
   }
 
   Future<void> _waitForReady(HomeViewModel vm) {
-    if (!vm.isLoading && !vm.isScanning) {
+    if (vm.hasHydratedLibrary) {
       return Future.value();
     }
 
     final completer = Completer<void>();
 
     void listener() {
-      if (!vm.isLoading && !vm.isScanning) {
+      if (vm.hasHydratedLibrary) {
         vm.removeListener(listener);
         if (!completer.isCompleted) {
           completer.complete();
@@ -139,7 +139,7 @@ class _SplashViewState extends State<SplashView> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Carregando sua biblioteca',
+                    'Carregando seu app',
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: Colors.white70,
                     ),
@@ -154,7 +154,7 @@ class _SplashViewState extends State<SplashView> {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        'Preparando tudo para você',
+                        'Sua biblioteca sera sincronizada em segundo plano',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: Colors.white70,
                         ),
@@ -183,5 +183,4 @@ class _SplashViewState extends State<SplashView> {
     super.dispose();
   }
 }
-
 

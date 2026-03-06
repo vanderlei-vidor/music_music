@@ -12,12 +12,14 @@ import 'package:music_music/features/home/view/home_screen.dart';
 import 'package:music_music/features/library/view/album_detail_screen.dart';
 import 'package:music_music/features/library/view/artist_detail_screen.dart';
 import 'package:music_music/features/library/view/all_musics_screen.dart';
+import 'package:music_music/features/library/view/trash_library_view.dart';
 import 'package:music_music/features/player/view/player_view.dart';
 import 'package:music_music/features/playlists/view/playlist_view.dart';
 import 'package:music_music/features/playlists/view/music_selection_screen.dart';
 import 'package:music_music/features/playlists/view/playlist_detail_screen.dart';
 import 'package:music_music/features/playlists/view/playlists_screen.dart';
 import 'package:music_music/features/splash/view/splash_view.dart';
+import 'package:music_music/features/settings/view/about_view.dart';
 import 'package:music_music/features/settings/view/theme_settings_view.dart';
 import 'package:music_music/features/welcome/view/welcome_view.dart';
 import 'package:music_music/core/ios_upload/ios_import_view.dart';
@@ -41,6 +43,8 @@ class AppRoutes {
   static const albumDetail = '/album';
   static const artistDetail = '/artist';
   static const allMusics = '/all-musics';
+  static const trash = '/trash';
+  static const about = '/about';
   static const playlistDetail = '/playlist';
   static const musicSelection = '/playlist/add';
   static const iosImport = '/ios-import';
@@ -62,6 +66,8 @@ class AppRoutes {
     recent: (_) => const RecentMusicsView(),
     mostPlayed: (_) => const MostPlayedView(),
     allMusics: (_) => const AllMusicsScreen(),
+    trash: (_) => const TrashLibraryView(),
+    about: (_) => const AboutView(),
     iosImport: (_) => const IOSImportView(),
   };
 
@@ -93,6 +99,10 @@ class AppRoutes {
         return const MostPlayedView();
       case allMusics:
         return const AllMusicsScreen();
+      case trash:
+        return const TrashLibraryView();
+      case about:
+        return const AboutView();
       case iosImport:
         return const IOSImportView();
     }

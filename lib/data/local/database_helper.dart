@@ -477,6 +477,148 @@ class DatabaseHelper {
     }, conflictAlgorithm: ConflictAlgorithm.ignore);
   }
 
+  Future<LibrarySyncResult> syncMusicsFromScan(List<MusicEntity> scanned) async {
+    final db = await database;
+    if (scanned.isEmpty) {
+      return const LibrarySyncResult();
+    }
+
+    return db.transaction((txn) async {
+      final existingRows = await txn.query(
+        'musics_v2',
+        columns: [
+          'id',
+          'audioUrl',
+          'sourceId',
+          'title',
+          'artist',
+          'album',
+          'duration',
+          'genre',
+          'mediaType',
+          'folderPath',
+          'isDeleted',
+        ],
+      );
+
+      final existingByUrl = <String, Map<String, Object?>>{
+        for (final row in existingRows) (row['audioUrl'] as String): row,
+      };
+
+      final scannedByUrl = <String, MusicEntity>{
+        for (final music in scanned) music.audioUrl: music,
+      };
+
+      var added = 0;
+      var restored = 0;
+      var updated = 0;
+      var removed = 0;
+
+      for (final music in scannedByUrl.values) {
+        final row = existingByUrl[music.audioUrl];
+        if (row == null) {
+          await txn.insert('musics_v2', {
+            'title': music.title,
+            'sourceId': music.sourceId,
+            'artist': music.artist,
+            'album': music.album,
+            'genre': music.genre,
+            'mediaType': music.mediaType,
+            'folderPath': music.folderPath,
+            'isDeleted': 0,
+            'audioUrl': music.audioUrl,
+            'artworkUrl': music.artworkUrl,
+            'duration': music.duration,
+            'isFavorite': music.isFavorite ? 1 : 0,
+            'lastPlayedAt': null,
+            'playCount': 0,
+          }, conflictAlgorithm: ConflictAlgorithm.ignore);
+          added += 1;
+          continue;
+        }
+
+        final changes = <String, Object?>{};
+        final isDeleted = (row['isDeleted'] as int?) ?? 0;
+        if (isDeleted == 1) {
+          changes['isDeleted'] = 0;
+          restored += 1;
+        }
+
+        if (_asInt(row['sourceId']) != music.sourceId && music.sourceId != null) {
+          changes['sourceId'] = music.sourceId;
+        }
+        if (_asString(row['title']) != music.title) {
+          changes['title'] = music.title;
+        }
+        if (_asString(row['artist']) != music.artist) {
+          changes['artist'] = music.artist;
+        }
+        if (_asNullableString(row['album']) != music.album) {
+          changes['album'] = music.album;
+        }
+        if (_asInt(row['duration']) != music.duration) {
+          changes['duration'] = music.duration;
+        }
+        if (_asNullableString(row['folderPath']) != music.folderPath &&
+            (music.folderPath?.isNotEmpty ?? false)) {
+          changes['folderPath'] = music.folderPath;
+        }
+        final existingGenre = _asNullableString(row['genre']);
+        final incomingGenre = music.genre?.trim();
+        if ((existingGenre == null || existingGenre.isEmpty) &&
+            incomingGenre != null &&
+            incomingGenre.isNotEmpty) {
+          changes['genre'] = incomingGenre;
+        }
+        final existingMediaType = _asNullableString(row['mediaType']);
+        if ((existingMediaType == null || existingMediaType.isEmpty) &&
+            (music.mediaType?.isNotEmpty ?? false)) {
+          changes['mediaType'] = music.mediaType;
+        }
+
+        if (changes.isNotEmpty) {
+          await txn.update(
+            'musics_v2',
+            changes,
+            where: 'audioUrl = ?',
+            whereArgs: [music.audioUrl],
+          );
+          updated += 1;
+        }
+      }
+
+      final activeRows = existingRows.where(
+        (row) => ((row['isDeleted'] as int?) ?? 0) == 0,
+      );
+      for (final row in activeRows) {
+        final audioUrl = row['audioUrl'] as String;
+        if (scannedByUrl.containsKey(audioUrl)) continue;
+
+        await txn.update(
+          'musics_v2',
+          {'isDeleted': 1, 'isFavorite': 0},
+          where: 'audioUrl = ?',
+          whereArgs: [audioUrl],
+        );
+        await txn.delete(
+          'playback_queue_items',
+          where: 'audioUrl = ?',
+          whereArgs: [audioUrl],
+        );
+        removed += 1;
+      }
+
+      final unchanged = scannedByUrl.length - added - restored - updated;
+      return LibrarySyncResult(
+        added: added,
+        restored: restored,
+        updated: updated,
+        removed: removed,
+        unchanged: unchanged < 0 ? 0 : unchanged,
+      );
+    });
+  }
+
   Future<void> updateMediaType(String audioUrl, String? mediaType) async {
     final db = await database;
     await db.update(
@@ -530,6 +672,77 @@ class DatabaseHelper {
       where: 'audioUrl = ?',
       whereArgs: [audioUrl],
     );
+  }
+
+  Future<void> permanentlyDeleteMusicByAudioUrl(String audioUrl) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      final found = await txn.query(
+        'musics_v2',
+        columns: ['id'],
+        where: 'audioUrl = ?',
+        whereArgs: [audioUrl],
+        limit: 1,
+      );
+
+      final musicId = found.isNotEmpty ? found.first['id'] as int? : null;
+      if (musicId != null) {
+        await txn.delete(
+          'playlist_musics_v2',
+          where: 'musicId = ?',
+          whereArgs: [musicId],
+        );
+      }
+
+      await txn.delete(
+        'playback_queue_items',
+        where: 'audioUrl = ?',
+        whereArgs: [audioUrl],
+      );
+
+      await txn.delete(
+        'musics_v2',
+        where: 'audioUrl = ? AND isDeleted = 1',
+        whereArgs: [audioUrl],
+      );
+    });
+  }
+
+  Future<int> permanentlyDeleteAllDeletedMusics() async {
+    final db = await database;
+    return db.transaction((txn) async {
+      final removedRows = await txn.query(
+        'musics_v2',
+        columns: ['id', 'audioUrl'],
+        where: 'isDeleted = 1',
+      );
+      if (removedRows.isEmpty) return 0;
+
+      for (final row in removedRows) {
+        final musicId = row['id'] as int?;
+        final audioUrl = row['audioUrl'] as String?;
+        if (musicId != null) {
+          await txn.delete(
+            'playlist_musics_v2',
+            where: 'musicId = ?',
+            whereArgs: [musicId],
+          );
+        }
+        if (audioUrl != null && audioUrl.isNotEmpty) {
+          await txn.delete(
+            'playback_queue_items',
+            where: 'audioUrl = ?',
+            whereArgs: [audioUrl],
+          );
+        }
+      }
+
+      final deletedCount = await txn.delete(
+        'musics_v2',
+        where: 'isDeleted = 1',
+      );
+      return deletedCount;
+    });
   }
 
   // =======================
@@ -669,4 +882,30 @@ class DatabaseHelper {
     }
     return false;
   }
+
+  static String _asString(Object? value) => value?.toString() ?? '';
+  static String? _asNullableString(Object? value) => value?.toString();
+  static int? _asInt(Object? value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
+  }
+}
+
+class LibrarySyncResult {
+  final int added;
+  final int restored;
+  final int updated;
+  final int removed;
+  final int unchanged;
+
+  const LibrarySyncResult({
+    this.added = 0,
+    this.restored = 0,
+    this.updated = 0,
+    this.removed = 0,
+    this.unchanged = 0,
+  });
+
+  int get changed => added + restored + updated + removed;
 }

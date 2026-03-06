@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 class SwipeToRevealActions extends StatefulWidget {
   final Widget child;
@@ -6,6 +6,9 @@ class SwipeToRevealActions extends StatefulWidget {
   final VoidCallback onToggleFavorite;
   final bool isFavorite;
   final double height;
+  final String deleteDialogTitle;
+  final String deleteDialogMessage;
+  final String deleteConfirmLabel;
 
   const SwipeToRevealActions({
     super.key,
@@ -14,6 +17,9 @@ class SwipeToRevealActions extends StatefulWidget {
     required this.onToggleFavorite,
     required this.isFavorite,
     this.height = 72,
+    this.deleteDialogTitle = 'Remover musica',
+    this.deleteDialogMessage = 'Deseja remover esta musica da playlist?',
+    this.deleteConfirmLabel = 'Remover',
   });
 
   @override
@@ -41,8 +47,8 @@ class _SwipeToRevealActionsState extends State<SwipeToRevealActions> {
     final result = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Remover música'),
-        content: const Text('Deseja remover esta música da playlist?'),
+        title: Text(widget.deleteDialogTitle),
+        content: Text(widget.deleteDialogMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -50,7 +56,7 @@ class _SwipeToRevealActionsState extends State<SwipeToRevealActions> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Remover'),
+            child: Text(widget.deleteConfirmLabel),
           ),
         ],
       ),
@@ -65,56 +71,65 @@ class _SwipeToRevealActionsState extends State<SwipeToRevealActions> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final revealFraction = (-_offset / _maxOffset.abs()).clamp(0.0, 1.0);
 
     return SizedBox(
       height: widget.height,
       child: Stack(
         children: [
-          // ðŸŽ¯ GAVETA FIXA
           Positioned.fill(
             child: Align(
               alignment: Alignment.centerRight,
-              child: Container(
-                width: 144,
-                height: widget.height,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    // â­ FAVORITO
-                    IconButton(
-                      icon: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 180),
-                        transitionBuilder: (child, animation) {
-                          return ScaleTransition(scale: animation, child: child);
-                        },
-                        child: Icon(
-                          widget.isFavorite ? Icons.favorite : Icons.favorite_border,
-                          key: ValueKey<bool>(widget.isFavorite),
-                          color: widget.isFavorite
-                              ? Colors.redAccent
-                              : theme.colorScheme.onSurfaceVariant,
-                        ),
+              child: ClipRect(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  widthFactor: revealFraction,
+                  child: IgnorePointer(
+                    ignoring: revealFraction < 0.35,
+                    child: Container(
+                      width: 144,
+                      height: widget.height,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      onPressed: widget.onToggleFavorite,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          IconButton(
+                            icon: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 180),
+                              transitionBuilder: (child, animation) {
+                                return ScaleTransition(
+                                  scale: animation,
+                                  child: child,
+                                );
+                              },
+                              child: Icon(
+                                widget.isFavorite
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
+                                key: ValueKey<bool>(widget.isFavorite),
+                                color: widget.isFavorite
+                                    ? Colors.redAccent
+                                    : theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            onPressed: widget.onToggleFavorite,
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete),
+                            color: Colors.redAccent,
+                            onPressed: _confirmDelete,
+                          ),
+                        ],
+                      ),
                     ),
-
-                    // ðŸ—‘ï¸ DELETE
-                    IconButton(
-                      icon: const Icon(Icons.delete),
-                      color: Colors.redAccent,
-                      onPressed: _confirmDelete,
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
-
-          // ðŸŽµ ITEM DESLIZÃVEL
           GestureDetector(
             onHorizontalDragUpdate: _onDragUpdate,
             onHorizontalDragEnd: _onDragEnd,
@@ -128,4 +143,3 @@ class _SwipeToRevealActionsState extends State<SwipeToRevealActions> {
     );
   }
 }
-
