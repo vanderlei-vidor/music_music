@@ -7,15 +7,31 @@
     android:paddingTop="6dp"
     android:paddingBottom="6dp">
 
-    <TextView
-        android:id="@+id/widget_queue_item_text"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:ellipsize="end"
-        android:maxLines="1"
-        android:text="-"
-        android:textColor="#E6FFFFFF"
-        android:textSize="11sp" />
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/widget_queue_item_indicator"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:layout_marginEnd="6dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_music_note"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/widget_queue_item_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="-"
+            android:textColor="#E6FFFFFF"
+            android:textSize="11sp" />
+    </LinearLayout>
 
     <TextView
         android:layout_width="match_parent"
@@ -24,4 +40,3 @@
         android:background="#22FFFFFF"
         android:text="" />
 </LinearLayout>
-

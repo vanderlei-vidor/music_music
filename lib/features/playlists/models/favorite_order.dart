@@ -1,0 +1,1 @@
+enum FavoriteOrder { recent, az }

@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:just_audio_background/just_audio_background.dart';
 import 'package:music_music/app/app.dart';
+import 'package:music_music/core/audio/audio_service_controller.dart';
 import 'package:music_music/core/observability/app_logger.dart';
 import 'package:music_music/core/platform/desktop_init.dart';
 import 'package:music_music/core/services/music_widget_manager.dart';
@@ -111,6 +111,8 @@ Future<void> _bootstrapApp() async {
     initWebDatabase();
   }
 
+  await AudioServiceController.init();
+
   // DESKTOP: only here use FFI.
   if (!kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.windows ||
@@ -125,12 +127,6 @@ Future<void> _bootstrapApp() async {
   if (!kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS)) {
-    await JustAudioBackground.init(
-      androidNotificationChannelId: 'com.example.music_music.playback',
-      androidNotificationChannelName: 'Reproducao',
-      androidNotificationOngoing: true,
-    );
-    
     // 🏠 Inicializar Widget de Home Screen
     await MusicWidgetManager.initialize();
   }

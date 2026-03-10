@@ -24,7 +24,10 @@ class EqualizerSheet extends StatelessWidget {
             (playlistVm) => playlistVm.isReprocessingGenres,
           );
           if (vm.autoGenrePresetEnabled) {
-            vm.syncGenre(currentGenre);
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!context.mounted) return;
+              vm.syncGenre(currentGenre);
+            });
           }
           final maxSheetHeight = MediaQuery.of(context).size.height * 0.88;
           return Padding(

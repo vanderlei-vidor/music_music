@@ -257,7 +257,9 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen>
                                   child: VinylAlbumCover(
                                     artwork: artwork,
                                     audioId: artworkId,
-                                    player: playlistVM.player,
+                                    playingStream: playlistVM.playingStream,
+                                    speedStream: playlistVM.speedStream,
+                                    isPlaying: playlistVM.isPlaying,
                                     size: 214,
                                     showNeedle: false,
                                     motionProgress: t,
@@ -467,7 +469,9 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen>
                                                   builder: (_, snapshot) {
                                                     return MiniProgressBar(
                                                       position: snapshot.data ?? Duration.zero,
-                                                      duration: playlistVM.player.duration ?? Duration.zero,
+                                                      duration: Duration(
+                                                        milliseconds: music.duration ?? 0,
+                                                      ),
                                                       color: dominantColor,
                                                     );
                                                   },

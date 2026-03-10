@@ -209,12 +209,13 @@ class _GenreDetailViewState extends State<GenreDetailView> {
                                     final position = snapshot.data ?? Duration.zero;
                                     final duration = context
                                             .read<PlaylistViewModel>()
-                                            .player
-                                            .duration ??
-                                        Duration.zero;
+                                            .currentMusic
+                                            ?.duration;
                                     return MiniProgressBar(
                                       position: position,
-                                      duration: duration,
+                                      duration: Duration(
+                                        milliseconds: duration ?? 0,
+                                      ),
                                       color: color,
                                     );
                                   },

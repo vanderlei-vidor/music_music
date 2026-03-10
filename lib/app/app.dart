@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:music_music/core/audio/audio_service_controller.dart';
 import 'package:music_music/core/theme/theme_manager.dart';
 import 'package:music_music/core/preferences/podcast_preferences.dart';
 import 'package:music_music/features/home/view_model/home_view_model.dart';
-import 'package:music_music/features/player/equalizer/equalizer_backend.dart';
 import 'package:music_music/features/player/equalizer/equalizer_view_model.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 import 'package:music_music/features/player/view_model/player_panel_controller.dart';
@@ -28,25 +28,20 @@ class MusicApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        Provider<EqualizerBackend>(create: (_) => createPlatformEqualizerBackend()),
         ChangeNotifierProvider(
           create: (_) => ThemeManager(initialPreset: initialPreset),
         ),
         ChangeNotifierProvider(create: (_) => PodcastPreferences()),
         ChangeNotifierProvider(create: (_) => HomeViewModel()),
         ChangeNotifierProvider(
-          create: (context) {
-            final backend = context.read<EqualizerBackend>();
-            final player = createAudioPlayerForBackend(backend);
-            return PlaylistViewModel(player: player);
-          },
+          create: (_) =>
+              PlaylistViewModel(handler: AudioServiceController.handler),
         ),
         ChangeNotifierProxyProvider<PlaylistViewModel, EqualizerViewModel>(
-          create: (context) =>
-              EqualizerViewModel(backend: context.read<EqualizerBackend>()),
+          create: (context) => EqualizerViewModel(),
           update: (_, playlistVm, eqVm) {
             final vm = eqVm!;
-            vm.attachPlayer(playlistVm.player);
+            vm.attachAudioHandler(AudioServiceController.handler);
             vm.syncGenre(playlistVm.currentGenre);
             return vm;
           },

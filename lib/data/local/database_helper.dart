@@ -200,6 +200,18 @@ class DatabaseHelper {
     return result.map((e) => MusicEntity.fromMap(e)).toList();
   }
 
+  Future<MusicEntity?> getMusicByAudioUrl(String audioUrl) async {
+    final db = await database;
+    final result = await db.query(
+      'musics_v2',
+      where: 'audioUrl = ?',
+      whereArgs: [audioUrl],
+      limit: 1,
+    );
+    if (result.isEmpty) return null;
+    return MusicEntity.fromMap(result.first);
+  }
+
   Future<int> insertMusicV2(MusicEntity music) async {
     final db = await database;
 

@@ -1,6 +1,8 @@
 ﻿package com.example.music_music
 
 import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -9,6 +11,8 @@ import android.view.KeyEvent
 import androidx.core.content.ContextCompat
 
 object WidgetUtils {
+    private const val HOME_WIDGET_PREFS = "HomeWidgetPreferences"
+
     fun getOpenAppPendingIntent(context: Context): PendingIntent {
         val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
             ?: Intent(Intent.ACTION_MAIN).apply {
@@ -97,6 +101,48 @@ object WidgetUtils {
         }
         context.sendBroadcast(downIntent)
         context.sendBroadcast(upIntent)
+    }
+
+    fun setPendingQueueIndex(context: Context, oneBasedIndex: Int) {
+        val prefs = context.getSharedPreferences(HOME_WIDGET_PREFS, Context.MODE_PRIVATE)
+        prefs.edit().putInt("player_pending_index", oneBasedIndex).apply()
+    }
+
+    fun clearPendingQueueIndex(context: Context) {
+        val prefs = context.getSharedPreferences(HOME_WIDGET_PREFS, Context.MODE_PRIVATE)
+        prefs.edit().putInt("player_pending_index", -1).apply()
+    }
+
+    fun requestWidgetUpdate(context: Context, widgetClass: Class<*>) {
+        val manager = AppWidgetManager.getInstance(context.applicationContext)
+        val component = ComponentName(context, widgetClass)
+        val ids = manager.getAppWidgetIds(component)
+        if (ids.isNotEmpty()) {
+            val intent = Intent(context, widgetClass).apply {
+                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+            }
+            context.sendBroadcast(intent)
+        }
+    }
+
+    fun refreshQueueList(context: Context, widgetClass: Class<*>) {
+        val manager = AppWidgetManager.getInstance(context.applicationContext)
+        val component = ComponentName(context, widgetClass)
+        val ids = manager.getAppWidgetIds(component)
+        if (ids.isNotEmpty()) {
+            manager.notifyAppWidgetViewDataChanged(ids, R.id.widget_queue_list)
+        }
+    }
+
+    fun openAppNow(context: Context) {
+        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+            ?: Intent(Intent.ACTION_MAIN).apply {
+                setPackage(context.packageName)
+                addCategory(Intent.CATEGORY_LAUNCHER)
+            }
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        context.startActivity(intent)
     }
 
     fun getIntCompat(prefs: SharedPreferences, key: String, defaultValue: Int): Int {

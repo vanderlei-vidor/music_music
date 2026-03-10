@@ -15,7 +15,13 @@ class AlbumFixedControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<PlaylistViewModel>();
+    final isShuffled =
+        context.select<PlaylistViewModel, bool>((vm) => vm.isShuffled);
+    final isPlaying =
+        context.select<PlaylistViewModel, bool>((vm) => vm.isPlaying);
+    final currentMusic =
+        context.select<PlaylistViewModel, MusicEntity?>((vm) => vm.currentMusic);
+    final vm = context.read<PlaylistViewModel>();
 
     return SafeArea(
       child: Padding(
@@ -38,7 +44,7 @@ class AlbumFixedControls extends StatelessWidget {
               // ðŸ”€ SHUFFLE
               _CircleButton(
                 icon: Icons.shuffle,
-                active: vm.isShuffled,
+                active: isShuffled,
                 color: color,
                 onTap: vm.toggleShuffle,
               ),
@@ -48,11 +54,10 @@ class AlbumFixedControls extends StatelessWidget {
               // â–¶ï¸ PLAY / â¸ PAUSE
               _CircleButton(
                 big: true,
-                icon: vm.isPlaying ? Icons.pause : Icons.play_arrow,
+                icon: isPlaying ? Icons.pause : Icons.play_arrow,
                 color: color,
                 onTap: () {
-                  if (vm.currentMusic == null ||
-                      !musics.contains(vm.currentMusic)) {
+                  if (currentMusic == null || !musics.contains(currentMusic)) {
                     vm.playMusic(musics, 0);
                   } else {
                     vm.playPause();

@@ -35,6 +35,13 @@ class WidgetActionReceiver : BroadcastReceiver() {
         val action = intent.action
         Log.d(TAG, "Widget action received: $action")
 
+        if (action == ACTION_PLAY_INDEX && intent.getBooleanExtra("open_app", false)) {
+            WidgetUtils.clearPendingQueueIndex(context)
+            WidgetUtils.refreshQueueList(context, MusicWidgetPlayer4x4::class.java)
+            WidgetUtils.openAppNow(context)
+            return
+        }
+
         val widgetAction = when (action) {
             ACTION_PLAY_PAUSE -> "play_pause"
             ACTION_NEXT -> "next"
@@ -45,6 +52,8 @@ class WidgetActionReceiver : BroadcastReceiver() {
             ACTION_PLAY_INDEX -> {
                 val index = intent.getIntExtra("queue_index_one_based", -1)
                 if (index > 0) {
+                    WidgetUtils.setPendingQueueIndex(context, index)
+                    WidgetUtils.refreshQueueList(context, MusicWidgetPlayer4x4::class.java)
                     "play_index:$index"
                 } else {
                     Log.w(TAG, "PLAY_INDEX sem indice valido")
@@ -60,6 +69,51 @@ class WidgetActionReceiver : BroadcastReceiver() {
             return
         }
 
+        val isCustomAction = when (action) {
+            ACTION_SHUFFLE, ACTION_REPEAT, ACTION_FAVORITE, ACTION_PLAY_INDEX -> true
+            else -> false
+        }
+        if (isCustomAction) {
+            val pendingResult = goAsync()
+            val customAction = when (action) {
+                ACTION_SHUFFLE -> "toggle_shuffle"
+                ACTION_REPEAT -> "toggle_repeat"
+                ACTION_FAVORITE -> "toggle_favorite"
+                ACTION_PLAY_INDEX -> "play_index"
+                else -> "toggle_shuffle"
+            }
+            val extras = android.os.Bundle()
+            if (action == ACTION_PLAY_INDEX) {
+                val index = intent.getIntExtra("queue_index_one_based", -1)
+                if (index > 0) {
+                    extras.putInt("index", index)
+                }
+            }
+
+            WidgetMediaController.sendCustomAction(context, customAction, extras) { success ->
+                if (success) {
+                    Log.d(TAG, "Custom action enviada ao AudioService: $customAction")
+                    pendingResult.finish()
+                    return@sendCustomAction
+                }
+
+                val engine = headlessEngine ?: createHeadlessEngine(context)
+                if (engine != null) {
+                    dispatchToFlutter(engine, widgetAction, delayMs = 1400L)
+                    Log.d(TAG, "Fallback headless para action: $widgetAction")
+                    pendingResult.finish()
+                    return@sendCustomAction
+                }
+
+                val prefs: SharedPreferences =
+                    context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                prefs.edit().putString(KEY_PENDING_ACTION, widgetAction).apply()
+                Log.d(TAG, "Fallback pendente salvo: $widgetAction")
+                pendingResult.finish()
+            }
+            return
+        }
+
         val mediaKeyCode = when (action) {
             ACTION_PLAY_PAUSE -> KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
             ACTION_NEXT -> KeyEvent.KEYCODE_MEDIA_NEXT
@@ -68,13 +122,7 @@ class WidgetActionReceiver : BroadcastReceiver() {
         }
         if (mediaKeyCode != null) {
             WidgetUtils.dispatchMediaButtonAction(context, mediaKeyCode)
-            val engineForFallback = headlessEngine ?: createHeadlessEngine(context)
-            if (engineForFallback != null) {
-                dispatchToFlutter(engineForFallback, widgetAction, delayMs = 1400L)
-                Log.d(TAG, "Media action + fallback headless enviados: $widgetAction")
-                return
-            }
-            Log.d(TAG, "Media action enviada em background sem headless: $widgetAction")
+            Log.d(TAG, "Media action enviada em background: $widgetAction")
             return
         }
 

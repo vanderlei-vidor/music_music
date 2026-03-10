@@ -16,7 +16,11 @@ class PlaylistStickyControls extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    final vm = context.watch<PlaylistViewModel>();
+    final isPlaying =
+        context.select<PlaylistViewModel, bool>((vm) => vm.isPlaying);
+    final isShuffled =
+        context.select<PlaylistViewModel, bool>((vm) => vm.isShuffled);
+    final vm = context.read<PlaylistViewModel>();
     final theme = Theme.of(context);
 
     final t = (shrinkOffset / (maxExtent - minExtent)).clamp(0.0, 1.0);
@@ -31,7 +35,12 @@ class PlaylistStickyControls extends SliverPersistentHeaderDelegate {
             padding: EdgeInsets.all(padding),
             child: Transform.scale(
               scale: scale,
-              child: _PlayShuffleButton(vm: vm),
+              child: _PlayShuffleButton(
+                isPlaying: isPlaying,
+                isShuffled: isShuffled,
+                onPlayPause: vm.playPause,
+                onToggleShuffle: vm.toggleShuffle,
+              ),
             ),
           ),
         ),
@@ -44,9 +53,17 @@ class PlaylistStickyControls extends SliverPersistentHeaderDelegate {
 }
 
 class _PlayShuffleButton extends StatelessWidget {
-  final PlaylistViewModel vm;
+  final bool isPlaying;
+  final bool isShuffled;
+  final VoidCallback onPlayPause;
+  final VoidCallback onToggleShuffle;
 
-  const _PlayShuffleButton({required this.vm});
+  const _PlayShuffleButton({
+    required this.isPlaying,
+    required this.isShuffled,
+    required this.onPlayPause,
+    required this.onToggleShuffle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -72,13 +89,13 @@ class _PlayShuffleButton extends StatelessWidget {
             icon: AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),
               child: Icon(
-                vm.isPlaying ? Icons.pause : Icons.play_arrow,
-                key: ValueKey(vm.isPlaying),
+                isPlaying ? Icons.pause : Icons.play_arrow,
+                key: ValueKey(isPlaying),
                 color: theme.colorScheme.onPrimary,
                 size: 28,
               ),
             ),
-            onPressed: vm.playPause,
+            onPressed: onPlayPause,
           ),
           Container(
             width: 1,
@@ -86,14 +103,14 @@ class _PlayShuffleButton extends StatelessWidget {
             color: theme.colorScheme.onPrimary.withValues(alpha: 0.3),
           ),
           IconButton(
-            onPressed: vm.toggleShuffle,
+            onPressed: onToggleShuffle,
             icon: AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeOutCubic,
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                boxShadow: vm.isShuffled
+                boxShadow: isShuffled
                     ? [
                         BoxShadow(
                           color: theme.colorScheme.onPrimary.withValues(alpha: 0.6),
@@ -116,9 +133,9 @@ class _PlayShuffleButton extends StatelessWidget {
                 },
                 child: Icon(
                   Icons.shuffle,
-                  key: ValueKey(vm.isShuffled),
+                  key: ValueKey(isShuffled),
                   size: 24,
-                  color: vm.isShuffled
+                  color: isShuffled
                       ? theme.colorScheme.onPrimary
                       : theme.colorScheme.onPrimary.withValues(alpha: 0.7),
                 ),

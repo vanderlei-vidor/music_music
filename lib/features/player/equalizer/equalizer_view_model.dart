@@ -2,10 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
-import 'package:just_audio/just_audio.dart';
-
 import 'package:music_music/features/player/equalizer/equalizer_backend.dart';
 import 'package:music_music/features/player/equalizer/equalizer_models.dart';
 import 'package:music_music/features/player/equalizer/equalizer_preferences.dart';
@@ -29,6 +28,7 @@ class EqualizerViewModel extends ChangeNotifier {
   EqualizerPreset? _lastAutoAppliedPreset;
   late final Map<int, double> _bandGainsDb;
   bool _initialized = false;
+  AudioHandler? _audioHandler;
   Timer? _persistDebounce;
   StreamSubscription<Set<AudioDevice>>? _audioDevicesSub;
   Duration _lastApplyDuration = Duration.zero;
@@ -77,8 +77,8 @@ class EqualizerViewModel extends ChangeNotifier {
 
   double gainFor(int frequencyHz) => _bandGainsDb[frequencyHz] ?? 0.0;
 
-  void attachPlayer(AudioPlayer player) {
-    _backend.attachPlayer(player);
+  void attachAudioHandler(AudioHandler handler) {
+    _audioHandler = handler;
     unawaited(_applyToBackend());
   }
 
@@ -391,12 +391,25 @@ class EqualizerViewModel extends ChangeNotifier {
   Future<void> _applyToBackend() async {
     final sw = Stopwatch()..start();
     try {
-      await _backend.apply(
-        enabled: _enabled,
-        preampDb: effectivePreampDb,
-        bandGainsDb: _bandGainsDb,
-        iosMode: _iosEqProcessingMode,
-      );
+      final handler = _audioHandler;
+      if (handler != null) {
+        await handler.customAction('eq_apply', {
+          'enabled': _enabled,
+          'preampDb': effectivePreampDb,
+          'bandGainsDb': {
+            for (final entry in _bandGainsDb.entries)
+              entry.key.toString(): entry.value,
+          },
+          'iosMode': _iosEqProcessingMode.storageKey,
+        });
+      } else {
+        await _backend.apply(
+          enabled: _enabled,
+          preampDb: effectivePreampDb,
+          bandGainsDb: _bandGainsDb,
+          iosMode: _iosEqProcessingMode,
+        );
+      }
       _applyCount += 1;
     } catch (_) {
       _applyErrorCount += 1;

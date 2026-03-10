@@ -16,6 +16,8 @@ class MusicWidgetManager {
 
   static const String _iosWidgetPlayer = 'PlayerWidget';
   static const Duration _updateDebounce = Duration(milliseconds: 220);
+  static const MethodChannel _widgetRefreshChannel =
+      MethodChannel('com.example.music_music/widget_refresh');
 
   static String _playerTitle = 'Nenhuma musica';
   static String _playerArtist = '-';
@@ -30,6 +32,7 @@ class MusicWidgetManager {
   static int _playerCurrentPosition = 1;
   static int _playerTotalTracks = 0;
   static String _playerQueueAllJson = '[]';
+  static int _playerPendingIndex = -1;
 
   static Timer? _updateTimer;
   static bool _updateInProgress = false;
@@ -62,6 +65,7 @@ class MusicWidgetManager {
     await HomeWidget.saveWidgetData<int>('player_current_position', 1);
     await HomeWidget.saveWidgetData<int>('player_total_tracks', 0);
     await HomeWidget.saveWidgetData<String>('player_queue_all_json', '[]');
+    await HomeWidget.saveWidgetData<int>('player_pending_index', -1);
 
     _playerTitle = 'Nenhuma musica';
     _playerArtist = '-';
@@ -76,6 +80,7 @@ class MusicWidgetManager {
     _playerCurrentPosition = 1;
     _playerTotalTracks = 0;
     _playerQueueAllJson = '[]';
+    _playerPendingIndex = -1;
   }
 
   static Future<void> updatePlayerWidget({
@@ -142,6 +147,7 @@ class MusicWidgetManager {
       await HomeWidget.saveWidgetData<int>('player_current_position', effectiveCurrentPosition);
       await HomeWidget.saveWidgetData<int>('player_total_tracks', effectiveTotalTracks);
       await HomeWidget.saveWidgetData<String>('player_queue_all_json', queueAllJson);
+      await HomeWidget.saveWidgetData<int>('player_pending_index', _playerPendingIndex);
 
       _playerTitle = title;
       _playerArtist = artist;
@@ -196,6 +202,25 @@ class MusicWidgetManager {
       debugPrint('Erro ao atualizar estado dos controles: $e');
     }
   }
+
+  static Future<void> setPendingQueueIndex(int? oneBasedIndex) async {
+    final value = oneBasedIndex ?? -1;
+    if (_playerPendingIndex == value) return;
+    try {
+      await HomeWidget.saveWidgetData<int>('player_pending_index', value);
+      _playerPendingIndex = value;
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        try {
+          await _widgetRefreshChannel.invokeMethod('refreshQueueList');
+          return;
+        } catch (_) {}
+      }
+      _requestPlayerWidgetsUpdate(urgent: true);
+    } catch (e) {
+      debugPrint('Erro ao atualizar pending index: $e');
+    }
+  }
+
 
   static bool _listEquals(List<String> a, List<String> b) {
     if (a.length != b.length) return false;
@@ -287,6 +312,7 @@ class MusicWidgetManager {
         ),
         'player_total_tracks': await HomeWidget.getWidgetData<int>('player_total_tracks'),
         'player_queue_all_json': await HomeWidget.getWidgetData<String>('player_queue_all_json'),
+        'player_pending_index': await HomeWidget.getWidgetData<int>('player_pending_index'),
       };
       return data;
     } catch (_) {

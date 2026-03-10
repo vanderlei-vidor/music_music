@@ -298,8 +298,9 @@ class _ArtistDetailViewState extends State<ArtistDetailView> {
                                                 builder: (_, snapshot) {
                                                   return MiniProgressBar(
                                                     position: snapshot.data ?? Duration.zero,
-                                                    duration:
-                                                        playlistVM.player.duration ?? Duration.zero,
+                                                    duration: Duration(
+                                                      milliseconds: music.duration ?? 0,
+                                                    ),
                                                     color: color,
                                                   );
                                                 },

@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:music_music/app/app_info.dart';
 import 'package:music_music/data/models/music_entity.dart';
 import 'package:music_music/features/player/view/equalizer_sheet.dart';
+import 'package:music_music/features/playlists/models/sleep_timer_mode.dart';
 import 'package:music_music/features/playlists/view_model/playlist_view_model.dart';
 
 import 'package:music_music/core/theme/app_shadows.dart';
@@ -60,7 +61,7 @@ class _PlayerViewState extends State<PlayerView> {
       (state) => _PlayerScreenState(
         music: state.currentMusic,
         isPlaying: state.isPlaying,
-        volume: state.player.volume,
+        volume: state.currentVolume,
       ),
     );
     final music = ui.music;
@@ -890,7 +891,7 @@ class _QueueSheet extends StatelessWidget {
     return Consumer<PlaylistViewModel>(
       builder: (context, queueVm, _) {
         final queue = queueVm.queueMusics;
-        final currentIndex = queueVm.player.currentIndex ?? 0;
+        final currentIndex = queueVm.currentIndex;
 
         return SizedBox(
           height: maxHeight,

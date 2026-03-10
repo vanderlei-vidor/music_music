@@ -32,22 +32,21 @@ class MusicWidgetPlayer4x4 : HomeWidgetProvider() {
             val isFavorite = widgetData.getBoolean("player_isFavorite", false)
             val queueCount = WidgetUtils.getIntCompat(widgetData, "player_queue_count", 0)
             val themeColor = WidgetUtils.getIntCompat(widgetData, "player_theme_color", 0xFFFFE0A3.toInt())
-            val queueStartPosition = WidgetUtils.getIntCompat(widgetData, "player_queue_start_position", 1)
             val currentPosition = WidgetUtils.getIntCompat(widgetData, "player_current_position", 1)
             val totalTracks = WidgetUtils.getIntCompat(widgetData, "player_total_tracks", 0)
             val queueJson = widgetData.getString(QUEUE_JSON_KEY, "[]") ?: "[]"
+            val pendingIndex = WidgetUtils.getIntCompat(widgetData, "player_pending_index", -1)
 
             views.setTextViewText(R.id.widget_title_music, title)
             views.setTextViewText(R.id.widget_artist, artist)
-            views.setTextViewText(R.id.widget_queue_header, "Proximas ($queueCount)")
-            views.setTextViewText(
-                R.id.widget_now_playing,
-                if (totalTracks > 0) {
-                    if (isPlaying) ">> Tocando #$currentPosition de $totalTracks" else "Pausado #$currentPosition de $totalTracks"
-                } else {
-                    if (isPlaying) ">> Tocando agora" else "Pausado"
-                }
-            )
+            val headerCount = if (totalTracks > 0) totalTracks else queueCount
+            views.setTextViewText(R.id.widget_queue_header, "Fila ($headerCount)")
+            val nowPlayingText = if (title.isNotBlank() && title != "Nenhuma musica") {
+                if (isPlaying) "Tocando: $title - $artist" else "Pausado: $title - $artist"
+            } else {
+                if (isPlaying) "Tocando agora" else "Pausado"
+            }
+            views.setTextViewText(R.id.widget_now_playing, nowPlayingText)
 
             views.setTextColor(R.id.widget_queue_header, themeColor)
             views.setTextColor(R.id.widget_now_playing, themeColor)
@@ -82,11 +81,22 @@ class MusicWidgetPlayer4x4 : HomeWidgetProvider() {
             val serviceIntent = Intent(context, MusicWidgetQueueService::class.java).apply {
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
                 putExtra("queue_json", queueJson)
-                putExtra("queue_start_position", queueStartPosition)
+                putExtra("current_position", currentPosition)
                 putExtra("theme_color", themeColor)
+                putExtra("pending_index", pendingIndex)
                 data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
             }
             views.setRemoteAdapter(R.id.widget_queue_list, serviceIntent)
+
+            val scrollTarget = if (pendingIndex > 0) pendingIndex else currentPosition
+            if (scrollTarget > 0) {
+                val scrollIndex = scrollTarget - 1
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    views.setScrollPosition(R.id.widget_queue_list, scrollIndex)
+                } else {
+                    views.setInt(R.id.widget_queue_list, "setSelection", scrollIndex)
+                }
+            }
 
             val templateIntent = Intent(context, WidgetActionReceiver::class.java).apply {
                 action = WidgetActionReceiver.ACTION_PLAY_INDEX

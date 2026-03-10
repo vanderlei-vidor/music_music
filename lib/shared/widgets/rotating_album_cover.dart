@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:just_audio/just_audio.dart';
-
 class RotatingAlbumCover extends StatefulWidget {
   final String? artwork;
-  final AudioPlayer player;
+  final Stream<bool> playingStream;
+  final bool isPlaying;
   final double size;
 
   const RotatingAlbumCover({
     super.key,
     required this.artwork,
-    required this.player,
+    required this.playingStream,
+    required this.isPlaying,
     this.size = 180,
   });
 
@@ -30,13 +30,17 @@ class _RotatingAlbumCoverState extends State<RotatingAlbumCover>
       duration: const Duration(seconds: 18),
     );
 
-    widget.player.playingStream.listen((isPlaying) {
+    widget.playingStream.listen((isPlaying) {
       if (isPlaying) {
         _controller.repeat();
       } else {
         _controller.stop();
       }
     });
+
+    if (widget.isPlaying) {
+      _controller.repeat();
+    }
   }
 
   @override

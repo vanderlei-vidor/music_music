@@ -1,6 +1,8 @@
 package com.example.music_music
 
 import android.Manifest
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.MediaStore
@@ -13,6 +15,7 @@ class MainActivity : AudioServiceActivity() {
 
     private val CHANNEL = "music_music/android_scanner"
     private val WIDGET_ACTION_CHANNEL = "com.example.music_music/widget_actions"
+    private val WIDGET_REFRESH_CHANNEL = "com.example.music_music/widget_refresh"
     private val WIDGET_PREFS = "music_widget_prefs"
     private val KEY_PENDING_ACTION = "pending_widget_action"
 
@@ -53,6 +56,24 @@ class MainActivity : AudioServiceActivity() {
                     val action = prefs.getString(KEY_PENDING_ACTION, null)
                     prefs.edit().remove(KEY_PENDING_ACTION).apply()
                     result.success(action)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            WIDGET_REFRESH_CHANNEL
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "refreshQueueList" -> {
+                    val manager = AppWidgetManager.getInstance(applicationContext)
+                    val component = ComponentName(applicationContext, MusicWidgetPlayer4x4::class.java)
+                    val ids = manager.getAppWidgetIds(component)
+                    if (ids.isNotEmpty()) {
+                        manager.notifyAppWidgetViewDataChanged(ids, R.id.widget_queue_list)
+                    }
+                    result.success(true)
                 }
                 else -> result.notImplemented()
             }

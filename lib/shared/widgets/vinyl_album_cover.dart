@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 
 import 'package:music_music/shared/widgets/artwork_image.dart';
@@ -12,7 +11,9 @@ import 'vinyl_needle.dart';
 class VinylAlbumCover extends StatefulWidget {
   final String? artwork;
   final int? audioId;
-  final AudioPlayer player;
+  final Stream<bool> playingStream;
+  final Stream<double> speedStream;
+  final bool isPlaying;
   final double size;
   final bool showNeedle;
   final double motionProgress;
@@ -21,7 +22,9 @@ class VinylAlbumCover extends StatefulWidget {
     super.key,
     required this.artwork,
     this.audioId,
-    required this.player,
+    required this.playingStream,
+    required this.speedStream,
+    required this.isPlaying,
     this.size = 190,
     this.showNeedle = true,
     this.motionProgress = 1.0,
@@ -71,7 +74,7 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
 
     _spinTicker = createTicker(_onTick)..start();
 
-    _playingSub = widget.player.playingStream.listen((playing) {
+    _playingSub = widget.playingStream.listen((playing) {
       _isPlaying = playing;
       if (playing) {
         _retargetVelocity(animate: true);
@@ -82,12 +85,12 @@ class _VinylAlbumCoverState extends State<VinylAlbumCover>
       }
     });
 
-    _speedSub = widget.player.speedStream.listen((s) {
+    _speedSub = widget.speedStream.listen((s) {
       _speed = s;
       _retargetVelocity(animate: true);
     });
 
-    _isPlaying = widget.player.playing;
+    _isPlaying = widget.isPlaying;
     _retargetVelocity(animate: false);
   }
 
