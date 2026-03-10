@@ -850,6 +850,14 @@ class _HomeDrawer extends StatelessWidget {
               },
             ),
             _DrawerItem(
+              icon: Icons.widgets_outlined,
+              label: 'Widgets',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, AppRoutes.widgetSettings);
+              },
+            ),
+            _DrawerItem(
               icon: Icons.info_outline_rounded,
               label: 'Sobre',
               onTap: () {

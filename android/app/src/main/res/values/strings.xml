@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_player_description">Music Music playback controls</string>
+    <string name="widget_player_4x2_description">Music Music playback controls (4x2)</string>
+    <string name="widget_player_2x2_description">Music Music compact controls (2x2)</string>
+    <string name="widget_player_4x4_description">Music Music queue controls (4x4)</string>
+    <string name="widget_title">Music Music</string>
+    <string name="no_music_playing">No music</string>
+    <string name="open">Open</string>
+</resources>

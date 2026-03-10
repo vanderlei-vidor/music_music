@@ -5,9 +5,11 @@ import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:music_music/core/observability/app_logger.dart';
+import 'package:music_music/core/services/music_widget_manager.dart';
 import 'package:music_music/core/ui/genre_colors.dart';
 import 'package:music_music/core/utils/genre_normalizer.dart';
 import 'package:music_music/core/preferences/playback_preferences.dart';
+import 'package:music_music/main.dart' as main_lib;
 
 import 'package:music_music/data/local/database_helper.dart';
 import 'package:palette_generator/palette_generator.dart';
@@ -67,6 +69,7 @@ class PlaylistViewModel extends ChangeNotifier {
   StreamSubscription<SequenceState>? _sequenceStateSub;
   StreamSubscription<AudioInterruptionEvent>? _audioInterruptionSub;
   StreamSubscription<void>? _becomingNoisySub;
+  StreamSubscription<String>? _widgetActionSub;
   Duration? _sleepPausedRemaining;
   bool _restoringQueue = false;
   bool _isPersistingQueue = false;
@@ -143,10 +146,12 @@ class PlaylistViewModel extends ChangeNotifier {
     _loadPlaybackConfig();
     _initAudioSession();
     _listenToSequenceChanges();
+    _setupWidgetActionListener();
 
     _playingSub = _player.playingStream.listen((playing) {
       _isPlaying = playing;
       notifyListeners();
+      unawaited(MusicWidgetManager.updatePlayerPlayPause(playing));
 
       if (!playing) {
         _pauseSleepTimer();
@@ -535,6 +540,8 @@ class PlaylistViewModel extends ChangeNotifier {
             await loadRecentMusics();
           }
 
+          unawaited(_updatePlayerWidget(newMusic));
+
           notifyListeners();
         } finally {
           _isChangingTrack = false;
@@ -543,54 +550,150 @@ class PlaylistViewModel extends ChangeNotifier {
     });
   }
 
-  // 🎧 CROSSFADE: Aplica fade in suave na nova faixa (NÃO BLOQUEANTE)
-  // Usamos Timer.periodic para não bloquear o listener do sequenceState
-  Timer? _crossfadeTimer;
-  bool _isApplyingCrossfade = false;
-  
-  Future<void> _applyCrossfade() async {
-    if (!_playbackConfig.isCrossfadeActive || _isApplyingCrossfade) return;
-    
-    _isApplyingCrossfade = true;
-    _crossfadeTimer?.cancel();
-    
+  Future<void> _updatePlayerWidget(MusicEntity music) async {
     try {
-      final crossfadeSeconds = _playbackConfig.crossfadeSeconds;
-      
-      if (crossfadeSeconds <= 0) return;
-
-      // Fade in gradual da nova faixa usando Timer (não bloqueante)
-      const steps = 20;
-      final stepDuration = (crossfadeSeconds * 1000 / steps).round();
-      var currentStep = 0;
-
-      // Volume inicial bem baixo
-      await _player.setVolume(0.0);
-      
-      // Pequeno delay inicial
-      await Future.delayed(const Duration(milliseconds: 30));
-
-      // Timer não bloqueante para fade in
-      _crossfadeTimer = Timer.periodic(
-        Duration(milliseconds: stepDuration),
-        (timer) {
-          currentStep++;
-          
-          if (currentStep >= steps || !_player.playing) {
-            timer.cancel();
-            _player.setVolume(1.0); // Garante volume máximo
-            _isApplyingCrossfade = false;
-            return;
-          }
-          
-          final targetVolume = currentStep / steps;
-          _player.setVolume(targetVolume);
-        },
+      await MusicWidgetManager.updatePlayerWidget(
+        currentMusic: music,
+        isPlaying: _isPlaying,
+        artworkPath: music.artworkUrl,
+        isShuffled: _isShuffled,
+        repeatMode: _repeatMode.index,
+        isFavorite: music.isFavorite,
+        queueTitles: _nextQueueTitles(limit: 1000),
+        queueCount: _remainingQueueCount(),
+        themeColor: _currentDominantColor.value,
+        queueStartPosition: _queueStartPosition(),
+        currentPosition: _currentQueuePosition(),
+        totalTracks: _queueMusics.length,
       );
+    } catch (e, st) {
+      AppLogger.warn(
+        'PlaylistViewModel',
+        'Falha ao atualizar widget player',
+        error: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  List<String> _nextQueueTitles({int limit = 4}) {
+    if (_queueMusics.isEmpty) return const <String>[];
+    final currentIndex = (_player.currentIndex ?? 0).clamp(0, _queueMusics.length - 1).toInt();
+    final next = <String>[];
+    for (var i = currentIndex + 1; i < _queueMusics.length && next.length < limit; i++) {
+      next.add(_queueMusics[i].title);
+    }
+    return next;
+  }
+
+  int _remainingQueueCount() {
+    if (_queueMusics.isEmpty) return 0;
+    final currentIndex = (_player.currentIndex ?? 0).clamp(0, _queueMusics.length - 1).toInt();
+    final remaining = _queueMusics.length - currentIndex - 1;
+    return remaining < 0 ? 0 : remaining;
+  }
+
+  int _currentQueuePosition() {
+    if (_queueMusics.isEmpty) return 1;
+    final currentIndex = (_player.currentIndex ?? 0).clamp(0, _queueMusics.length - 1).toInt();
+    return currentIndex + 1;
+  }
+
+  int _queueStartPosition() {
+    if (_queueMusics.isEmpty) return 1;
+    return _currentQueuePosition() + 1;
+  }
+
+  void _setupWidgetActionListener() {
+    _widgetActionSub?.cancel();
+    final stream = main_lib.widgetActionController?.stream;
+    if (stream == null) return;
+
+    _widgetActionSub = stream.listen((action) {
+      unawaited(_handleWidgetAction(action));
+    });
+  }
+
+  Future<void> _handleWidgetAction(String action) async {
+    try {
+      if (action.startsWith('play_index:')) {
+        final raw = action.substring('play_index:'.length);
+        final oneBasedIndex = int.tryParse(raw);
+        if (oneBasedIndex != null) {
+          await _playFromQueuePosition(oneBasedIndex);
+        }
+        return;
+      }
+
+      switch (action) {
+        case 'play_pause':
+          await _togglePlayPause();
+          break;
+        case 'next':
+          await nextMusic();
+          break;
+        case 'previous':
+          await previousMusic();
+          break;
+        case 'shuffle':
+          await toggleShuffle();
+          break;
+        case 'repeat':
+          await toggleRepeatMode();
+          break;
+        case 'favorite':
+          final music = _currentMusic;
+          if (music != null) {
+            await toggleFavorite(music);
+          }
+          break;
+      }
+    } catch (e, st) {
+      AppLogger.warn(
+        'PlaylistViewModel',
+        'Falha ao processar acao do widget: $action',
+        error: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  Future<void> _playFromQueuePosition(int oneBasedIndex) async {
+    if (_queueMusics.isEmpty) return;
+    final index = (oneBasedIndex - 1).clamp(0, _queueMusics.length - 1);
+    await playMusic(_queueMusics, index);
+  }
+
+  // 🎧 CROSSFADE: Aplica fade in suave na nova faixa
+  int _crossfadeRunId = 0;
+
+  Future<void> _applyCrossfade() async {
+    if (!_playbackConfig.isCrossfadeActive) return;
+
+    final crossfadeSeconds = _playbackConfig.crossfadeSeconds;
+    if (crossfadeSeconds <= 0) return;
+
+    final runId = ++_crossfadeRunId;
+    final targetVolume = _player.volume.clamp(0.0, 1.0);
+    if (targetVolume <= 0.0) {
+      return;
+    }
+
+    try {
+      const steps = 20;
+      final stepMs = (crossfadeSeconds * 1000 / steps).round().clamp(16, 1000);
+      await _player.setVolume(0.0);
+
+      for (var step = 1; step <= steps; step++) {
+        if (runId != _crossfadeRunId || !_player.playing) return;
+        await Future.delayed(Duration(milliseconds: stepMs));
+        if (runId != _crossfadeRunId || !_player.playing) return;
+
+        final volume = (targetVolume * (step / steps)).clamp(0.0, 1.0);
+        await _player.setVolume(volume);
+      }
     } catch (_) {
-      _crossfadeTimer?.cancel();
-      await _player.setVolume(1.0);
-      _isApplyingCrossfade = false;
+      await _player.setVolume(targetVolume);
     }
   }
 
@@ -608,10 +711,14 @@ class PlaylistViewModel extends ChangeNotifier {
   }
 
   void playPause() {
+    unawaited(_togglePlayPause());
+  }
+
+  Future<void> _togglePlayPause() async {
     if (_player.playing) {
-      pause();
+      await pause();
     } else {
-      play();
+      await play();
     }
   }
 
@@ -638,6 +745,7 @@ class PlaylistViewModel extends ChangeNotifier {
       }
 
       _currentMusic = _queueMusics[index];
+      unawaited(_updatePlayerWidget(_currentMusic!));
       if (kDebugMode) {
         AppLogger.info('PlaylistViewModel', 'play called');
       }
@@ -686,10 +794,22 @@ class PlaylistViewModel extends ChangeNotifier {
       await _setAudioSource(initialIndex: _player.currentIndex ?? 0);
     }
 
+    final current = _currentMusic;
+    if (current != null) {
+      unawaited(_updatePlayerWidget(current));
+    } else {
+      unawaited(
+        MusicWidgetManager.updatePlayerControlsState(
+          isShuffled: _isShuffled,
+          repeatMode: _repeatMode.index,
+          isFavorite: false,
+        ),
+      );
+    }
     notifyListeners();
   }
 
-  void toggleRepeatMode() {
+  Future<void> toggleRepeatMode() async {
     if (_repeatMode == LoopMode.off) {
       _repeatMode = LoopMode.all;
     } else if (_repeatMode == LoopMode.all) {
@@ -698,7 +818,19 @@ class PlaylistViewModel extends ChangeNotifier {
       _repeatMode = LoopMode.off;
     }
 
-    _player.setLoopMode(_repeatMode);
+    await _player.setLoopMode(_repeatMode);
+    final current = _currentMusic;
+    if (current != null) {
+      unawaited(_updatePlayerWidget(current));
+    } else {
+      unawaited(
+        MusicWidgetManager.updatePlayerControlsState(
+          isShuffled: _isShuffled,
+          repeatMode: _repeatMode.index,
+          isFavorite: false,
+        ),
+      );
+    }
     notifyListeners();
   }
 
@@ -766,6 +898,7 @@ class PlaylistViewModel extends ChangeNotifier {
       );
     }
 
+
     notifyListeners();
   }
 
@@ -791,6 +924,18 @@ class PlaylistViewModel extends ChangeNotifier {
     }
 
     await loadFavoriteMusics();
+    final current = _currentMusic;
+    if (current != null) {
+      unawaited(_updatePlayerWidget(current));
+    } else {
+      unawaited(
+        MusicWidgetManager.updatePlayerControlsState(
+          isShuffled: _isShuffled,
+          repeatMode: _repeatMode.index,
+          isFavorite: false,
+        ),
+      );
+    }
     notifyListeners();
 
     return newValue;
@@ -898,7 +1043,7 @@ class PlaylistViewModel extends ChangeNotifier {
     unawaited(_persistPlaybackQueueOnDispose());
     _sleepTimer?.cancel();
     _sleepTick?.cancel();
-    _crossfadeTimer?.cancel(); // 🎧 Cancela crossfade timer
+    _crossfadeRunId++;
     _positionSub?.cancel();
     _playerStateSub?.cancel();
     _playingSub?.cancel();
@@ -906,6 +1051,7 @@ class PlaylistViewModel extends ChangeNotifier {
     _sequenceStateSub?.cancel();
     _audioInterruptionSub?.cancel();
     _becomingNoisySub?.cancel();
+    _widgetActionSub?.cancel();
     _player.dispose();
     super.dispose();
   }

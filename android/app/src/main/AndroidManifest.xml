@@ -2,23 +2,16 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.example.music_music">
 
-    <!-- 🔊 Áudio -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
-
-    <!-- 🌐 Internet (artwork, metadata) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.INTERNET" />
-
-    <!-- ✅ Android 13+ -->
     <uses-permission
         android:name="android.permission.READ_MEDIA_AUDIO"
         android:minSdkVersion="33" />
     <uses-permission
         android:name="android.permission.POST_NOTIFICATIONS"
         android:minSdkVersion="33" />
-
-    <!-- ✅ Android 9 → Android 12 -->
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
@@ -28,7 +21,7 @@
         android:icon="@mipmap/ic_launcher">
 
         <activity
-            android:name="com.ryanheise.audioservice.AudioServiceActivity"
+            android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
@@ -64,6 +57,69 @@
                 <action android:name="android.intent.action.MEDIA_BUTTON" />
             </intent-filter>
         </receiver>
+
+        <receiver
+            android:name=".MusicWidgetPlayer"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_player_info" />
+        </receiver>
+
+        <receiver
+            android:name=".MusicWidgetPlayer4x2"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_player_4x2_info" />
+        </receiver>
+
+        <receiver
+            android:name=".MusicWidgetPlayer2x2"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_player_2x2_info" />
+        </receiver>
+
+        <receiver
+            android:name=".MusicWidgetPlayer4x4"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_player_4x4_info" />
+        </receiver>
+
+        <receiver
+            android:name=".WidgetActionReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.example.music_music.PLAY_PAUSE" />
+                <action android:name="com.example.music_music.NEXT" />
+                <action android:name="com.example.music_music.PREVIOUS" />
+                <action android:name="com.example.music_music.SHUFFLE" />
+                <action android:name="com.example.music_music.REPEAT" />
+                <action android:name="com.example.music_music.FAVORITE" />
+                <action android:name="com.example.music_music.PLAY_INDEX" />
+            </intent-filter>
+        </receiver>
+
+        <service
+            android:name=".MusicWidgetQueueService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
 
         <meta-data
             android:name="flutterEmbedding"

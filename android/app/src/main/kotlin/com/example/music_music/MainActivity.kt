@@ -4,18 +4,21 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.MediaStore
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import io.flutter.embedding.android.FlutterActivity
+import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
-class MainActivity : FlutterActivity() {
+class MainActivity : AudioServiceActivity() {
 
     private val CHANNEL = "music_music/android_scanner"
+    private val WIDGET_ACTION_CHANNEL = "com.example.music_music/widget_actions"
+    private val WIDGET_PREFS = "music_widget_prefs"
+    private val KEY_PENDING_ACTION = "pending_widget_action"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        WidgetActionReceiver.flutterEngine = flutterEngine
 
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
@@ -39,9 +42,28 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            WIDGET_ACTION_CHANNEL
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getPendingWidgetAction" -> {
+                    val prefs = getSharedPreferences(WIDGET_PREFS, MODE_PRIVATE)
+                    val action = prefs.getString(KEY_PENDING_ACTION, null)
+                    prefs.edit().remove(KEY_PENDING_ACTION).apply()
+                    result.success(action)
+                }
+                else -> result.notImplemented()
+            }
+        }
     }
 
-    // 🔐 Confere permissão
+    override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        super.cleanUpFlutterEngine(flutterEngine)
+        WidgetActionReceiver.flutterEngine = null
+    }
+
     private fun hasPermission(): Boolean {
         val permission = if (android.os.Build.VERSION.SDK_INT >= 33) {
             Manifest.permission.READ_MEDIA_AUDIO
@@ -55,7 +77,6 @@ class MainActivity : FlutterActivity() {
         ) == PackageManager.PERMISSION_GRANTED
     }
 
-    // 🎧 Scan real
     private fun scanMusic(): List<Map<String, Any>> {
         val results = mutableListOf<Map<String, Any>>()
 

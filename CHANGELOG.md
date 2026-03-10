@@ -2,7 +2,38 @@
 
 Todas as mudancas relevantes deste projeto serao documentadas aqui.
 
-## [1.4.0] - 2026-03-06
+## [1.6.0] - 2026-03-06
+
+### Added
+- **4 Widgets de Home Screen** (estilo Mercado Livre):
+  - **Widget Player**: Controles de reproducao com artwork, titulo, artista.
+  - **Widget Favoritas**: Lista das 3 musicas favoritas.
+  - **Widget Recentes**: Lista das 3 ultimas musicas tocadas.
+  - **Widget Playlists**: Acesso rapido as playlists.
+- **home_widget ^0.9.0**: Pacote atualizado para Flutter 3.35.
+- **Layouts Android**: 4 widgets com design premium (Dark Liquid gradient).
+- **Icones Vetoriais**: Play, pause, previous, next, favorite, history, playlist.
+- **Previews dos Widgets**: Imagens de preview para cada widget.
+
+### Changed
+- `MusicWidgetManager`: Reescrito para suportar 4 widgets.
+- `PlaylistViewModel`: Atualiza widget player quando musica/playback mudam.
+- `AndroidManifest.xml`: 4 receivers registrados para widgets.
+- `pubspec.yaml`: home_widget atualizado para ^0.9.0.
+
+### Technical
+- 4 XML layouts: widget_player, widget_favorites, widget_recent, widget_playlists.
+- 4 XML configs: widget_*_info.xml com dimensoes e previews.
+- 8 Drawables: background gradient, botoes, icones, previews.
+- Strings em PT-BR para descricoes dos widgets.
+
+### UX
+- Usuario pode adicionar 1 ou mais widgets na tela inicial.
+- Widget Player atualiza em tempo real com a musica atual.
+- Design consistente com tema Dark Liquid do app.
+- Cada widget tem botao "Abrir" para lancar o app.
+
+## [1.5.0] - 2026-03-06
 
 ### Added
 - **Gapless Playback**: Reproducao continua sem silencio entre faixas do mesmo album.
